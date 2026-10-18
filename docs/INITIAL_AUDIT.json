@@ -1,0 +1,302 @@
+{
+  "date_local": "2026-10-17 America/Los_Angeles",
+  "project": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent",
+  "preexisting_git": false,
+  "initial_commit": "bd9bbd3",
+  "original_inventory": {
+    "file_count": 7282,
+    "bytes": 1207443199,
+    "local_manifest": ".relay/bootstrap-before.json"
+  },
+  "checkpoint": {
+    "path": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/DungeonRaid-reverse-checkpoint-2026-10-16.zip",
+    "size": 16491584,
+    "sha256": "7a20c43e1fddecbb816313881a1b7431ee04f6b24929a7fcd2fbbe05c12d06ec",
+    "new_in_current": [
+      "recovered/recovered_encounters.cpp",
+      "recovered/recovered_encounters.hpp",
+      "recovered/recovered_generation.cpp",
+      "recovered/recovered_generation.hpp",
+      "recovered/recovered_refill.cpp",
+      "recovered/recovered_refill.hpp",
+      "recovered/verify_encounters.py",
+      "recovered/verify_generation.py",
+      "recovered/verify_refill.py",
+      "recovered/verify_refill_integration.py"
+    ],
+    "different": [
+      "recovered/build.sh",
+      "recovered/rewards_demo.cpp",
+      "recovered/run_rewards_demo.sh"
+    ]
+  },
+  "older_investigation": "/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation",
+  "current_sources": [
+    {
+      "path": "recovered/build.sh",
+      "sha256": "e6b960889813560b4034853645ef404b42b8eccbbe3790584a1c82dbb1f67af8"
+    },
+    {
+      "path": "recovered/recovered_battle.cpp",
+      "sha256": "93b21c6308e4fe5615a5a713cbe5dea476b4a5a0cb97e50ae55d4dbda42efe73"
+    },
+    {
+      "path": "recovered/recovered_combat.cpp",
+      "sha256": "5b86297807c2847f53bc192a14d21308359811a1e777527443488e2a9f0766f7"
+    },
+    {
+      "path": "recovered/recovered_core.hpp",
+      "sha256": "4649a98c5be05950c2184ca6a41969fb808472978691c8efeaa88e3d0234ae79"
+    },
+    {
+      "path": "recovered/recovered_encounters.cpp",
+      "sha256": "7ac35a53dc8559f7a17c258d07c49190f3d04c15fba250c031515787102e8458"
+    },
+    {
+      "path": "recovered/recovered_encounters.hpp",
+      "sha256": "1a9228213f98c7ecb567874b103082a014e3a7a8e1cb1de86cc3e2ba9bc157a8"
+    },
+    {
+      "path": "recovered/recovered_generation.cpp",
+      "sha256": "c3d246d323a651865d3a9acc9cc9aecd49c055ea580aecc8a50a9490c1811b0a"
+    },
+    {
+      "path": "recovered/recovered_generation.hpp",
+      "sha256": "5b2c826c1225e12c278551255317aff198a6aeb77e2e55751b43ba3d6d41d2d7"
+    },
+    {
+      "path": "recovered/recovered_input.cpp",
+      "sha256": "d47c99e3284bc9011f7da39b55a8c6317f6ba708ccb963337cffb349e40872b2"
+    },
+    {
+      "path": "recovered/recovered_match.cpp",
+      "sha256": "9b2994b5177fda736ccdda3c2273473492a2017c3dcb8013fd8fc39f34d1f3b2"
+    },
+    {
+      "path": "recovered/recovered_match.hpp",
+      "sha256": "d534c1f66f5ef253bc0c3f1904d94f2eb4d0af76cd8646541ec5f506340e505d"
+    },
+    {
+      "path": "recovered/recovered_motion.cpp",
+      "sha256": "0500b72ac5597bfead3a76196a1441c01f9e0980d36a9151e56a3b2b8912399f"
+    },
+    {
+      "path": "recovered/recovered_motion.hpp",
+      "sha256": "17f528a6d9c545ef178beef403f36f4399a5091b9eb33504abe96a940e37ad14"
+    },
+    {
+      "path": "recovered/recovered_path.cpp",
+      "sha256": "d2bd82ed75e8b294e65d00e5aaa1027b6c574f585180ff5f7d41c2a72a0f2255"
+    },
+    {
+      "path": "recovered/recovered_path.hpp",
+      "sha256": "a1d29f86df0907f1a3637a08b307ba0311c6f3d929dc59d705ec6392cab7c62b"
+    },
+    {
+      "path": "recovered/recovered_preview.cpp",
+      "sha256": "d1bc59d1aa7d5ee82c28e6fdda497a81e6384e83b7484f9c2b8bad205c8250ba"
+    },
+    {
+      "path": "recovered/recovered_preview.hpp",
+      "sha256": "94a79d167dbdf4043faf3c9f278cf03c5917f98d1521ed0f0f2249240ba86c13"
+    },
+    {
+      "path": "recovered/recovered_progression.cpp",
+      "sha256": "188f2f6ad2756241511c89416df5b9d8cab11d99adf542ca7fde74981b63e286"
+    },
+    {
+      "path": "recovered/recovered_random.cpp",
+      "sha256": "cb8361ab3b8258d2bbf84de445647ff1969cd50b2fe6979a543b2c8065a3a56a"
+    },
+    {
+      "path": "recovered/recovered_random.hpp",
+      "sha256": "d7b2f3f463d9cf29d1ab2e3f85366d87a4defc3feac13023e5d2e2fdb6991b39"
+    },
+    {
+      "path": "recovered/recovered_refill.cpp",
+      "sha256": "07db694bd144232046d5d22a65a3a52e8aecf0aa881b8cbab8ca64562163604c"
+    },
+    {
+      "path": "recovered/recovered_refill.hpp",
+      "sha256": "e20b59a54bf03c8c6234d9fb13002d8a150db81ea5452504fed75c1c34918d10"
+    },
+    {
+      "path": "recovered/recovered_resources.cpp",
+      "sha256": "5823f95d40c9c5be56579763ea9d30c98d2c51e4a084708b92d1a0e04828620a"
+    },
+    {
+      "path": "recovered/recovered_resources.hpp",
+      "sha256": "dcc0319a2021ae99bf0a3cd132a23a1ee88b5d30e837bb758fbeaf16c676fd2a"
+    },
+    {
+      "path": "recovered/recovered_round.cpp",
+      "sha256": "132fe4146a510b989944a23c08c1b8cc840a776981284241e520d7d04ba8114b"
+    },
+    {
+      "path": "recovered/recovered_rules.cpp",
+      "sha256": "a3b57b6bd38016b605ecdbee4b2ddc43a1c187f733a1bfaefc2c4645a1bc3adb"
+    },
+    {
+      "path": "recovered/recovered_rune.cpp",
+      "sha256": "8073f465490a4307dcf48428b7f0fbee1d338b3242f421689db14f8635bdbe22"
+    },
+    {
+      "path": "recovered/recovered_rune.hpp",
+      "sha256": "6c63735c19ebc5771baee7f3a70c7f6bf74beca92220888ead541aeddd931379"
+    },
+    {
+      "path": "recovered/recovered_selection.cpp",
+      "sha256": "bc220c917ccb263c06a13564ef3f7ab0448a162aa3e3a086d3eae12cbbb27206"
+    },
+    {
+      "path": "recovered/recovered_selection.hpp",
+      "sha256": "907e49bbef34c9025233a6c1dd00dad000e1359d86674b592e61453d6b79e441"
+    },
+    {
+      "path": "recovered/recovered_stroke.cpp",
+      "sha256": "ca36e1c9182ae577dc166967cb193d50df360221bbf389c10a48f6cc1a5a7a0c"
+    },
+    {
+      "path": "recovered/recovered_stroke.hpp",
+      "sha256": "21b26cd944e6883f2165038a5a6fd3e4a2dc1f62ad83ed08545c7205b9c17ac8"
+    },
+    {
+      "path": "recovered/recovered_tokens.cpp",
+      "sha256": "7194cf27e6aa55d7acef95643818258708a23037809c83370a479c0f6b43eedd"
+    },
+    {
+      "path": "recovered/recovered_tokens.hpp",
+      "sha256": "45fb2e4f9648bc47f08c8bc48055f5bb410ef3fcb26e9eec7ca3641700664765"
+    },
+    {
+      "path": "recovered/replay_arm64.py",
+      "sha256": "839563ef8d8f3ea6985f0dd0a515e9f7503adc92cc17f6f0c2c433b56431a5ae"
+    },
+    {
+      "path": "recovered/rewards_demo.cpp",
+      "sha256": "29c0a1a32e35b99fd5b9312ea074613911d52283d78daccf373fa75eff43344f"
+    },
+    {
+      "path": "recovered/run_rewards_demo.sh",
+      "sha256": "24ba975451e1afb03341291ec4dc43e4521f6bce1ccd33ca3ecd56206cd13a7f"
+    },
+    {
+      "path": "recovered/run_stroke_demo.sh",
+      "sha256": "71065be9985ff3a5b931b00dc29a3c6c6c9e33f5fa25e7e739bf3f60e36fbab0"
+    },
+    {
+      "path": "recovered/stroke_demo.cpp",
+      "sha256": "7b55e95dc188572117f85bf56e4e0f74dc1e8737c0060ed7623ec40512d8a633"
+    },
+    {
+      "path": "recovered/verify_battle.py",
+      "sha256": "56d76c83fd3d4e8d37af4e18dc92f9336dacb9f5abff627e43d6d86e75594325"
+    },
+    {
+      "path": "recovered/verify_encounters.py",
+      "sha256": "35504bf2b7a4763a5e779cd50c68915fc3fb3f6b946477b6633630092f3d8bb8"
+    },
+    {
+      "path": "recovered/verify_generation.py",
+      "sha256": "15fda9d12751e56315f3e3d40d6df039baa0965355fa58f7cc684c19d4d0b87b"
+    },
+    {
+      "path": "recovered/verify_input.py",
+      "sha256": "959d1f4a234d21aced720282c8054a567db455970c7e9043d0dcd7142c54f7bd"
+    },
+    {
+      "path": "recovered/verify_match.py",
+      "sha256": "0715fdd7432d89f9ddf473a6db45b03fe14df292825a5794c10db03665c6e2c5"
+    },
+    {
+      "path": "recovered/verify_motion.py",
+      "sha256": "ccae520fcb102af6934a82ed8ed271d9c3fa819a27b1fabd74b6a0ec70515c1c"
+    },
+    {
+      "path": "recovered/verify_original.py",
+      "sha256": "5f3b19b30210fef9fd950143d0c263b5bbf76dd785b49fca0d3691d27421d26a"
+    },
+    {
+      "path": "recovered/verify_path.py",
+      "sha256": "8e986bf5c63f729f5c8438156e4815b1f0fdabbba69793041e00695951fd2c97"
+    },
+    {
+      "path": "recovered/verify_preview.py",
+      "sha256": "9a35ca4a55291270c78861b568e391e2209fbcc5d97838eb0a404302393aa941"
+    },
+    {
+      "path": "recovered/verify_progression.py",
+      "sha256": "1752f7f290c0e27530bfb7c052ae7ffdd7298e8185c79d57c56dbafbd330e79c"
+    },
+    {
+      "path": "recovered/verify_random.py",
+      "sha256": "73fe92f2d228acf25e5fad34eeb3ccc0037ff46e199cdce124fe531745284a66"
+    },
+    {
+      "path": "recovered/verify_refill.py",
+      "sha256": "6b18f8e8ef88861ecb36843b6497cb698f7ebc2b2a5755a4807a74a3dce1880e"
+    },
+    {
+      "path": "recovered/verify_refill_integration.py",
+      "sha256": "6af2cbf81ae669f25698a8d1c7f3a6ce0e3f5c25454cb5890a30034ddb824a9d"
+    },
+    {
+      "path": "recovered/verify_resources.py",
+      "sha256": "d1baa79b3d3c677496ca69b6271c421f22e5bb00b2d796709f017816e3cab550"
+    },
+    {
+      "path": "recovered/verify_round.py",
+      "sha256": "ec9153f70a2a56663eeb8cdf1e606d97bcb68ec4d5a281bd53b78dd42d4d5637"
+    },
+    {
+      "path": "recovered/verify_rules.py",
+      "sha256": "8c1af64bdba57f0bc0859ae90b52f4e0c6478db6a30cd3e0a5d385488a8a3bc1"
+    },
+    {
+      "path": "recovered/verify_rune.py",
+      "sha256": "ac26e3cea442a590d33e77d9837fc8583d03be4f674a563e385e717ad9df0b7c"
+    },
+    {
+      "path": "recovered/verify_selection.py",
+      "sha256": "b6b2c3b6c553f4130905a0d1d14a38803871d055c58e581cc424f96a9eb088ed"
+    },
+    {
+      "path": "recovered/verify_stroke.py",
+      "sha256": "a305a33b310be7bc8ee59d0107986cac4650da64a132bcdc497b319eb5d6ac67"
+    },
+    {
+      "path": "recovered/verify_tokens.py",
+      "sha256": "8e3701ad7eecfc3b02c2325da7a7cbf96bf4b40dbdca57cc983e40a1c926d3cc"
+    }
+  ],
+  "local_dependencies": [
+    {
+      "path": "armv7-disassembly.txt",
+      "size": 18813373,
+      "sha256": "66841fcf8ddbb15e89c8518823293b92883c8525f765368e5a46ea06c13ebc92"
+    },
+    {
+      "path": "DungeonRaid-original",
+      "size": 8428656,
+      "sha256": "5ab6e00407f865f126d4b0bd30a33296942d20cb2ecb4e813db5090caded9356"
+    },
+    {
+      "path": "tools/unicorn/lib/libunicorn.2.dylib",
+      "size": 1262864,
+      "sha256": "4c141e387858950da9f2ba532ee641a6ecd083c3f2f90a25f484147846bc163c"
+    },
+    {
+      "path": "runtime/liveexec32/original-progression-verification.json",
+      "size": 10512203,
+      "sha256": "fd596f0c27c5cf2df12d072d5753749e77ae074315a32da7e0d279f9bd609820"
+    }
+  ],
+  "tools": {
+    "codex": "0.135.0",
+    "claude": "not found in PATH or common user bin directories",
+    "gemini": "not found in PATH or common user bin directories",
+    "iphoneos_sdk": "27.1",
+    "macosx_sdk": "27.0"
+  },
+  "scope": "File presence and hashes only. Historical test reports are not current validation."
+}

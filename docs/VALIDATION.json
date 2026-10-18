@@ -1,0 +1,284 @@
+{
+  "scope": "Isolated rebuild and existing recovered tests; not a playable iOS app",
+  "local_date": "2026-10-17 America/Los_Angeles",
+  "status": "passed",
+  "run": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z",
+  "full": true,
+  "fingerprint": "b3586780dcd6890c5fca4f3f1cb168341f938988db0d75d239f5302eeb5c0d00",
+  "steps": [
+    {
+      "name": "build",
+      "command": [
+        "sh",
+        "recovered/build.sh"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/build.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 10.86
+    },
+    {
+      "name": "stroke_demo",
+      "command": [
+        "sh",
+        "recovered/run_stroke_demo.sh"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/stroke_demo.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 0.35
+    },
+    {
+      "name": "rewards_demo",
+      "command": [
+        "sh",
+        "recovered/run_rewards_demo.sh"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/rewards_demo.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 1.77
+    },
+    {
+      "name": "verify_battle",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_battle.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_battle.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 1.47
+    },
+    {
+      "name": "verify_encounters",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_encounters.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_encounters.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 39.55
+    },
+    {
+      "name": "verify_generation",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_generation.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_generation.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 19.61
+    },
+    {
+      "name": "verify_input",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_input.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_input.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 0.66
+    },
+    {
+      "name": "verify_match",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_match.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_match.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 5.63
+    },
+    {
+      "name": "verify_motion",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_motion.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_motion.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 5.44
+    },
+    {
+      "name": "verify_original",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_original.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_original.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 0.96
+    },
+    {
+      "name": "verify_path",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_path.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_path.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 32.13
+    },
+    {
+      "name": "verify_preview",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_preview.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_preview.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 3.26
+    },
+    {
+      "name": "verify_progression",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_progression.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_progression.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 0.29
+    },
+    {
+      "name": "verify_random",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_random.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_random.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 0.4
+    },
+    {
+      "name": "verify_refill",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_refill.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_refill.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 7.08
+    },
+    {
+      "name": "verify_refill_integration",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_refill_integration.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_refill_integration.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 5.83
+    },
+    {
+      "name": "verify_resources",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_resources.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_resources.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 5.89
+    },
+    {
+      "name": "verify_round",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_round.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_round.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 5.91
+    },
+    {
+      "name": "verify_rules",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_rules.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_rules.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 1.28
+    },
+    {
+      "name": "verify_rune",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_rune.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_rune.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 3.76
+    },
+    {
+      "name": "verify_selection",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_selection.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_selection.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 3.83
+    },
+    {
+      "name": "verify_stroke",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_stroke.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_stroke.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 2.14
+    },
+    {
+      "name": "verify_tokens",
+      "command": [
+        "/Users/yuchen/.local/bin/python3",
+        "recovered/verify_tokens.py"
+      ],
+      "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/verify_tokens.log",
+      "status": "passed",
+      "exit_code": 0,
+      "seconds": 8.62
+    }
+  ],
+  "inputs_unchanged": true,
+  "preservation": {
+    "original_files_checked": 7282,
+    "changed_or_missing": [],
+    "safety_tests_exit_code": 0
+  },
+  "infra_safety_tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_relay.py -v",
+    "passed": 4,
+    "log": "/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/relay-safety-tests.log",
+    "launcher_mode": "dummy local executables, not real model sessions"
+  },
+  "read_only_rehearsal": {
+    "command": "./scripts/relay.sh check",
+    "exit_code": 0,
+    "file_hashes_compared": 7654,
+    "changed_during_check": [],
+    "staged_changes_present": true,
+    "next_task": "T010",
+    "real_other_model_used": false
+  }
+}

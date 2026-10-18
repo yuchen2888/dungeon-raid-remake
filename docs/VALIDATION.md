@@ -1,0 +1,62 @@
+# 本轮验证记录
+
+日期：2026-10-17（America/Los_Angeles）。以下均为本轮实际执行；历史报告未覆盖。
+
+## 执行入口
+
+`./scripts/relay.sh verify --full` 返回 0。19 模块完整重编译、两个源码示例与 20 个既有验证脚本共 23 步全部通过。来源输入哈希在运行前后相同。
+
+- 本地完整结果：`/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/result.json`
+- 新报告和新库：`/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T065100.380122Z/work/recovered/`
+- 结构化摘要：`docs/VALIDATION.json`
+- 输入指纹：`b3586780dcd6890c5fca4f3f1cb168341f938988db0d75d239f5302eeb5c0d00`
+
+| 步骤 | 结果 | 秒 |
+| --- | --- | --- |
+| build | passed / exit 0 | 10.86 |
+| stroke_demo | passed / exit 0 | 0.35 |
+| rewards_demo | passed / exit 0 | 1.77 |
+| verify_battle | passed / exit 0 | 1.47 |
+| verify_encounters | passed / exit 0 | 39.55 |
+| verify_generation | passed / exit 0 | 19.61 |
+| verify_input | passed / exit 0 | 0.66 |
+| verify_match | passed / exit 0 | 5.63 |
+| verify_motion | passed / exit 0 | 5.44 |
+| verify_original | passed / exit 0 | 0.96 |
+| verify_path | passed / exit 0 | 32.13 |
+| verify_preview | passed / exit 0 | 3.26 |
+| verify_progression | passed / exit 0 | 0.29 |
+| verify_random | passed / exit 0 | 0.4 |
+| verify_refill | passed / exit 0 | 7.08 |
+| verify_refill_integration | passed / exit 0 | 5.83 |
+| verify_resources | passed / exit 0 | 5.89 |
+| verify_round | passed / exit 0 | 5.91 |
+| verify_rules | passed / exit 0 | 1.28 |
+| verify_rune | passed / exit 0 | 3.76 |
+| verify_selection | passed / exit 0 | 3.83 |
+| verify_stroke | passed / exit 0 | 2.14 |
+| verify_tokens | passed / exit 0 | 8.62 |
+
+## 关键复现及边界
+
+- build：19 个 macOS 双架构动态库、19 个 iPhone arm64 对象及静态库；使用已安装 macOS SDK 27.0 / iPhone SDK 27.1，编译选项继承原 build.sh。不是 App 构建验收。
+- refill：522 棋盘、108 定位、2705 下落步；隔离测试的生成/Stab 是明确回调。
+- generation：3164 场景；真实原版生成、晋升、数值与随机指令对照。
+- encounters：1992 场景，包含 1296 swap、36 jump、360 stab、300 move；完整敌人调度未验证。
+- refill_integration：20 连续手势、1550 操作/帧、280 奖励及新格；真实补位、生成与特殊动作接通。没有重开下一回合输入。
+- rewards_demo：周边 8 格加圈内 1 格消除，26 帧后奖励和落格结束，金币 0→18，补入 9 格，额外推进不重复入账。示例不执行原版程序，无界面，停在完整敌人阶段之前。
+- progression：本轮用原有 original-progression-verification.json 做原生 fixture 重放；不是本轮重新执行原版职业存档采集。其他测试以各报告的 original/boundaries/scope 为准。
+- 不累加重叠场景，不将这些通过结果写成完整游戏、真实触摸或现代 iOS 试玩通过。
+
+## 接力安全验证
+
+`PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_relay.py -v`：4 项通过。覆盖脏工作树/暂存/二进制未跟踪文件保留、锁冲突/错误释放拒绝、显式接管保留旧 owner、check 零文件副作用，以及三种启动参数/同目录（本地替身程序）。
+本地日志 `.relay/relay-safety-tests.log`。启动测试曾遇 macOS /var 与 /private/var 的路径别名，已改为解析后比较并复验通过。没有真实启动 Claude/Gemini 或使用模型额度。
+
+## 原文件保护与交接演练
+
+原有 7282 个文件逐项检查：缺失/内容变化 0，含源码、旧报告、大 fixture、原始程序、素材、构建产物和第三方依赖。完整基线 `.relay/bootstrap-before.json`；结果 `.relay/preservation-check.json`。根外 ZIP 与旧研究副本未修改。
+
+真实项目的只读交接演练结果记录在本节末尾；它不等同于另一模型开发并提交。
+
+已在真实项目执行 `./scripts/relay.sh check`（保留本轮暂存中的新增文件与活动任务），退出码 0。比较运行前后 7654 个文件的内容哈希：变化/增删 0，Git 暂存和未暂存状态保持。输出能定位当前源码、验证结果和下一项 T010。日志 `.relay/read-only-handoff.log`，结构结果 `.relay/read-only-handoff.json`。

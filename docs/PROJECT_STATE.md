@@ -1,0 +1,28 @@
+# 当前状态
+
+更新：2026-10-17（America/Los_Angeles）。维护者：Codex。当前阶段：保留现有逆向成果，建立三工具轮流开发入口和可复现验证。
+
+## 已核实
+
+- 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
+- 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
+- recovered/ 实际存在 19 个 `recovered_*.cpp` 模块、14 个头文件、20 个 verify 脚本、两个独立源码示例。源码结构包含补位、生成、JumpDown/Stab，见 ARCHITECTURE.md。
+- 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
+- `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
+- Codex CLI 0.135.0 可执行；Claude Code、Gemini CLI 未在当前 PATH 和常用用户安装目录发现。启动入口已预留，实际双模型接力尚未发生。
+
+## 验证
+
+本轮实际隔离构建通过：19 模块 macOS 双架构库与 iPhone ARM64 静态库、两个无界面源码示例、20 个既有 verify 脚本全部通过。复现 522 补位棋盘、3164 生成场景、1992 特殊动作场景，以及 20 个连续手势/1550 步联合链条。来源哈希一致。详细命令、边界和日志路径见 VALIDATION.md；历史报告与新实跑分开保存。
+
+## 本轮修改与继承修改
+
+整理前没有 Git，全部现有文件视为继承成果，已原样建立源码基线；没有清理、stash 或覆盖。新增 AGENTS.md / CLAUDE.md / GEMINI.md、README、docs/、scripts/ 与接力安全测试，单独原子提交；以 `git log` 查看设施提交。忽略的本地材料不在提交内。当前无待转交的继承源码修改；完成后释放 T001 活动锁。
+
+活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
+
+## 尚未完成及下一步
+
+完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
+
+下一轮先完成 TASKS.md 的 T010：把当前 19 模块的证据和未恢复回调整理到敌人阶段入口，再推进 T020。不要重做补位和随机生成；先读新的验证结果及现有代码。

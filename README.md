@@ -1,0 +1,21 @@
+# Dungeon Raid 本地接力工作区
+
+这是现有逆向工程的原地整理，保留 recovered/、reverse-engineering/、adapter/ 和本地兼容运行层。当前是部分恢复源码及无界面示例，完整重制游戏尚未完成。
+
+实际目录：`/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent`
+
+```sh
+cd /Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent
+./scripts/relay.sh check
+./scripts/relay.sh verify
+./scripts/relay.sh start codex
+# 切换前停止上一个工具；下面两条任选一条
+./scripts/relay.sh start claude
+./scripts/relay.sh start gemini
+```
+
+接力操作及突然中断的恢复方法见 [docs/RELAY.md](docs/RELAY.md)。AI 首先读 [AGENTS.md](AGENTS.md)、[当前状态](docs/PROJECT_STATE.md) 和 [任务列表](docs/TASKS.md)。
+
+验证需要 macOS、Python 3、Xcode macOS/iPhone SDK，以及本目录已有本地原版/TCI 测试依赖。`verify --full` 运行全部已有 recovered/verify_*.py。日志与新报告只写 `.relay/runs/`，不覆盖历史证据。
+
+Git 只保存审阅过的源码、脚本、文档。原版程序、机器码/反汇编、测试 fixture、图片、IPA、第三方源码/库及构建产物被忽略，仍原样留在本机。仅克隆本仓库不能重现原指令差分测试，依赖清单见架构文档；`.relay/` 也不是完整资源备份。没有远端或上传。
