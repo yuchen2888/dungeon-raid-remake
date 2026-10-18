@@ -8,8 +8,9 @@ fails if the committed registry differs from a fresh extraction.
 Every hand-written claim below (callback -> original symbol, native state ->
 original offset) is asserted against a literal snippet in the verify script
 that exercises it, so the registry cannot silently drift from the tests.
-Static callees come from direct bl/blx/b.w lines only; that is not a CFG and
-not proof of execution order.
+Static callees include only direct bl/blx/b.w targets named with __Z (C++).
+Numeric-address platform stubs and indirect calls are excluded. This is not
+a CFG or proof of execution order.
 """
 from pathlib import Path
 import argparse
@@ -110,7 +111,7 @@ HOOKS = {
         ('Colour', '__ZN4Quad9SetColourERK9GLcolour4', "'colour'", 'render'),
         ('UV', '__ZN4Quad5SetUVEffff', "'uv'", 'render'),
         ('Text', '__ZN4Tile10UpdateTextEbbb', "'text'", 'render, not recovered'),
-        ('Countdown', '__ZN4Tile15UpdateCountdownEv', "'countdown'", 'not recovered; evidence asm present'),
+        ('Countdown', '__ZN4Tile15UpdateCountdownEv', "'countdown'", 'UI countdown text/label placement only; no gameplay countdown mutation; not recovered'),
         ('EnemyUV', '__ZN4Tile13UpdateEnemyUVEv', "'enemy_uv'", 'render'),
         ('Sound', '__ZN4Game10QueueSoundE5Sound', "'sound'", 'audio'),
         ('Achievement', '__ZN4Game16QueueAchievementE11Achievementf', "'achievement'", 'platform'),
@@ -290,7 +291,7 @@ def build(pinned_run=None):
         native_inline_callees=inline, unmodelled_static_callees=unmodelled,
         boundaries=['No full ProcessAttack 0x14118 / EndOfTurn 0x13574 / Game::Process',
                     'CheckEndGame not recovered; encounters test forces it to return 0',
-                    'Static callees are direct-call sites only, not proof of executed branches'],
+                    'Static callees include direct __Z C++ symbols only; numeric-address platform stubs and indirect calls excluded; not proof of executed branches'],
         problems=problems)
 
 def main():

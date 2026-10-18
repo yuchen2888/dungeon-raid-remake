@@ -18,7 +18,9 @@ cd /Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/d
 
 脚本自动定位项目、检查活动任务、传入统一续做指令，保留工具默认交互/审批设置。它不切换分支、不新建项目、不恢复别家聊天，也不监测额度或自动轮换。
 
-当前可执行 Codex CLI；本环境未发现 Claude Code、Gemini CLI。缺工具时启动脚本会明确停止。可在已安装对应工具的终端直接重试；如尚未安装，按 [Claude Code 官方安装说明](https://code.claude.com/docs/en/setup) 与 [Gemini CLI 官方安装说明](https://geminicli.com/docs/get-started/installation/) 完成安装和账号登录，确认 `claude --version` / `gemini --version` 可执行。这里没有为它们安装程序、登录账号或发起付费 API 请求。
+当前可执行 Codex CLI；Claude 桌面应用已安装并完成过本项目的 Code 接力，但 `claude` 命令仍不在 PATH。Gemini CLI 尚未发现。以上 start 命令使用命令行工具；缺工具时会明确停止。使用已有 Claude 桌面应用时，进入「Code → 本电脑」，选择本项目目录，发送下段接手指令即可。要使用终端入口时，再按 [Claude Code 官方安装说明](https://code.claude.com/docs/en/setup) 或 [Gemini CLI 官方安装说明](https://geminicli.com/docs/get-started/installation/) 配置命令行并确认 `claude --version` / `gemini --version` 可执行。
+
+桌面接手指令：“读取 AGENTS.md、PROJECT_STATE.md 和 TASKS.md，先运行 `./scripts/relay.sh check`，检查继承修改，按共享规则认领首个未完成任务；完成一个可验收单元后检查、提交、更新状态并 handoff。”同一目录始终只有一个写入者。
 
 在 Codex 桌面端也可直接选择这个实际项目目录，再输入“读取 AGENTS.md，先做 relay check，按 TASKS.md 从中断处继续”。不要打开旧 ZIP 或较早 investigation 目录继续写。
 

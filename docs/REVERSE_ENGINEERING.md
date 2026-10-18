@@ -23,7 +23,7 @@
 
 ## T010：补位 / 生成 / 特殊动作登记（Claude，2026-10-18）
 
-机器可读真源 `docs/T010_REGISTRY.json`，由 `scripts/t010_registry.py` 从原 ARMv7 切片（SHA-256 `5ab6e004…9356`，与 inventory.json 一致）和 armv7-disassembly.txt 只读提取；`python3 -I scripts/t010_registry.py --check` 重新提取并逐字节比较，`problems` 必须为空。字节长度取反汇编符号起点到最后一条指令（含文字池），17 个均与下一符号相接。
+机器可读真源 `docs/T010_REGISTRY.json`，由 `scripts/t010_registry.py` 从原可执行文件中的 ARMv7 切片和 armv7-disassembly.txt 只读提取；整份可执行文件的 SHA-256 为 `5ab6e004…9356`（与 inventory.json 一致，不是单独切片哈希）。`python3 -I scripts/t010_registry.py --check` 重新提取登记内容并与已存 JSON 比较，`problems` 必须为空。字节长度取反汇编符号起点到最后一条指令（含文字池），17 个均与下一符号相接。
 
 计数：17 个完整原函数 + 1 个 Game::Process 片段，与 46 流程旧清单地址/原生函数零重叠；这是独立清单，不并入 46，也不换算完成度。
 
@@ -46,9 +46,9 @@
 
 状态字段（原偏移均在对应 verify 脚本中有字面量，脚本逐条断言）：GenerationState 的 time_to_promotion +0x14af0、generated_count/enemies +0x165c0/+0x165c4、promotion_enabled/one_health/force_coins +0x14af4..6、inhibit_force_coins +0x15563、filter +0xbfb8/9；GeneratedTile 的 Tile+0x22c/+0xb0/+0xb4/+0x224；补位的 resting_position 表 Game+0xb400、移动列表 Game+0xb3f8、608 字节 Tile 交换；特殊动作的 health +0xbd98、ui_health +0x5994、shake +0xbd90/4。
 
-回调边界：直接静态调用（bl/blx/b.w）逐个分类为 T010 内、46 流程内、hook 事件或原生内联，未建模 0 个。
+回调边界：目标名以 `__Z` 开头的直接 C++ 调用（bl/blx/b.w）逐个分类为 T010 内、46 流程内、hook 事件或原生内联，未建模 0 个。提取器不统计数值地址的平台 stub 或间接调用，不能据此声称所有调用均已恢复。
 - 需由调用方接回已恢复逻辑的 hook：Refill.Randomise→dr_randomise_tile、Refill.Stab→dr_stab、Generation.JumpDown→dr_jump_down（rewards_demo / 联合测试已接）。
 - 原生内联替代：CharacterClass::HavePerk、Game::GetSpecialEnemyCount、std::set<Tile*>（索引序布尔数组，因 Tile 连续存放与指针序一致）、std::list::push_back（AppendMoving）。
-- 未恢复且影响玩法：**Game::CheckEndGame**（Stab 后调用，测试强制返回 0，死亡/结束路径未验证）、**Tile::UpdateCountdown**（evidence 有汇编，事件仅记录）。其余为渲染/音频/UI/成就。
+- 未恢复且影响玩法：**Game::CheckEndGame**（Stab 后调用，测试强制返回 0，死亡/结束路径未验证）。**Tile::UpdateCountdown** 属未恢复的 UI：读取 Tile+0x250 的已有数值，用 sprintf / Label::SetText 更新倒计时文字并调整 Label 位置，没有推进或写回玩法倒计时；事件目前仅记录。其余为渲染/音频/UI/成就。
 
-边界：静态调用不是 CFG，也不证明分支已执行；没有 ProcessAttack 0x14118 / EndOfTurn 0x13574 / 完整 Game::Process。报告计数为历史文件与 2026-10-18 full run `20261018T065100.380122Z` 对照一致；同日默认 verify `20261018T070600.453747Z` 再次实跑四组通过，输入指纹相同。
+边界：静态调用不是 CFG，也不证明分支已执行；没有 ProcessAttack 0x14118 / EndOfTurn 0x13574 / 完整 Game::Process。报告计数为历史文件与前次完整运行 `20261018T065100.380122Z`（洛杉矶时间 2026-10-17）对照一致；2026-10-18 默认 verify `20261018T070600.453747Z` 再次实跑四组通过，输入指纹相同。Codex 复核已独立逐字节对照全部 17 函数及 1 片段，见 T010_REVIEW.md。

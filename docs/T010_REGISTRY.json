@@ -637,7 +637,7 @@
           "original_callee": "__ZN4Tile15UpdateCountdownEv",
           "original_address": "0x3d9ec",
           "recovered": false,
-          "note": "not recovered; evidence asm present"
+          "note": "UI countdown text/label placement only; no gameplay countdown mutation; not recovered"
         },
         {
           "event": "EnemyUV",
@@ -975,7 +975,7 @@
   "boundaries": [
     "No full ProcessAttack 0x14118 / EndOfTurn 0x13574 / Game::Process",
     "CheckEndGame not recovered; encounters test forces it to return 0",
-    "Static callees are direct-call sites only, not proof of executed branches"
+    "Static callees include direct __Z C++ symbols only; numeric-address platform stubs and indirect calls excluded; not proof of executed branches"
   ],
   "problems": []
 }

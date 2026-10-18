@@ -69,3 +69,9 @@
 - `./scripts/relay.sh verify`（默认集：build、两个示例、verify_refill/generation/encounters/refill_integration）→ exit 0，结果 `.relay/runs/20261018T070600.453747Z/result.json`；输入指纹 `b3586780…5c0d00`，与 2026-10-17 full run 相同，inputs_unchanged true。四组计数复现 522/108/2705、3164、1992、20/1550/280。
 - `python3 -m unittest discover -s tests -p test_relay.py` → 4 项通过。
 - 未运行 `verify --full`（其余 16 个 verify 的输入未变化，指纹相同）。
+
+## 2026-10-18 T010 交接复核（Codex）
+
+从干净的 `8d9604a` 接手。本轮重跑 `python3 -I scripts/t010_registry.py --check`，修正登记说明并重新生成 JSON 后再次通过（matches true、problems 0、17 函数）。独立逐字节核对全部 17 个完整函数和 1 个片段，与原可执行文件和反汇编一致；损坏登记副本被 --check 拒绝（exit 1）。原有 7282 文件再次核对无变化。
+
+修正 UpdateCountdown 为 UI 显示边界、可执行文件整文件哈希描述和直接具名调用的统计范围。现有两轮游戏验证的输入指纹与当前源码一致，本次未重复运行构建或游戏测试。详细证据和内联替代核对见 T010_REVIEW.md，本地独立核对结果 `.relay/reviews/T010-codex/independent-check.json`，最终登记检查日志 `.relay/reviews/T010-codex/final-check.log`。
