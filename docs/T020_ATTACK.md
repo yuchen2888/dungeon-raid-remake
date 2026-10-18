@@ -115,3 +115,14 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 - 错误副本：遍历改为行优先、封顶判断 `>=` 改 `>`，均 exit 1；真实源码未改。
 
 尚未完成：T020-C 扣血段仍以 Vampires 事件把调用交给调用方，测试里该段的原版 ProcessVampires 仍是存根。把两边接成同一状态的连续回合（同时跑真实 ProcessVampires）需要合并 attack_shield 与 encounters 两套测试状态，留作下一单元。
+
+## T020-E：扣血段接真实 ProcessVampires（Claude，2026-10-18）
+
+起始提交 77307b3。没有新增或修改恢复源码，只新增链式测试 `recovered/verify_attack_vampires.py`，把 T020-C 中仍是存根的吸血调用换成真实逻辑：
+
+- 原版侧：ProcessAttack `[0x14a14,0x14ae4)` 中的 ProcessVampires 调用**实际执行**原函数（连同 GetMortalEnemyType、Tile::GetAttack、Tile::AddHealth）；只有标签/文字/音效等表现调用记录为事件。原版内存除阶段、9 号值、生命、UI 生命、毒以及各格生命/上限外不得写入。
+- 原生侧：`dr_process_attack_health_damage` 的 Vampires 事件同步调用 `dr_process_vampires`；GenerationState → RefillState → PathState 与 attack_shield 的 ResourceState 共用同一 MatchState、棋盘和 resources。
+- 单段 300 组（10 个种族 × 30 块随机棋盘，约 30% 吸血鬼，含已匹配、带毒、满血、超上限）+ 10 局 × 30 回合吸收→扣血携带状态（232 回合进入扣血）；共 600 次比较、5448 个吸血相关事件，宿敌路径 397 次、封顶路径 1419 次。
+- 反向检查：把原生侧吸血回调换成空函数后测试失败（各格生命与事件不一致），证明这一步不是空回调也能通过的。
+
+至此 ProcessAttack 内"阶段 5 结束→吸收→护甲损耗；阶段 6 结束→扣血→吸血鬼回血→阶段 7"这一条路径都由恢复源码执行。仍未恢复：阶段 1..4（含 DoCounterattack 0x143a4）、阶段 5/6 标签动画、0x1487e 后读 Game+0xbe6c / +0xbe68 的分支（AttackSkull 0x149dc、MoveMatchedTiles 0x14a0c）、阶段 7 收尾（0x14ae4 起）、游戏结束判断。
