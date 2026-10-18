@@ -4,6 +4,8 @@
 
 实际目录：`/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent`
 
+第一次使用先读 [用户操作说明](docs/用户操作.md)：现在留在 Codex，由 Codex 继续开发；额度用完后停止当前工具，再让下一位 AI 打开同一目录。Claude 桌面版可直接用「Code → 本电脑」，不要求先配置 claude 命令。
+
 ```sh
 cd /Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent
 ./scripts/relay.sh check
