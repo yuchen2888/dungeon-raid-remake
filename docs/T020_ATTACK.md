@@ -126,3 +126,18 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 - 反向检查：把原生侧吸血回调换成空函数后测试失败（各格生命与事件不一致），证明这一步不是空回调也能通过的。
 
 至此 ProcessAttack 内"阶段 5 结束→吸收→护甲损耗；阶段 6 结束→扣血→吸血鬼回血→阶段 7"这一条路径都由恢复源码执行。仍未恢复：阶段 1..4（含 DoCounterattack 0x143a4）、阶段 5/6 标签动画、0x1487e 后读 Game+0xbe6c / +0xbe68 的分支（AttackSkull 0x149dc、MoveMatchedTiles 0x14a0c）、阶段 7 收尾（0x14ae4 起）、游戏结束判断。
+
+## T020-F：敌人削弱片段（Claude，2026-10-18）
+
+起始提交 98a112a。阶段 5 结束路径在护甲损耗（T020-A）之后紧接两个效果：Game+0xbe6c 削弱、Game+0xbe68 全体伤害。本单元只恢复前者：`[0x1487e,0x14938)` 加上它跳转经过的两段循环块 `[0x14b56,0x14b5e)`、`[0x14b9c,0x14bbe)`（合并 SHA-256 `62f2ff31beff7910153a9b26a20fa6882183d41c8394389404dc403220ef13cd`），在 attack_shield 模块追加 `dr_process_attack_weaken(PathState*, weaken, hooks)`。
+
+| 项 | 原位置 | 行为 |
+| --- | --- | --- |
+| 削弱值 | Game+0xbe6c | ≤0 时直接到 0x14938；ItemUpgrade::GetRandomStat 也读取它（装备/升级属性），写入者未定位，由调用者传入 |
+| 遍历 | 列 x 外层、行 y 内层 | 类型 1、attack_flag（Tile+0x86）为 0、攻击（Tile+0xa4）>1 的敌人 |
+| 削弱 | Tile+0xa4 | 攻击 = 攻击 − 削弱值（回绕减法），低于 1 则为 1 |
+| 表现 | QueueSound / UpdateText / GetAttackLabelPosition / AddSimpleLabel / AddParticles | 第一个命中的敌人前播一次音效 30；每格 UpdateText(1,0,0)、标签 4（数值为削弱值而非实际减少量，颜色 14、1.0 倍）、粒子 3 |
+
+验证 `recovered/verify_attack_weaken.py`：336 组边界（削弱 −1/0/1/2/4/100 × 攻击 −3..101 × 类型 × attack_flag）+ 600 组随机 + 5 局 × 15 次携带状态重复削弱，共 1011 次比较；8307 次削弱、3230 次结果为 1。原版 Game 区除各格攻击外无写入。错误副本：攻击门槛 `<=1` 改 `<1`、每格都播音效，均 exit 1。
+
+仍未恢复：0x14938 起的 Game+0xbe68 全体伤害（清 Game+0xbfa4..0xbfb7 五个计数；对未出手敌人逐个 AttackSkull，击杀 2 号敌人时成就 43；随后 MoveMatchedTiles 并清全部 attack_flag，回到 0x14ae4）。它要接战斗、补位和生成整条链，适合作为单独单元，复用 dr_attack_skull、dr_move_matched_tiles 及 refill_integration 的接线方式。

@@ -460,6 +460,36 @@
         "Game::ProcessVampires 0xdaf8 (recovered as dr_process_vampires in T020-D; caller runs it on the Vampires event; only vampire tile health)"
       ],
       "boundary": "Partial instructions only; no phase animation, scheduler or game-over check"
+    },
+    {
+      "start": "0x1487e",
+      "end_exclusive": "0x14938",
+      "size": 186,
+      "original_bytes_sha256": "98a7d5635f6258daf78a32ddf64e4ddaa047b3557cac120f87d6d456cf7da74e",
+      "extra_blocks": [
+        {
+          "start": "0x14b56",
+          "end_exclusive": "0x14b5e",
+          "original_bytes_sha256": "b5097c47a6510f290aed8d43c39291c8b5aa0fc7a94230407636679c10e88d76"
+        },
+        {
+          "start": "0x14b9c",
+          "end_exclusive": "0x14bbe",
+          "original_bytes_sha256": "e97d2216e96a0378239a539d6ee33fb8193de3a4d07ac0bba5725664b8b82764"
+        }
+      ],
+      "native_function": "dr_process_attack_weaken",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_weaken.py",
+      "inputs": [
+        "R8=Game pointer; reached after shield wear on the phase-5 completion path",
+        "Game+0xbe6c weaken amount (producer not recovered)",
+        "tile type +0x9c, attack_flag +0x86, attack +0xa4"
+      ],
+      "outputs": [
+        "attack=max(1,attack-weaken) for unattacked enemies with attack>1, column-major"
+      ],
+      "boundary": "Partial instructions only; continues at 0x14938 (Game+0xbe68 damage-all, not recovered)"
     }
   ],
   "limits": [

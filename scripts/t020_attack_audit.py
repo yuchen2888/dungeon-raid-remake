@@ -70,7 +70,17 @@ def build():
                             'Game+0x15540 poison','Game+0xbd98 health','Game+0x5994 UI health'],
                     outputs=['poison=max(enemy9,poison)','enemy9 label flush','health=max(0,health-remaining)','phase 7'],
                     callbacks=['Game::ProcessVampires 0xdaf8 (recovered as dr_process_vampires in T020-D; caller runs it on the Vampires event; only vampire tile health)'],
-                    boundary='Partial instructions only; no phase animation, scheduler or game-over check')],
+                    boundary='Partial instructions only; no phase animation, scheduler or game-over check'),
+                    dict(start=hex(0x1487e),end_exclusive=hex(0x14938),size=0x14938-0x1487e,
+                    original_bytes_sha256=hashlib.sha256(read(0x1487e,0x14938-0x1487e)).hexdigest(),
+                    extra_blocks=[dict(start=hex(a),end_exclusive=hex(b),original_bytes_sha256=hashlib.sha256(read(a,b-a)).hexdigest())
+                                  for a,b in ((0x14b56,0x14b5e),(0x14b9c,0x14bbe))],
+                    native_function='dr_process_attack_weaken',source='recovered/recovered_attack_shield.cpp',
+                    verify='recovered/verify_attack_weaken.py',
+                    inputs=['R8=Game pointer; reached after shield wear on the phase-5 completion path',
+                            'Game+0xbe6c weaken amount (producer not recovered)','tile type +0x9c, attack_flag +0x86, attack +0xa4'],
+                    outputs=['attack=max(1,attack-weaken) for unattacked enemies with attack>1, column-major'],
+                    boundary='Partial instructions only; continues at 0x14938 (Game+0xbe68 damage-all, not recovered)')],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph',
                         'Presentation categories still require validation when their real implementations are connected',
                         'DoCounterattack remains an unrecovered gameplay dependency; ProcessVampires recovered in T020-D but the health segment still reaches it through an ordered callback'])

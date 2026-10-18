@@ -1,5 +1,6 @@
 #pragma once
 #include "recovered_resources.hpp"
+#include "recovered_path.hpp"
 namespace dungeonraid {
 enum class AttackShieldEventKind : std::int32_t { Random=1, ShieldValue, ShieldShatter, Sound };
 struct AttackShieldEvent { AttackShieldEventKind kind; std::int32_t a,b,c,d; };
@@ -22,6 +23,11 @@ struct AttackAbsorbHooks { void* context; void (*event)(void*,const AttackAbsorb
 enum class AttackHealthEventKind : std::int32_t { Sound=1, Label, Poison, Vampires, HelpHealth, HealthBar };
 struct AttackHealthEvent { AttackHealthEventKind kind; std::int32_t a,b,c,d; };
 struct AttackHealthHooks { void* context; void (*event)(void*,const AttackHealthEvent*); };
+// Sound: a=sound. Text: Tile::UpdateText(a,b,c). Label: a=type 4,b=number,
+// c=colour 14,d=scale bits at Tile::GetAttackLabelPosition. Particles: a=type 3.
+enum class AttackWeakenEventKind : std::int32_t { Sound=1, Text, Label, Particles };
+struct AttackWeakenEvent { AttackWeakenEventKind kind; std::int32_t tile,a,b,c,d; };
+struct AttackWeakenHooks { void* context; void (*event)(void*,const AttackWeakenEvent*); };
 }
 extern "C" {
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
@@ -30,6 +36,11 @@ extern "C" {
 // nothing gets through, sets phase 7 and flushes a positive enemy9_damage label.
 std::int32_t dr_process_attack_armour_absorb(dungeonraid::AttackDamageState*,
     const dungeonraid::AttackAbsorbHooks*);
+// ProcessAttack [0x1487e,0x14938) plus loop blocks 0x14b56..0x14b5d and
+// 0x14b9c..0x14bbd: when weaken (Game+0xbe6c) > 0, every enemy tile that has
+// not attacked and has attack > 1 loses weaken attack (floor 1), column-major.
+void dr_process_attack_weaken(dungeonraid::PathState*,std::int32_t weaken,
+    const dungeonraid::AttackWeakenHooks*);
 // ProcessAttack subsection [0x14a14,0x14ae4): phase-6 completion only.
 // Applies remaining incoming_damage to health (floored at 0), raises poison to
 // enemy9_damage, sets phase 7. Does not schedule phases or check game over.

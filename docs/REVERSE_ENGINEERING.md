@@ -70,3 +70,7 @@
 ## T020-D：ProcessVampires 0xdaf8 / Tile::AddHealth 0x3dc6c（Claude，2026-10-18）
 
 两个完整原函数 → `dr_process_vampires` / `dr_tile_add_health`（recovered_encounters.cpp）。吸血鬼（敌人 20）按攻击力回血，平时封顶于 max_health，玩家宿敌为吸血鬼时走 AddHealth 不封顶并抬高上限；遍历为列优先。verify_vampires.py 原版完整执行，1100 次比较。这是 T020 期间新增的两个完整函数，单独计数，不并入 46 流程或 T010；ProcessAttack 调用登记里 ProcessVampires 的分类已改为 T020-D。
+
+## T020-E / T020-F（Claude，2026-10-18）
+
+T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版侧真实执行，原生侧事件调用 dr_process_vampires，共享同一状态，无源码改动。T020-F：`[0x1487e,0x14938)`＋循环块 `[0x14b56,0x14b5e)`、`[0x14b9c,0x14bbe)` → `dr_process_attack_weaken`，按 Game+0xbe6c 削弱未出手敌人攻击（最低 1）。细节见 T020_ATTACK.md。均为局部片段，不计入完整函数数。

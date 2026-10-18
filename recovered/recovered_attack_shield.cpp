@@ -73,3 +73,23 @@ extern "C" void dr_process_attack_health_damage(AttackDamageState* s,const Attac
         r.ui_health=r.health;emit(AttackHealthEventKind::HealthBar,r.health);
     }
 }
+extern "C" void dr_process_attack_weaken(PathState* p,std::int32_t weaken,const AttackWeakenHooks* h) {
+    auto emit=[h](AttackWeakenEventKind kind,int tile,int a=0,int b=0,int c=0,int d=0) {
+        if(h && h->event) { const AttackWeakenEvent e{kind,tile,a,b,c,d};h->event(h->context,&e); }
+    };
+    if(weaken<=0)return;
+    const auto& board=p->match->stroke->selection;
+    bool first=true;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;auto& c=p->combat[i];
+        if(board.tiles[i].rule.type!=1 || c.attack_flag || c.attack<=1)continue;
+        if(first)emit(AttackWeakenEventKind::Sound,-1,30);
+        // Original RSB wraps; only a signed result below 1 is raised to 1.
+        const auto reduced=static_cast<std::int32_t>(static_cast<std::uint32_t>(c.attack)-static_cast<std::uint32_t>(weaken));
+        c.attack=reduced<1?1:reduced;
+        emit(AttackWeakenEventKind::Text,i,1,0,0);
+        emit(AttackWeakenEventKind::Label,i,4,weaken,14,0x3f800000);
+        emit(AttackWeakenEventKind::Particles,i,3);
+        first=false;
+    }
+}

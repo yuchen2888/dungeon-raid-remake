@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-18（America/Los_Angeles）。维护者：Claude（T020-E）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击中护甲吸收+损耗、阶段 6 扣血、吸血鬼回血已恢复并在共享状态上链式验证；Gemini 尚未接入。
+更新：2026-10-18（America/Los_Angeles）。维护者：Claude（T020-F）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击中护甲吸收+损耗+削弱、阶段 6 扣血+吸血鬼回血已恢复；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、25 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、26 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -16,6 +16,7 @@
 - T020-C：阶段 6 扣血片段 `[0x14a14,0x14ae4)` 恢复为 `dr_process_attack_health_damage`：剩余伤害扣生命（负数归 0）、毒＝max(9 号敌人伤害,毒)、阶段 7。阶段 5→6→7 的切换位置已核实（0x146ce/0x146d8）。Game::ProcessVampires 未恢复，作为有序回调。
 - T020-D：完整原函数 Game::ProcessVampires 0xdaf8、Tile::AddHealth 0x3dc6c 恢复为 dr_process_vampires / dr_tile_add_health（encounters 模块），原版完整执行对照通过。扣血段通过 Vampires 事件交给调用方执行。
 - T020-E：扣血段与真实 ProcessVampires 已在同一共享状态上链式差分（原版侧不再存根，原生 Vampires 事件调用 dr_process_vampires），空回调会被测试拒绝。
+- T020-F：护甲损耗之后的敌人削弱片段 `[0x1487e,0x14938)`（含两段循环块）恢复为 `dr_process_attack_weaken`：Game+0xbe6c>0 时未出手敌人攻击减该值、最低 1。接下来的 Game+0xbe68 全体伤害仍未恢复。
 
 ## 验证
 
@@ -41,10 +42,12 @@
 
 2026-10-18 Claude 继续认领 T020-E（起始 77307b3）：只新增 verify_attack_vampires.py 并加入默认 verify，无源码改动。
 
+2026-10-18 Claude 继续认领 T020-F（起始 98a112a）：attack_shield 模块追加削弱函数（头文件新增 include recovered_path.hpp），新增 verify_attack_weaken.py，默认 verify 与调用登记各加一项。
+
 活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
 
 ## 尚未完成及下一步
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-继续 T020 的下一单元：先核实阶段 7 收尾（0x14ae4 起，读 Game+0xb92b 与帧时间）或 0x1487e 后读 Game+0xbe6c / +0xbe68 的分支（含 AttackSkull 0x149dc、MoveMatchedTiles 0x14a0c 调用点）的段边界与阶段语义，再选一段同法差分恢复。阶段 1..4 与 DoCounterattack 0x143a4 也未恢复。复用 T020-A..E、AttackSkull、MoveMatchedTiles、补位与生成，不重写。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+继续 T020 的下一单元：0x14938 起的 Game+0xbe68 全体伤害——清 Game+0xbfa4..0xbfb7 五个计数，按列优先对未出手敌人 AttackSkull（击杀 2 号敌人发成就 43），随后 MoveMatchedTiles，并在 0x14b66 循环清全部 attack_flag，回到 0x14ae4。需要复用 dr_attack_skull、dr_move_matched_tiles 和补位/生成接线（参考 verify_refill_integration.py、rewards_demo.cpp）。另一候选是阶段 7 收尾（0x14ae4 起）。阶段 1..4 与 DoCounterattack 0x143a4 也未恢复。不重写已恢复部分。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
