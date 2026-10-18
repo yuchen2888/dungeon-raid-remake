@@ -89,3 +89,11 @@
 - 错误副本（隔离开发副本，非 .relay/runs）：吸收判断 `>0`→`>=0`、9 号敌人 `>0`→`!=0`，均 exit 1 并在 0x147e4 处出现阶段/标签差异；真实源码与副本对比一致。
 - `python3 -m unittest discover -s tests -p test_relay.py` → 4 项通过；`t010_registry.py --check`、`t020_attack_audit.py --check` 均 matches true。
 - 边界：入口 R4/R5/R6 由测试按前一段代码设置；标签/音效/护甲 UI 为事件；不是完整 ProcessAttack 或可玩回合。
+
+## 2026-10-18 T020-C：阶段 6 扣血片段（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、23 个 verify 脚本共 26 步通过。运行目录 `.relay/runs/20261018T151443.228996Z`，输入指纹 `2467ca02…14f9ed`，inputs_unchanged true。
+- 新 verify_attack_health：2320 次比较（1280 边界 + 800 随机单段 + 6 局 × 40 回合吸收→扣血连续链，其中 168 回合进入扣血），单段字节 SHA-256 `f16f6bd0…79be19e`。T020-A/B 的测试同次通过。
+- 错误副本（隔离开发副本）：去掉生命下限、交换 Vampires/HelpHealth 顺序，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；`t010_registry.py --check`、`t020_attack_audit.py --check` 均 matches true。
+- 边界：ProcessVampires 为有序回调（未恢复）；阶段 6 由测试按 0x146e0 设置；无阶段动画、调度或游戏结束判断。

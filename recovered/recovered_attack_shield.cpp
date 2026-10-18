@@ -50,3 +50,26 @@ extern "C" std::int32_t dr_process_attack_armour_absorb(AttackDamageState* s,con
     }
     return absorbed;
 }
+extern "C" void dr_process_attack_health_damage(AttackDamageState* s,const AttackHealthHooks* h) {
+    auto emit=[h](AttackHealthEventKind kind,int a=0,int b=0,int c=0,int d=0) {
+        if(h && h->event) { const AttackHealthEvent e{kind,a,b,c,d};h->event(h->context,&e); }
+    };
+    auto& r=*s->resources;
+    emit(AttackHealthEventKind::Sound,17);
+    emit(AttackHealthEventKind::Label,2,s->incoming_damage,11,0x3f000000);
+    if(s->enemy9_damage>=r.poison)r.poison=s->enemy9_damage;
+    emit(AttackHealthEventKind::Poison,r.poison);
+    if(s->enemy9_damage>0) {
+        emit(AttackHealthEventKind::Label,7,s->enemy9_damage,15,0x3f000000);
+        s->enemy9_damage=0;
+    }
+    emit(AttackHealthEventKind::Vampires);
+    emit(AttackHealthEventKind::HelpHealth);
+    s->phase=7;
+    // Original RSB wraps; only a signed negative result is floored.
+    const auto health=static_cast<std::int32_t>(static_cast<std::uint32_t>(r.health)-static_cast<std::uint32_t>(s->incoming_damage));
+    r.health=health<0?0:health;
+    if(r.health!=r.ui_health) {
+        r.ui_health=r.health;emit(AttackHealthEventKind::HealthBar,r.health);
+    }
+}

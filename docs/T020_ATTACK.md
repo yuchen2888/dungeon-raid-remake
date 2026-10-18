@@ -71,3 +71,26 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 仍未恢复：phase 1..4 与 phase 5 前半段（含 DoCounterattack 调用点 0x143a4）；0x1487e 之后读 Game+0xbe6c / +0xbe68 的分支（含 AttackSkull 0x149dc、MoveMatchedTiles 0x14a0c 调用点）；phase≠5 时 0x146d8 跳往的 0x14a14 起代码（读 0xbe84 出标签，0x14a9c 处置阶段 7 并读生命 0xbd98）；ProcessVampires 和阶段收尾。以上只是静态阅读到的位置，段边界和阶段语义尚未核实。
 
 下一单元候选：0x14a14 起的剩余伤害/扣血代码。先核实段边界、入口寄存器与阶段号，再同法差分；继续复用 T020-A/B、AttackSkull、MoveMatchedTiles，不重写。
+
+## T020-C：阶段 6 扣血片段（Claude，2026-10-18）
+
+起始提交 929526b（自身上一单元），工作树干净。阶段结构经静态阅读核实：0x1457c 起阶段 5、6 共用一段标签动画，进度到 1 时置完成标志；0x146ce 处阶段 5 完成→置 6 并进入 T020-B 吸收段，阶段 6 完成→0x146d8 跳到 0x14a14。本单元恢复 `[0x14a14,0x14ae4)`（208 字节，SHA-256 `f16f6bd0faef2eb9695078ade4d80ea635d0f5096be81ebfbf690fa9779be19e`），在 attack_shield 模块追加 `dr_process_attack_health_damage`。
+
+| 步骤 | 原位置 | 行为 |
+| --- | --- | --- |
+| 音效 17、伤害标签 | QueueSound / AddSimpleLabel | 标签类型 2，位置 Game+0xbd30，数值为剩余伤害 Game+0xbe84，颜色 11、0.5 倍 |
+| 毒 | Game+0x15540（ResourceState.poison） | poison = max(9 号敌人伤害 Game+0x1553c, poison)，有符号；随后 SetPoison 事件。9 号敌人即施毒者 |
+| 9 号标签 | Game+0x15518 | 9 号伤害 >0 时出标签（类型 7、颜色 15）并清零，与 T020-B 全吸收分支同一标签 |
+| 吸血 | Game::ProcessVampires 0xdaf8 | **未恢复**：原调用在此处，原生发有序 Vampires 事件由调用方执行。已核对它只写吸血敌人格自身生命（Tile+0xac），不写本段比较的字段 |
+| 帮助 | Interface::ShowHelpHealth | UI 事件 |
+| 扣血 | Game+0xbd98 / +0x5994 | 阶段置 7；health = health − 剩余伤害（回绕减法），负数归 0；与 UI 生命不同时同步并发 HealthBar |
+
+验证 `recovered/verify_attack_health.py`：
+- 单段 1280 组边界（生命 0/1/5/30/100 × UI 同/异 × 剩余伤害 −3..200 八值 × 9 号 −1/0/3/50 × 毒 −1/0/3/10）+ 800 组随机（含任意初始阶段）。
+- 连续回合：6 局 × 40 回合在同一棋盘/护甲/生命/毒/随机流上携带状态；每回合按 0x146e0 置阶段 6，先跑原版吸收段，仍为阶段 6 才跑扣血段，原生同序调用 absorb + health。168 回合进入扣血。
+- 共 2320 次比较；比较阶段、剩余伤害、9 号值、生命/UI 生命、毒、护甲/UI 和有序事件；原版 Game 区除允许字段外无写入；五个分支点均执行。
+- 错误副本：去掉生命下限、交换 Vampires 与 HelpHealth 顺序，均 exit 1；真实源码未改。
+
+仍未恢复：阶段 1..4（含 DoCounterattack 调用点 0x143a4）、阶段 5/6 标签动画本身、0x1487e 之后读 Game+0xbe6c/+0xbe68 的分支（AttackSkull 0x149dc、MoveMatchedTiles 0x14a0c 调用点）、阶段 7 收尾（0x14ae4 起）、ProcessVampires、游戏结束判断。
+
+下一单元候选：ProcessVampires 0xdaf8（130 行，只改吸血敌人格生命，依赖 GetMortalEnemyType/GetAttack/AddHealth/UpdateText），恢复后把本段的 Vampires 事件换成真实调用并重跑连续回合。

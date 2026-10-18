@@ -62,3 +62,7 @@
 ## T020-B：攻击护甲吸收片段（Claude，2026-10-18）
 
 `[0x14790,0x147e4)` → `dr_process_attack_armour_absorb`（recovered_attack_shield.cpp）。读 Game+0xbe84 来袭伤害与护甲，算出 R10＝min(伤害,护甲) 交给 T020-A，写回剩余伤害，全吸收时置阶段 Game+0xb8a8＝7 并结算 Game+0x1553c 标签。原版差分 verify_attack_absorb.py 同时比较单段和连续 `[0x14790,0x1487e)`。字段来源、测试数和边界见 T020_ATTACK.md 的 T020-B 节；登记在 T020_ATTACK_CALLS.json 的 additional_recovered_partials。仍是局部片段，不计入完整函数数。
+
+## T020-C：阶段 6 扣血片段（Claude，2026-10-18）
+
+`[0x14a14,0x14ae4)` → `dr_process_attack_health_damage`。剩余伤害扣生命（负数归 0）、毒取 max(9 号敌人伤害, 现毒)、阶段置 7。Game::ProcessVampires 0xdaf8 未恢复，作为有序回调保留（已核对只写吸血敌人格生命）。verify_attack_health.py 含单段差分和吸收→扣血连续回合。细节见 T020_ATTACK.md 的 T020-C 节。局部片段，不计入完整函数数。

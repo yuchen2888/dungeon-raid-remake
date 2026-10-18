@@ -16,6 +16,12 @@ struct AttackDamageState {
 enum class AttackAbsorbEventKind : std::int32_t { DamageNumber=1, Label };
 struct AttackAbsorbEvent { AttackAbsorbEventKind kind; std::int32_t a,b,c,d; };
 struct AttackAbsorbHooks { void* context; void (*event)(void*,const AttackAbsorbEvent*); };
+// Label: a=type,b=number,c=colour,d=scale bits; type 2 at Game+0xbd30, type 7 at Game+0x15518.
+// Vampires: Game::ProcessVampires is NOT recovered; the caller must run it at
+// this point (it only heals vampire tiles, never player health/poison/damage).
+enum class AttackHealthEventKind : std::int32_t { Sound=1, Label, Poison, Vampires, HelpHealth, HealthBar };
+struct AttackHealthEvent { AttackHealthEventKind kind; std::int32_t a,b,c,d; };
+struct AttackHealthHooks { void* context; void (*event)(void*,const AttackHealthEvent*); };
 }
 extern "C" {
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
@@ -24,6 +30,11 @@ extern "C" {
 // nothing gets through, sets phase 7 and flushes a positive enemy9_damage label.
 std::int32_t dr_process_attack_armour_absorb(dungeonraid::AttackDamageState*,
     const dungeonraid::AttackAbsorbHooks*);
+// ProcessAttack subsection [0x14a14,0x14ae4): phase-6 completion only.
+// Applies remaining incoming_damage to health (floored at 0), raises poison to
+// enemy9_damage, sets phase 7. Does not schedule phases or check game over.
+void dr_process_attack_health_damage(dungeonraid::AttackDamageState*,
+    const dungeonraid::AttackHealthHooks*);
 // ProcessAttack subsection [0x147e4,0x1487e), NOT the complete enemy phase.
 // Caller supplies the preceding min(incoming damage, armour) value (R10).
 // Valid gameplay domain: 0 <= absorbed_damage <= current armour.
