@@ -8,9 +8,9 @@
 | 随机 | random，原 RNG 地址/字节及 random_provenance.json | 5 个函数、6 流逐步对照 | 原始溢出域、启动取种等以原测试边界为限 |
 | 输入/围合 | stroke/preview/rune | 629 手势、1192 预览、594 符文等，集合互有重叠 | 输入门槛预先满足，不能相加为独立游戏覆盖 |
 | 消除/奖励/路径 | match/tokens/resources/motion/path | 517 路径、26 联合手势、973 步、412 奖励 | 特殊目标/表现、完整主循环仍是接口 |
-| 补位 | refill；MoveMatchedTiles 0x10ed8、PositionTile 0xb3c8（verify_refill.py 实际调用地址）、Tile::Process；对应汇编 | 522 棋盘、108 定位、2705 下落步 | 独立测试对生成/Stab 用确定性回调，另有真实依赖联合测试 |
-| 生成 | generation；RandomiseTile 0xf5b8、GenerateStats 0x3e740、SetType 0x3f32c 等 | 3164 场景 | 完整函数/状态清单仍需 T010 补入旧 inventory，不能直接沿用“46 流程”当最新计数 |
-| 特殊动作 | encounters；SwapTiles/JumpDown/Stab 对应 evidence/ | 1992 场景（1296 swap/36 jump/360 stab/300 move） | 与补位/生成接通，非完整敌人 ProcessAttack |
+| 补位 | refill；PositionTile/MoveMatchedTiles/Tile::Process/SwapTiles 及 Game::Process 下落片段，见 T010 登记 | 522 棋盘、108 定位、2705 下落步 | 独立测试对生成/Stab 用确定性回调；SwapTiles 直接差分在 verify_encounters（1296 swap） |
+| 生成 | generation；11 个原函数，地址/字节哈希见下节 T010 登记 | 3164 场景 | 独立于 46 流程登记，不累加为完成度 |
+| 特殊动作 | encounters；Stab/JumpDown（SwapTiles 源码在 refill），见 T010 登记 | 1992 场景（1296 swap/36 jump/360 stab/300 move） | 与补位/生成接通，非完整敌人 ProcessAttack；CheckEndGame 被测试强制返回 0 |
 | 连续链条 | verify_refill_integration.py、rewards_demo.cpp | 20 手势、1550 步、280 奖励/新格 | 明确没有重开输入或完整回合 |
 
 未核实的聊天说法不能升级为已完成项。本轮已实际复现表中各组现有验证，包括 522、3164、1992 和联合链条，详情见 VALIDATION.md；表中历史数字仍保留其原范围，不与其他组累加。职业档案以原 fixture 重放通过，未重新采集原版档案。旧 generation_failure.json 等失败现场虽与后续 passed 报告并存，也原样保留，不据文件名推断历史失败的修复原因。
@@ -20,3 +20,35 @@
 待恢复：ProcessAttack 0x14118、EndOfTurn 0x13574、ProcessInput 0x16638 门槛、InitNewGame 0x15c50、Game::Process 的完整阶段转换、Healing/CheckEndGame 及存档系统。首先查原指令和现有模块接口，再写差分复现，不用等概率随机或空敌人回调拼成假完整循环。
 
 新增条目必须记录：原符号/地址/字节哈希 → 源码函数与文件 → 状态字段 → 明确回调 → 原版执行或 fixture 重放 → 场景与边界 → 本轮验证来源哈希/退出码。未经逐个核对不要补猜地址或函数数量。
+
+## T010：补位 / 生成 / 特殊动作登记（Claude，2026-10-18）
+
+机器可读真源 `docs/T010_REGISTRY.json`，由 `scripts/t010_registry.py` 从原 ARMv7 切片（SHA-256 `5ab6e004…9356`，与 inventory.json 一致）和 armv7-disassembly.txt 只读提取；`python3 -I scripts/t010_registry.py --check` 重新提取并逐字节比较，`problems` 必须为空。字节长度取反汇编符号起点到最后一条指令（含文字池），17 个均与下一符号相接。
+
+计数：17 个完整原函数 + 1 个 Game::Process 片段，与 46 流程旧清单地址/原生函数零重叠；这是独立清单，不并入 46，也不换算完成度。
+
+| 模块 | 原函数 | 地址 | 字节 | 原生函数 | 直接差分 |
+| --- | --- | --- | --- | --- | --- |
+| refill | Game::PositionTile | 0xb3c8 | 204 | dr_position_tile | verify_refill |
+| refill | Game::MoveMatchedTiles | 0x10ed8 | 664 | dr_move_matched_tiles | verify_refill |
+| refill | Tile::Process | 0x3d1d0 | 76 | dr_process_falling_tile | verify_refill |
+| refill | Game::SwapTiles | 0xb494 | 304 | dr_swap_tiles | verify_encounters |
+| refill（片段） | Game::Process 下落列表 | 0x173c8 | 56 | dr_process_falling_list | verify_refill_integration |
+| generation | Tile::GenerateStats | 0x3e740 | 2084 | dr_generate_stats | verify_generation |
+| generation | Tile::SetType | 0x3f32c | 272 | dr_set_tile_type | verify_generation |
+| generation | Tile::Promote | 0x3f260 | 204 | dr_promote_tile | verify_generation |
+| generation | Game::RandomiseTile | 0xf5b8 | 516 | dr_randomise_tile | verify_generation |
+| generation | Tile::MakeArrow / MakeManaPotion / MakeBroken | 0x3d870 / 0x3d814 / 0x3d714 | 44 / 92 / 72 | dr_make_arrow / dr_make_mana_potion / dr_make_broken | verify_generation |
+| generation | Tile::UpdateValues | 0x3db9c | 96 | dr_update_generated_values | verify_generation |
+| generation | Game::IsTimeToPromote / SetTimeToPromotion / GetTotalXP | 0xcbc4 / 0x90d8 / 0x189fc | 168 / 60 / 48 | dr_time_to_promote / dr_set_time_to_promotion / dr_generation_total_xp | verify_generation |
+| encounters | Game::Stab | 0x10e24 | 180 | dr_stab | verify_encounters |
+| encounters | Game::JumpDown | 0xb5c4 | 132 | dr_jump_down | verify_encounters |
+
+状态字段（原偏移均在对应 verify 脚本中有字面量，脚本逐条断言）：GenerationState 的 time_to_promotion +0x14af0、generated_count/enemies +0x165c0/+0x165c4、promotion_enabled/one_health/force_coins +0x14af4..6、inhibit_force_coins +0x15563、filter +0xbfb8/9；GeneratedTile 的 Tile+0x22c/+0xb0/+0xb4/+0x224；补位的 resting_position 表 Game+0xb400、移动列表 Game+0xb3f8、608 字节 Tile 交换；特殊动作的 health +0xbd98、ui_health +0x5994、shake +0xbd90/4。
+
+回调边界：直接静态调用（bl/blx/b.w）逐个分类为 T010 内、46 流程内、hook 事件或原生内联，未建模 0 个。
+- 需由调用方接回已恢复逻辑的 hook：Refill.Randomise→dr_randomise_tile、Refill.Stab→dr_stab、Generation.JumpDown→dr_jump_down（rewards_demo / 联合测试已接）。
+- 原生内联替代：CharacterClass::HavePerk、Game::GetSpecialEnemyCount、std::set<Tile*>（索引序布尔数组，因 Tile 连续存放与指针序一致）、std::list::push_back（AppendMoving）。
+- 未恢复且影响玩法：**Game::CheckEndGame**（Stab 后调用，测试强制返回 0，死亡/结束路径未验证）、**Tile::UpdateCountdown**（evidence 有汇编，事件仅记录）。其余为渲染/音频/UI/成就。
+
+边界：静态调用不是 CFG，也不证明分支已执行；没有 ProcessAttack 0x14118 / EndOfTurn 0x13574 / 完整 Game::Process。报告计数为历史文件与 2026-10-18 full run `20261018T065100.380122Z` 对照一致；同日默认 verify `20261018T070600.453747Z` 再次实跑四组通过，输入指纹相同。

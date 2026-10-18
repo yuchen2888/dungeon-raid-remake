@@ -60,3 +60,12 @@
 真实项目的只读交接演练结果记录在本节末尾；它不等同于另一模型开发并提交。
 
 已在真实项目执行 `./scripts/relay.sh check`（保留本轮暂存中的新增文件与活动任务），退出码 0。比较运行前后 7654 个文件的内容哈希：变化/增删 0，Git 暂存和未暂存状态保持。输出能定位当前源码、验证结果和下一项 T010。日志 `.relay/read-only-handoff.log`，结构结果 `.relay/read-only-handoff.json`。
+
+## 2026-10-18 T010 接力验证（Claude）
+
+源码未改动；只新增只读登记脚本和文档。
+
+- `PYTHONDONTWRITEBYTECODE=1 python3 -I scripts/t010_registry.py` → exit 0，17 函数，problems 0，未建模调用 0；`--check` → exit 0（matches true）。把一个 size 改成错值的副本做 `--check --out` → exit 1，确认比较有效。
+- `./scripts/relay.sh verify`（默认集：build、两个示例、verify_refill/generation/encounters/refill_integration）→ exit 0，结果 `.relay/runs/20261018T070600.453747Z/result.json`；输入指纹 `b3586780…5c0d00`，与 2026-10-17 full run 相同，inputs_unchanged true。四组计数复现 522/108/2705、3164、1992、20/1550/280。
+- `python3 -m unittest discover -s tests -p test_relay.py` → 4 项通过。
+- 未运行 `verify --full`（其余 16 个 verify 的输入未变化，指纹相同）。

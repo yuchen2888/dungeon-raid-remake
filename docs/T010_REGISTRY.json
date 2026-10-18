@@ -1,0 +1,981 @@
+{
+  "task": "T010",
+  "scope": "refill/generation/encounters only; read-only extraction from original ARMv7 slice and disassembly",
+  "executable_sha256": "5ab6e00407f865f126d4b0bd30a33296942d20cb2ecb4e813db5090caded9356",
+  "counting": {
+    "inventory46_flows": 46,
+    "new_full_functions": 17,
+    "new_partial_ranges": 1,
+    "overlap_with_inventory46": 0,
+    "note": "Separate list; do not add to 46 as a completion percentage. Overlapping test scenarios are not summed."
+  },
+  "functions": [
+    {
+      "module": "refill",
+      "original_symbol": "__ZN4Game12PositionTileER4Tileiib",
+      "address": "0xb3c8",
+      "size": 204,
+      "original_bytes_sha256": "8935310cd388ba790d6c7508b8227fa61995d3875e092f677de79abdbcf5de3e",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_position_tile",
+      "source": "recovered/recovered_refill.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_refill.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": []
+    },
+    {
+      "module": "refill",
+      "original_symbol": "__ZN4Game16MoveMatchedTilesEv",
+      "address": "0x10ed8",
+      "size": 664,
+      "original_bytes_sha256": "9574dfed09a1fe5240e556aca8c9009ca0174147c9f1f026ff86964cf6c96ec1",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_move_matched_tiles",
+      "source": "recovered/recovered_refill.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_refill.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Game12PositionTileER4Tileiib",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Game13RandomiseTileER4Tile",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Game23GetNearestUnmatchedTileEii",
+          "status": "inventory46:dr_nearest_unmatched"
+        },
+        {
+          "symbol": "__ZN4Game4StabEP4Tile",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZNSt3setIP4TileSt4lessIS1_ESaIS1_EE6insertERKS1_",
+          "status": "native-inline"
+        },
+        {
+          "symbol": "__ZNSt4listIP4TileSaIS1_EE9push_backERKS1_",
+          "status": "native-inline"
+        },
+        {
+          "symbol": "__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE13_Rb_tree_implIS5_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS1_EERKS5_",
+          "status": "native-inline"
+        },
+        {
+          "symbol": "__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE8_M_eraseEPSt13_Rb_tree_nodeIS1_E",
+          "status": "native-inline"
+        },
+        {
+          "symbol": "__ZSt4swapI4TileEvRT_S2_",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "refill",
+      "original_symbol": "__ZN4Tile7ProcessEf",
+      "address": "0x3d1d0",
+      "size": 76,
+      "original_bytes_sha256": "36f48a721db6ee373d2d138bb6273a88bbb312516684104d4dee291fbbf6a064",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_process_falling_tile",
+      "source": "recovered/recovered_refill.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_refill.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": []
+    },
+    {
+      "module": "refill",
+      "original_symbol": "__ZN4Game9SwapTilesEiiii",
+      "address": "0xb494",
+      "size": 304,
+      "original_bytes_sha256": "ac9cd1d1c6fe7cecde5100eba9771ac579ad138ef494ac879b72f4129533bcb2",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_swap_tiles",
+      "source": "recovered/recovered_refill.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_encounters.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Game12PositionTileER4Tileiib",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZSt4swapI4TileEvRT_S2_",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Tile13GenerateStatsEii",
+      "address": "0x3e740",
+      "size": 2084,
+      "original_bytes_sha256": "ca79ff3aee0bb283f54ac2065a282fd6b82a231a41fdd4e153873c4c82f9c92b",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_generate_stats",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__Z5RandIii8RandType",
+          "status": "inventory46:dr_random_int"
+        },
+        {
+          "symbol": "__ZN14CharacterClass18GetMortalEnemyTypeE8RaceType",
+          "status": "inventory46:dr_mortal_enemy"
+        },
+        {
+          "symbol": "__ZN14CharacterClass8HaveFlawE8FlawType",
+          "status": "inventory46:dr_have_flaw"
+        },
+        {
+          "symbol": "__ZN4Game10GetTotalXPEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Game13GetEnemyCountE9EnemyType",
+          "status": "inventory46:dr_enemy_count"
+        },
+        {
+          "symbol": "__ZN4Game18SetTimeToPromotionEi",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile15UpdateCountdownEv",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Tile7SetTypeE8TileTypeii",
+      "address": "0x3f32c",
+      "size": 272,
+      "original_bytes_sha256": "156f789cbfef3e98ec323358e5cf593be1679e09bda8f698769696247929e1ee",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_set_tile_type",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__Z5RandIii8RandType",
+          "status": "inventory46:dr_random_int"
+        },
+        {
+          "symbol": "__ZN4Game15IsTimeToPromoteEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Quad5SetUVEffff",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Quad9SetColourERK9GLcolour4",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Tile12UpdateValuesEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile13GenerateStatsEii",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile7PromoteEiib",
+          "status": "T010"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Tile7PromoteEiib",
+      "address": "0x3f260",
+      "size": 204,
+      "original_bytes_sha256": "6ed4b2615a87315cc5744d196ba7154da0bfd190969c3057e358f25c259424ae",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_promote_tile",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__Z5RandIii8RandType",
+          "status": "inventory46:dr_random_int"
+        },
+        {
+          "symbol": "__ZN14CharacterClass18GetMortalEnemyTypeE8RaceType",
+          "status": "inventory46:dr_mortal_enemy"
+        },
+        {
+          "symbol": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "status": "native-inline"
+        },
+        {
+          "symbol": "__ZN4Game16QueueAchievementE11Achievementf",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game20GetSpecialEnemyCountEv",
+          "status": "native-inline"
+        },
+        {
+          "symbol": "__ZN4Tile12UpdateValuesEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile13GenerateStatsEii",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile13UpdateEnemyUVEv",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Game13RandomiseTileER4Tile",
+      "address": "0xf5b8",
+      "size": 516,
+      "original_bytes_sha256": "5db0d012534515cf48db73c1ed6ca8990fe753ec008de24b0c4bf9424c231ba5",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_randomise_tile",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__Z5RandIii8RandType",
+          "status": "inventory46:dr_random_int"
+        },
+        {
+          "symbol": "__ZN14CharacterClass18GetMortalEnemyTypeE8RaceType",
+          "status": "inventory46:dr_mortal_enemy"
+        },
+        {
+          "symbol": "__ZN14CharacterClass8HaveFlawE8FlawType",
+          "status": "inventory46:dr_have_flaw"
+        },
+        {
+          "symbol": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "status": "native-inline"
+        },
+        {
+          "symbol": "__ZN4Game10QueueSoundE5Sound",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game15IsTimeToPromoteEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Game16QueueAchievementE11Achievementf",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game21InialiseShieldShatterEv",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game8JumpDownEP4Tile",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile10MakeBrokenEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile10UpdateTextEbbb",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Tile14MakeManaPotionEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile7SetTypeE8TileTypeii",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN4Tile9MakeArrowEv",
+          "status": "T010"
+        },
+        {
+          "symbol": "__ZN9Interface17UpdateShieldValueEv",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Tile9MakeArrowEv",
+      "address": "0x3d870",
+      "size": 44,
+      "original_bytes_sha256": "d91a84d90e9e9d7263a3d14bce20a3d4d52444271ed48759436fff0a46304f78",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_make_arrow",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Quad5SetUVEffff",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Tile14MakeManaPotionEv",
+      "address": "0x3d814",
+      "size": 92,
+      "original_bytes_sha256": "47027d31fbc9f2376a88738523508deca086015e974803c0e74c5498c4477ebc",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_make_mana_potion",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Quad5SetUVEffff",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Tile10MakeBrokenEv",
+      "address": "0x3d714",
+      "size": 72,
+      "original_bytes_sha256": "60f5f0b88864d40453a36985cdb10fd488f624cc39fdc5233dee9cc8582c044c",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_make_broken",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Quad5SetUVEffff",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Tile12UpdateValuesEv",
+      "address": "0x3db9c",
+      "size": 96,
+      "original_bytes_sha256": "09c6193a9c41c121199c59bfb4dc0a1f9da15614f136608d777b86721c835b1a",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_update_generated_values",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Tile10UpdateTextEbbb",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Tile15UpdateCountdownEv",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Game15IsTimeToPromoteEv",
+      "address": "0xcbc4",
+      "size": 168,
+      "original_bytes_sha256": "ceb8f424405771c8ce737ec789d24b63c471a1eeabf5e9e15ca0cb5087d40995",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_time_to_promote",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN14CharacterClass8HaveFlawE8FlawType",
+          "status": "inventory46:dr_have_flaw"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Game18SetTimeToPromotionEi",
+      "address": "0x90d8",
+      "size": 60,
+      "original_bytes_sha256": "d85396b0db9aa6f721021aa2868348c527b23f72aec6e69a1d4f64a4e308b850",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_set_time_to_promotion",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Game10QueueSoundE5Sound",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "generation",
+      "original_symbol": "__ZN4Game10GetTotalXPEv",
+      "address": "0x189fc",
+      "size": 48,
+      "original_bytes_sha256": "4820644ce0a26439fa61e84a4e592e1ff3f32c781135c497101ec4ec82393ef9",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_generation_total_xp",
+      "source": "recovered/recovered_generation.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_generation.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": []
+    },
+    {
+      "module": "encounters",
+      "original_symbol": "__ZN4Game4StabEP4Tile",
+      "address": "0x10e24",
+      "size": 180,
+      "original_bytes_sha256": "12bef459d556500e7eee8ca100ffa6db22cf3de2f459447cf708c8d9cf6ad325",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_stab",
+      "source": "recovered/recovered_encounters.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_encounters.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Game10QueueSoundE5Sound",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game12CheckEndGameEv",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Tile9GetAttackEv",
+          "status": "inventory46:dr_get_attack"
+        },
+        {
+          "symbol": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN9Interface17GetPoisonPositionEv",
+          "status": "hook"
+        }
+      ]
+    },
+    {
+      "module": "encounters",
+      "original_symbol": "__ZN4Game8JumpDownEP4Tile",
+      "address": "0xb5c4",
+      "size": 132,
+      "original_bytes_sha256": "fc73e64a680a174311c6a3e0a9b321b8cb50191716921850db43d2835140d936",
+      "contiguous_with_next_symbol": true,
+      "native_function": "dr_jump_down",
+      "source": "recovered/recovered_encounters.cpp",
+      "native_defined": true,
+      "evidence_asm": true,
+      "verify_script": "recovered/verify_encounters.py",
+      "verify_references_address": true,
+      "in_inventory46": false,
+      "static_callees": [
+        {
+          "symbol": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game8AddFlareE9FlareType8GLfloat2RK9GLcolour4",
+          "status": "hook"
+        },
+        {
+          "symbol": "__ZN4Game9SwapTilesEiiii",
+          "status": "T010"
+        }
+      ]
+    }
+  ],
+  "partial_ranges": [
+    {
+      "module": "refill",
+      "original_symbol": "__ZN4Game7ProcessEv",
+      "native_function": "dr_process_falling_list",
+      "address": "0x173c8",
+      "size": 56,
+      "original_bytes_sha256": "e64de085cb38f5e9757abc05d8870011e27b289c76e7ad48d6409b911d1640c3",
+      "verify_script": "recovered/verify_refill_integration.py",
+      "status": "partial: falling-list subsection only, not Game::Process"
+    }
+  ],
+  "hooks": {
+    "refill": {
+      "hook": "RefillHooks.event",
+      "verify_script": "recovered/verify_refill.py",
+      "events": [
+        {
+          "event": "Swap",
+          "original_callee": "__ZSt4swapI4TileEvRT_S2_",
+          "original_address": "0x1948c",
+          "recovered": false,
+          "note": "extra per-tile state swap; std::swap of 608-byte Tile done natively"
+        },
+        {
+          "event": "AppendMoving",
+          "original_callee": "moving list push (Game+0xb3f8)",
+          "original_address": null,
+          "recovered": false,
+          "note": "caller owns moving-list container"
+        },
+        {
+          "event": "Randomise",
+          "original_callee": "__ZN4Game13RandomiseTileER4Tile",
+          "original_address": "0xf5b8",
+          "recovered": true,
+          "note": "recovered: caller should invoke dr_randomise_tile"
+        },
+        {
+          "event": "Stab",
+          "original_callee": "__ZN4Game4StabEP4Tile",
+          "original_address": "0x10e24",
+          "recovered": true,
+          "note": "recovered: caller should invoke dr_stab, pointer order via std::set"
+        }
+      ]
+    },
+    "generation": {
+      "hook": "GenerationHooks.event",
+      "verify_script": "recovered/verify_generation.py",
+      "events": [
+        {
+          "event": "Random",
+          "original_callee": "__Z5RandIii8RandType",
+          "original_address": "0x1bca0",
+          "recovered": true,
+          "note": "trace only; value comes from recovered dr_random_int"
+        },
+        {
+          "event": "Colour",
+          "original_callee": "__ZN4Quad9SetColourERK9GLcolour4",
+          "original_address": "0x1c674",
+          "recovered": false,
+          "note": "render"
+        },
+        {
+          "event": "UV",
+          "original_callee": "__ZN4Quad5SetUVEffff",
+          "original_address": "0x213a4",
+          "recovered": false,
+          "note": "render"
+        },
+        {
+          "event": "Text",
+          "original_callee": "__ZN4Tile10UpdateTextEbbb",
+          "original_address": "0x3da78",
+          "recovered": false,
+          "note": "render, not recovered"
+        },
+        {
+          "event": "Countdown",
+          "original_callee": "__ZN4Tile15UpdateCountdownEv",
+          "original_address": "0x3d9ec",
+          "recovered": false,
+          "note": "not recovered; evidence asm present"
+        },
+        {
+          "event": "EnemyUV",
+          "original_callee": "__ZN4Tile13UpdateEnemyUVEv",
+          "original_address": "0x3ef64",
+          "recovered": false,
+          "note": "render"
+        },
+        {
+          "event": "Sound",
+          "original_callee": "__ZN4Game10QueueSoundE5Sound",
+          "original_address": "0x903c",
+          "recovered": false,
+          "note": "audio"
+        },
+        {
+          "event": "Achievement",
+          "original_callee": "__ZN4Game16QueueAchievementE11Achievementf",
+          "original_address": "0xbd68",
+          "recovered": false,
+          "note": "platform"
+        },
+        {
+          "event": "ShieldValue",
+          "original_callee": "__ZN9Interface17UpdateShieldValueEv",
+          "original_address": "0x20294",
+          "recovered": false,
+          "note": "UI"
+        },
+        {
+          "event": "ShieldShatter",
+          "original_callee": "__ZN4Game21InialiseShieldShatterEv",
+          "original_address": "0x9810",
+          "recovered": false,
+          "note": "UI effect"
+        },
+        {
+          "event": "JumpDown",
+          "original_callee": "__ZN4Game8JumpDownEP4Tile",
+          "original_address": "0xb5c4",
+          "recovered": true,
+          "note": "recovered: caller should invoke dr_jump_down"
+        }
+      ]
+    },
+    "encounters": {
+      "hook": "EncounterHooks.event (+ .refill for SwapTiles)",
+      "verify_script": "recovered/verify_encounters.py",
+      "events": [
+        {
+          "event": "Sound",
+          "original_callee": "__ZN4Game10QueueSoundE5Sound",
+          "original_address": "0x903c",
+          "recovered": false,
+          "note": "audio"
+        },
+        {
+          "event": "Label",
+          "original_callee": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+          "original_address": "0xae2c",
+          "recovered": false,
+          "note": "UI"
+        },
+        {
+          "event": "HealthBar",
+          "original_callee": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "original_address": "0x21130",
+          "recovered": false,
+          "note": "UI"
+        },
+        {
+          "event": "PoisonPosition",
+          "original_callee": "__ZN9Interface17GetPoisonPositionEv",
+          "original_address": "0x20028",
+          "recovered": false,
+          "note": "UI query; test returns fixed (.1,.1)"
+        },
+        {
+          "event": "CheckEndGame",
+          "original_callee": "__ZN4Game12CheckEndGameEv",
+          "original_address": "0x10b18",
+          "recovered": false,
+          "note": "NOT recovered; test forces return 0 -> game-over path unverified"
+        },
+        {
+          "event": "Flare",
+          "original_callee": "__ZN4Game8AddFlareE9FlareType8GLfloat2RK9GLcolour4",
+          "original_address": "0x9f94",
+          "recovered": false,
+          "note": "render"
+        }
+      ]
+    }
+  },
+  "state": {
+    "refill": [
+      {
+        "native": "RefillState.falling[].target/moving/speed/acceleration",
+        "original": "Tile fields used by Tile::Process",
+        "verify_script": "recovered/verify_refill.py"
+      },
+      {
+        "native": "board tiles (SelectionState.tiles, 608-byte Tile swap)",
+        "original": "Tile[36]",
+        "verify_script": "recovered/verify_refill.py"
+      },
+      {
+        "native": "resting_position table",
+        "original": "Game+0xb400 (8-byte stride)",
+        "verify_script": "recovered/verify_refill.py"
+      },
+      {
+        "native": "moving list (caller-owned)",
+        "original": "Game+0xb3f8",
+        "verify_script": "recovered/verify_refill.py"
+      }
+    ],
+    "generation": [
+      {
+        "native": "GenerationState.time_to_promotion",
+        "original": "Game+0x14af0",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GenerationState.generated_count",
+        "original": "Game+0x165c0",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GenerationState.generated_enemies",
+        "original": "Game+0x165c4",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GenerationState.promotion_enabled",
+        "original": "Game+0x14af4",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GenerationState.one_health",
+        "original": "Game+0x14af5",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GenerationState.force_coins",
+        "original": "Game+0x14af6",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GenerationState.inhibit_force_coins",
+        "original": "Game+0x15563",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GenerationState.filter_enabled/filter_swords",
+        "original": "Game+0xbfb8/+0xbfb9",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GeneratedTile.variant",
+        "original": "Tile+0x22c",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GeneratedTile.max_health",
+        "original": "Tile+0xb0",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GeneratedTile.label_offset",
+        "original": "Tile+0xb4",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "GeneratedTile.flag_224",
+        "original": "Tile+0x224",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "PreviewState.armour_current / ResourceState.ui_armour",
+        "original": "Game+0xbda4 / Game+0x59c0",
+        "verify_script": "recovered/verify_generation.py"
+      },
+      {
+        "native": "RNG seeds (6 streams)",
+        "original": "0x1eac20",
+        "verify_script": "recovered/verify_generation.py"
+      }
+    ],
+    "encounters": [
+      {
+        "native": "ResourceState.health",
+        "original": "Game+0xbd98",
+        "verify_script": "recovered/verify_encounters.py"
+      },
+      {
+        "native": "ResourceState.ui_health",
+        "original": "Game+0x5994",
+        "verify_script": "recovered/verify_encounters.py"
+      },
+      {
+        "native": "MatchState.shake_progress_bd90/shake_scale_bd94",
+        "original": "Game+0xbd90/+0xbd94",
+        "verify_script": "recovered/verify_encounters.py"
+      },
+      {
+        "native": "JumpDown column read",
+        "original": "Tile+0x74",
+        "verify_script": "recovered/verify_encounters.py"
+      }
+    ]
+  },
+  "reports": {
+    "refill": {
+      "historical": {
+        "path": "recovered/refill_verification.json",
+        "status": "passed",
+        "counts": {
+          "refill_boards": 522,
+          "position_cases": 108,
+          "fall_steps": 2705
+        }
+      },
+      "latest_full_run": {
+        "run": "20261018T065100.380122Z",
+        "fingerprint": "b3586780dcd6890c5fca4f3f1cb168341f938988db0d75d239f5302eeb5c0d00",
+        "status": "passed",
+        "matches_historical_counts": true
+      }
+    },
+    "generation": {
+      "historical": {
+        "path": "recovered/generation_verification.json",
+        "status": "passed",
+        "counts": {
+          "cases": 3164,
+          "by_function": {
+            "stats": 1875,
+            "randomise": 750,
+            "type": 7,
+            "arrow": 7,
+            "mana": 7,
+            "broken": 7,
+            "values": 7,
+            "due": 504
+          }
+        }
+      },
+      "latest_full_run": {
+        "run": "20261018T065100.380122Z",
+        "fingerprint": "b3586780dcd6890c5fca4f3f1cb168341f938988db0d75d239f5302eeb5c0d00",
+        "status": "passed",
+        "matches_historical_counts": true
+      }
+    },
+    "encounters": {
+      "historical": {
+        "path": "recovered/encounters_verification.json",
+        "status": "passed",
+        "counts": {
+          "cases": 1992,
+          "by_function": {
+            "swap": 1296,
+            "jump_down": 36,
+            "stab": 360,
+            "move": 300
+          }
+        }
+      },
+      "latest_full_run": {
+        "run": "20261018T065100.380122Z",
+        "fingerprint": "b3586780dcd6890c5fca4f3f1cb168341f938988db0d75d239f5302eeb5c0d00",
+        "status": "passed",
+        "matches_historical_counts": true
+      }
+    },
+    "integration": {
+      "historical": {
+        "path": "recovered/refill_integration_verification.json",
+        "status": "passed",
+        "counts": {
+          "gestures": 20,
+          "steps": 1550,
+          "completed_rewards": 280,
+          "generated_tiles": 280
+        }
+      },
+      "latest_full_run": {
+        "run": "20261018T065100.380122Z",
+        "fingerprint": "b3586780dcd6890c5fca4f3f1cb168341f938988db0d75d239f5302eeb5c0d00",
+        "status": "passed",
+        "matches_historical_counts": true
+      }
+    }
+  },
+  "native_inline_callees": [
+    {
+      "original_callee": "__ZN14CharacterClass8HavePerkE8PerkType",
+      "original_address": "0x1115c0",
+      "replaced_in": "recovered/recovered_generation.cpp",
+      "note": "inline perk scan over MatchState.perks"
+    },
+    {
+      "original_callee": "__ZN4Game20GetSpecialEnemyCountEv",
+      "original_address": "0x8b88",
+      "replaced_in": "recovered/recovered_generation.cpp",
+      "note": "inline count in dr_promote_tile (achievement when >2)"
+    },
+    {
+      "original_callee": "__ZNSt3setIP4TileSt4lessIS1_ESaIS1_EE6insertERKS1_",
+      "original_address": "0x1a0b8",
+      "replaced_in": "recovered/recovered_refill.cpp",
+      "note": "std::set<Tile*> -> index-ordered bool array (tiles contiguous, so pointer order)"
+    },
+    {
+      "original_callee": "__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE13_Rb_tree_implIS5_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS1_EERKS5_",
+      "original_address": "0x190d0",
+      "replaced_in": "recovered/recovered_refill.cpp",
+      "note": "std::set construction"
+    },
+    {
+      "original_callee": "__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE8_M_eraseEPSt13_Rb_tree_nodeIS1_E",
+      "original_address": "0x19d48",
+      "replaced_in": "recovered/recovered_refill.cpp",
+      "note": "std::set destruction"
+    },
+    {
+      "original_callee": "__ZNSt4listIP4TileSaIS1_EE9push_backERKS1_",
+      "original_address": "0x1a354",
+      "replaced_in": "recovered/recovered_refill.cpp",
+      "note": "moving list push_back -> AppendMoving hook"
+    }
+  ],
+  "unmodelled_static_callees": [],
+  "boundaries": [
+    "No full ProcessAttack 0x14118 / EndOfTurn 0x13574 / Game::Process",
+    "CheckEndGame not recovered; encounters test forces it to return 0",
+    "Static callees are direct-call sites only, not proof of executed branches"
+  ],
+  "problems": []
+}

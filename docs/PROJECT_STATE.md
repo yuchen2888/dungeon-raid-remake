@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-10-17（America/Los_Angeles）。维护者：Codex。当前阶段：保留现有逆向成果，建立三工具轮流开发入口和可复现验证。
+更新：2026-10-18（America/Los_Angeles）。维护者：Claude（T010 接力，前一轮 Codex）。当前阶段：保留现有逆向成果，三工具轮流开发；首次跨模型接力已发生。
 
 ## 已核实
 
@@ -9,7 +9,8 @@
 - recovered/ 实际存在 19 个 `recovered_*.cpp` 模块、14 个头文件、20 个 verify 脚本、两个独立源码示例。源码结构包含补位、生成、JumpDown/Stab，见 ARCHITECTURE.md。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
-- Codex CLI 0.135.0 可执行；Claude Code、Gemini CLI 未在当前 PATH 和常用用户安装目录发现。启动入口已预留，实际双模型接力尚未发生。
+- Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
+- T010：refill/generation/encounters 的 17 个原函数 + Game::Process 下落片段 0x173c8 已登记原地址、字节哈希、状态偏移、hook 与测试（docs/T010_REGISTRY.json）；与 46 流程零重叠且不并入计数。玩法相关未恢复回调：Game::CheckEndGame（测试强制返回 0）、Tile::UpdateCountdown。
 
 ## 验证
 
@@ -19,10 +20,12 @@
 
 整理前没有 Git，全部现有文件视为继承成果，已原样建立源码基线；没有清理、stash 或覆盖。新增 AGENTS.md / CLAUDE.md / GEMINI.md、README、docs/、scripts/ 与接力安全测试，单独原子提交；以 `git log` 查看设施提交。忽略的本地材料不在提交内。当前无待转交的继承源码修改；完成后释放 T001 活动锁。
 
+2026-10-18 Claude 接手时工作树干净（HEAD 557cf44），无继承未提交修改。本轮只新增 scripts/t010_registry.py、docs/T010_REGISTRY.json 并更新 docs/ 四个文档，单独提交；recovered/ 源码与原始材料未改动。验证路径见 VALIDATION.md 末节。
+
 活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
 
 ## 尚未完成及下一步
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-下一轮先完成 TASKS.md 的 T010：把当前 19 模块的证据和未恢复回调整理到敌人阶段入口，再推进 T020。不要重做补位和随机生成；先读新的验证结果及现有代码。
+T010 已由 Claude 完成，下一位工具（建议 Codex）先复核：`python3 -I scripts/t010_registry.py --check` 应 exit 0 且 problems 为空，抽查地址。之后推进 T020：先用同样只读方法列出 ProcessAttack 0x14118 的直接调用并按 46 流程/T010/hook/未恢复分类，再选一个敌人分支做原版差分。不要重做补位、生成和 Stab/JumpDown。
