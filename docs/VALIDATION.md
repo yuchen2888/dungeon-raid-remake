@@ -97,3 +97,11 @@
 - 错误副本（隔离开发副本）：去掉生命下限、交换 Vampires/HelpHealth 顺序，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；`t010_registry.py --check`、`t020_attack_audit.py --check` 均 matches true。
 - 边界：ProcessVampires 为有序回调（未恢复）；阶段 6 由测试按 0x146e0 设置；无阶段动画、调度或游戏结束判断。
+
+## 2026-10-18 T020-D：ProcessVampires / Tile::AddHealth（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建（encounters 新增 rules 依赖）、2 个示例、24 个 verify 脚本共 27 步通过。运行目录 `.relay/runs/20261018T152206.412664Z`，输入指纹 `e4cb980a…d6203`，与提交时源码一致。encounters 原 1992 场景仍通过。
+- 新 verify_vampires：1100 次比较（AddHealth 100、边界 480、随机 400、重复回合 120），3443 次回血；宿敌不封顶路径 486 次、封顶路径 2957 次。
+- 错误副本（隔离开发副本）：行优先遍历、封顶判断 `>`，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；`t010_registry.py --check`、`t020_attack_audit.py --check` 均 matches true。
+- 注意：本次第一次后台启动因相对路径从 scripts/ 目录解析失败（exit 127，未运行任何测试），已用绝对路径重跑；上面结果来自重跑。

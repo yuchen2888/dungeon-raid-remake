@@ -30,3 +30,27 @@ extern "C" void dr_jump_down(GenerationState* s,std::uint32_t i,const EncounterH
     emit(h,EncounterEventKind::Flare,30+rule.x,1,-1);
     p.match->shake_progress_bd90=0;p.match->shake_scale_bd94=0x3f800000;
 }
+extern "C" void dr_tile_add_health(GenerationState* s,std::uint32_t i,std::int32_t amount,const EncounterHooks* h) {
+    auto& c=s->refill->path->combat[i];
+    c.health=static_cast<std::int32_t>(static_cast<std::uint32_t>(c.health)+static_cast<std::uint32_t>(amount));
+    emit(h,EncounterEventKind::Text,i,0,0,1);
+    if(c.health>s->tiles[i].max_health)s->tiles[i].max_health=c.health;
+}
+extern "C" void dr_process_vampires(GenerationState* s,const EncounterHooks* h) {
+    auto& p=*s->refill->path;auto& board=p.match->stroke->selection;
+    const int mortal=dr_mortal_enemy(board.character.race);
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+        if(rule.matched || rule.type!=1 || rule.enemy_type!=20)continue;
+        if(mortal==20)dr_tile_add_health(s,i,attack(s,i),h);
+        else {
+            auto& c=p.combat[i];const int max=s->tiles[i].max_health;
+            if(c.health>=max)continue;
+            const int healed=static_cast<std::int32_t>(static_cast<std::uint32_t>(attack(s,i))+static_cast<std::uint32_t>(c.health));
+            c.health=healed>max?max:healed;
+            emit(h,EncounterEventKind::Text,i,0,0,1);
+        }
+        emit(h,EncounterEventKind::Label,i,26,attack(s,i),34,0x3f800000);
+        emit(h,EncounterEventKind::Sound,-1,23);
+    }
+}

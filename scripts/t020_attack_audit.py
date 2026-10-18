@@ -18,6 +18,8 @@ def build():
     t010=json.loads((ROOT/'docs/T010_REGISTRY.json').read_text())
     known.update({int(f['address'],16):'T010:'+f['native_function'] for f in t010['functions']})
     gameplay={'__ZN4Game15DoCounterattackEv','__ZN4Game15ProcessVampiresEv'}
+    # Whole functions recovered during T020 (not in inventory46 or T010).
+    recovered_here={'__ZN4Game15ProcessVampiresEv':'T020-D:dr_process_vampires (recovered_encounters.cpp, verify_vampires)'}
     helpers={'__Z11InterpolateRK8GLfloat2S1_f','__Z11Interpolatefff','__Z3Sqrf'}
     calls=[]
     for line in block['body'].splitlines():
@@ -30,6 +32,7 @@ def build():
         label=target if not stub else stub[1]
         if address in known:category=known[address]
         elif target=='__Z4Randff8RandType':category='existing-source:dr_random_float (verify_motion)'
+        elif target in recovered_here:category=recovered_here[target]
         elif target in gameplay:category='unrecovered-gameplay'
         elif target in helpers:category='math-helper; not registered as recovered function'
         elif stub:category='platform-library-boundary'
@@ -66,11 +69,11 @@ def build():
                             'Game+0xbe84 remaining damage after armour','Game+0x1553c enemy-type-9 damage',
                             'Game+0x15540 poison','Game+0xbd98 health','Game+0x5994 UI health'],
                     outputs=['poison=max(enemy9,poison)','enemy9 label flush','health=max(0,health-remaining)','phase 7'],
-                    callbacks=['Game::ProcessVampires 0xdaf8 (unrecovered gameplay; only vampire tile health)'],
+                    callbacks=['Game::ProcessVampires 0xdaf8 (recovered as dr_process_vampires in T020-D; caller runs it on the Vampires event; only vampire tile health)'],
                     boundary='Partial instructions only; no phase animation, scheduler or game-over check')],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph',
                         'Presentation categories still require validation when their real implementations are connected',
-                        'DoCounterattack and ProcessVampires remain gameplay dependencies; phase/health logic not implemented here'])
+                        'DoCounterattack remains an unrecovered gameplay dependency; ProcessVampires recovered in T020-D but the health segment still reaches it through an ordered callback'])
 
 
 def main():

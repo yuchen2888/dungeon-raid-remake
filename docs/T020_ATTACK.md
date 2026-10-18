@@ -94,3 +94,24 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 仍未恢复：阶段 1..4（含 DoCounterattack 调用点 0x143a4）、阶段 5/6 标签动画本身、0x1487e 之后读 Game+0xbe6c/+0xbe68 的分支（AttackSkull 0x149dc、MoveMatchedTiles 0x14a0c 调用点）、阶段 7 收尾（0x14ae4 起）、ProcessVampires、游戏结束判断。
 
 下一单元候选：ProcessVampires 0xdaf8（130 行，只改吸血敌人格生命，依赖 GetMortalEnemyType/GetAttack/AddHealth/UpdateText），恢复后把本段的 Vampires 事件换成真实调用并重跑连续回合。
+
+## T020-D：ProcessVampires 与 Tile::AddHealth（Claude，2026-10-18）
+
+起始提交 496d9aa。恢复两个**完整原函数**（不是片段），放在 encounters 模块（与 Stab/JumpDown 同属特殊敌人行为）：
+
+| 原函数 | 地址 | 原生函数 | 行为 |
+| --- | --- | --- | --- |
+| Game::ProcessVampires | 0xdaf8 | dr_process_vampires | 先取玩家职业种族的宿敌类型；按列 x 外层、行 y 内层遍历，未匹配（Tile+0x84=0）、类型 1、敌人 20（吸血鬼）的格子回血；然后出标签 26（数值为攻击力、颜色 34、1.0 倍，位置为格子中心 Tile+0x54）和音效 23 |
+| 　回血（宿敌≠20） | 0xdb3c | 同上 | 生命 ≥ max_health（Tile+0xb0）时整格跳过（无标签无音效）；否则 生命 = min(攻击 + 生命, max_health)，UpdateText(0,0,1) |
+| 　回血（宿敌=20） | 0xdb4c | 同上 | 调 Tile::AddHealth(攻击)，不封顶 |
+| Tile::AddHealth | 0x3dc6c | dr_tile_add_health | 生命 += 值（回绕加法），UpdateText(0,0,1)，若超过 max_health 则抬高 max_health |
+
+攻击力复用已恢复的 dr_get_attack（含毒和种族），宿敌复用 dr_mortal_enemy；为此 build.sh 给 encounters 的链接依赖加入 recovered_rules.cpp（唯一的 build.sh 改动）。EncounterEventKind 末尾追加 Text=7，已有编号不变。
+
+验证 `recovered/verify_vampires.py`：原版完整执行 ProcessVampires、AddHealth、GetMortalEnemyType、Tile::GetAttack，只适配 UpdateText/AddSimpleLabel/QueueSound。
+- AddHealth 直接 100 组（含负数、INT_MAX 回绕、抬高上限）。
+- ProcessVampires 480 组边界（10 个种族 × 6 种生命/上限关系 × 4 种攻击 × 毒有无，含已匹配、其他敌人、非敌人类型的干扰格）+ 400 组随机棋盘 + 10 局 × 12 次在携带状态上重复回血。
+- 共 1100 次比较，3443 次回血；宿敌路径 486 次、封顶路径 2957 次。比较整盘、combat、max_health、生成状态、随机种子和有序事件。
+- 错误副本：遍历改为行优先、封顶判断 `>=` 改 `>`，均 exit 1；真实源码未改。
+
+尚未完成：T020-C 扣血段仍以 Vampires 事件把调用交给调用方，测试里该段的原版 ProcessVampires 仍是存根。把两边接成同一状态的连续回合（同时跑真实 ProcessVampires）需要合并 attack_shield 与 encounters 两套测试状态，留作下一单元。

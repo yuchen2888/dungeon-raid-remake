@@ -361,7 +361,7 @@
       "instruction": "bl",
       "target": "__ZN4Game15ProcessVampiresEv",
       "target_address": "0xdaf8",
-      "category": "unrecovered-gameplay"
+      "category": "T020-D:dr_process_vampires (recovered_encounters.cpp, verify_vampires)"
     },
     {
       "site": "0x14a98",
@@ -457,7 +457,7 @@
         "phase 7"
       ],
       "callbacks": [
-        "Game::ProcessVampires 0xdaf8 (unrecovered gameplay; only vampire tile health)"
+        "Game::ProcessVampires 0xdaf8 (recovered as dr_process_vampires in T020-D; caller runs it on the Vampires event; only vampire tile health)"
       ],
       "boundary": "Partial instructions only; no phase animation, scheduler or game-over check"
     }
@@ -465,6 +465,6 @@
   "limits": [
     "Direct bl/blx plus external b.w only; no indirect call graph",
     "Presentation categories still require validation when their real implementations are connected",
-    "DoCounterattack and ProcessVampires remain gameplay dependencies; phase/health logic not implemented here"
+    "DoCounterattack remains an unrecovered gameplay dependency; ProcessVampires recovered in T020-D but the health segment still reaches it through an ordered callback"
   ]
 }

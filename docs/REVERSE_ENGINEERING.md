@@ -66,3 +66,7 @@
 ## T020-C：阶段 6 扣血片段（Claude，2026-10-18）
 
 `[0x14a14,0x14ae4)` → `dr_process_attack_health_damage`。剩余伤害扣生命（负数归 0）、毒取 max(9 号敌人伤害, 现毒)、阶段置 7。Game::ProcessVampires 0xdaf8 未恢复，作为有序回调保留（已核对只写吸血敌人格生命）。verify_attack_health.py 含单段差分和吸收→扣血连续回合。细节见 T020_ATTACK.md 的 T020-C 节。局部片段，不计入完整函数数。
+
+## T020-D：ProcessVampires 0xdaf8 / Tile::AddHealth 0x3dc6c（Claude，2026-10-18）
+
+两个完整原函数 → `dr_process_vampires` / `dr_tile_add_health`（recovered_encounters.cpp）。吸血鬼（敌人 20）按攻击力回血，平时封顶于 max_health，玩家宿敌为吸血鬼时走 AddHealth 不封顶并抬高上限；遍历为列优先。verify_vampires.py 原版完整执行，1100 次比较。这是 T020 期间新增的两个完整函数，单独计数，不并入 46 流程或 T010；ProcessAttack 调用登记里 ProcessVampires 的分类已改为 T020-D。

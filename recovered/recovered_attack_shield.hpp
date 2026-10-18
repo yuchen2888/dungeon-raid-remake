@@ -17,8 +17,8 @@ enum class AttackAbsorbEventKind : std::int32_t { DamageNumber=1, Label };
 struct AttackAbsorbEvent { AttackAbsorbEventKind kind; std::int32_t a,b,c,d; };
 struct AttackAbsorbHooks { void* context; void (*event)(void*,const AttackAbsorbEvent*); };
 // Label: a=type,b=number,c=colour,d=scale bits; type 2 at Game+0xbd30, type 7 at Game+0x15518.
-// Vampires: Game::ProcessVampires is NOT recovered; the caller must run it at
-// this point (it only heals vampire tiles, never player health/poison/damage).
+// Vampires: the caller must run Game::ProcessVampires at this point
+// (dr_process_vampires in recovered_encounters; it only heals vampire tiles).
 enum class AttackHealthEventKind : std::int32_t { Sound=1, Label, Poison, Vampires, HelpHealth, HealthBar };
 struct AttackHealthEvent { AttackHealthEventKind kind; std::int32_t a,b,c,d; };
 struct AttackHealthHooks { void* context; void (*event)(void*,const AttackHealthEvent*); };
