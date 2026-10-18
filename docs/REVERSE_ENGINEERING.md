@@ -52,3 +52,9 @@
 - 未恢复且影响玩法：**Game::CheckEndGame**（Stab 后调用，测试强制返回 0，死亡/结束路径未验证）。**Tile::UpdateCountdown** 属未恢复的 UI：读取 Tile+0x250 的已有数值，用 sprintf / Label::SetText 更新倒计时文字并调整 Label 位置，没有推进或写回玩法倒计时；事件目前仅记录。其余为渲染/音频/UI/成就。
 
 边界：静态调用不是 CFG，也不证明分支已执行；没有 ProcessAttack 0x14118 / EndOfTurn 0x13574 / 完整 Game::Process。报告计数为历史文件与前次完整运行 `20261018T065100.380122Z`（洛杉矶时间 2026-10-17）对照一致；2026-10-18 默认 verify `20261018T070600.453747Z` 再次实跑四组通过，输入指纹相同。Codex 复核已独立逐字节对照全部 17 函数及 1 片段，见 T010_REVIEW.md。
+
+## T020-A：攻击护甲损耗片段（Codex，2026-10-18）
+
+已登记 ProcessAttack 0x14118 的 55 个直接调用点、32 个目标（含平台 stub，间接调用不在此表）。新增 `recovered_attack_shield.cpp/.hpp` 只覆盖 `[0x147e4,0x1487e)` 的 154 字节子段：指定敌人 29 / 真实 RNG 流 5 的护甲损耗、UI 同步和有序表现事件。1510 场景及 100 连续步骤与真实原指令一致，错误阈值副本被拒绝；本轮全套 21 个 verify 与构建/示例通过。
+
+原地址、字节哈希、共享字段、调用者提供的 R10 输入及未恢复边界见 T020_ATTACK.md / T020_ATTACK_CALLS.json。它不是完整 ProcessAttack，不新增完整函数数量，也未接完整敌人回合；DoCounterattack、ProcessVampires、前置伤害/阶段与后续生命扣减仍待恢复。

@@ -1,0 +1,419 @@
+{
+  "task": "T020",
+  "executable_sha256": "5ab6e00407f865f126d4b0bd30a33296942d20cb2ecb4e813db5090caded9356",
+  "original_symbol": "__ZN4Game13ProcessAttackEv",
+  "address": "0x14118",
+  "size": 2796,
+  "original_bytes_sha256": "d23f5dbbb696552bb0da93c530140a4282b9fded1f7f6a5d72daa0fbbadc6317",
+  "call_sites": [
+    {
+      "site": "0x1415e",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14184",
+      "instruction": "bl",
+      "target": "__ZN4Game16InitialiseFlaresEv",
+      "target_address": "0xd9b0",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1419a",
+      "instruction": "bl",
+      "target": "__ZN4Quad8SetAlphaEh",
+      "target_address": "0x1c714",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x141a4",
+      "instruction": "bl",
+      "target": "__ZN9Interface15SetHealthShadowEi",
+      "target_address": "0x2127c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x141ae",
+      "instruction": "bl",
+      "target": "__ZN9Interface11SetXPshadowEi",
+      "target_address": "0x1eae4",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x141b8",
+      "instruction": "bl",
+      "target": "__ZN9Interface11SetUPshadowEi",
+      "target_address": "0x21368",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x141c2",
+      "instruction": "bl",
+      "target": "__ZN9Interface13SetGoldShadowEi",
+      "target_address": "0x207e4",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14248",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1428c",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel9SetNumberEi",
+      "target_address": "0x2311c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1429c",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+      "target_address": "0x22d6c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x142be",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel9SetNumberEi",
+      "target_address": "0x2311c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x142da",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+      "target_address": "0x22d6c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14338",
+      "instruction": "bl",
+      "target": "__ZN4Quad8SetAlphaEh",
+      "target_address": "0x1c714",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x143a4",
+      "instruction": "bl",
+      "target": "__ZN4Game15DoCounterattackEv",
+      "target_address": "0x11214",
+      "category": "unrecovered-gameplay"
+    },
+    {
+      "site": "0x143c6",
+      "instruction": "bl",
+      "target": "__ZN4Quad8SetAlphaEh",
+      "target_address": "0x1c714",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x144a4",
+      "instruction": "bl",
+      "target": "__Z4Randff8RandType",
+      "target_address": "0x1b7a8",
+      "category": "inventory46:dr_random_float"
+    },
+    {
+      "site": "0x14508",
+      "instruction": "bl",
+      "target": "__ZN8HelpMenu10InitialiseEffff8HelpType",
+      "target_address": "0x380b8",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1453c",
+      "instruction": "bl",
+      "target": "__ZN4Quad8SetAlphaEh",
+      "target_address": "0x1c714",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1455a",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel8SetAlphaEh",
+      "target_address": "0x22f64",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14578",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel8SetAlphaEh",
+      "target_address": "0x22f64",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x145fc",
+      "instruction": "bl",
+      "target": "__Z11InterpolateRK8GLfloat2S1_f",
+      "target_address": "0x1be38",
+      "category": "math-helper; not registered as recovered function"
+    },
+    {
+      "site": "0x14610",
+      "instruction": "bl",
+      "target": "__Z3Sqrf",
+      "target_address": "0x1b828",
+      "category": "math-helper; not registered as recovered function"
+    },
+    {
+      "site": "0x14666",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+      "target_address": "0x22d6c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1466e",
+      "instruction": "blx",
+      "target": "_powf",
+      "target_address": "0x194f40",
+      "category": "platform-library-boundary"
+    },
+    {
+      "site": "0x14692",
+      "instruction": "bl",
+      "target": "__Z11Interpolatefff",
+      "target_address": "0x1b800",
+      "category": "math-helper; not registered as recovered function"
+    },
+    {
+      "site": "0x146b6",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+      "target_address": "0x22d6c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14740",
+      "instruction": "bl",
+      "target": "__Z4Randff8RandType",
+      "target_address": "0x1b7a8",
+      "category": "inventory46:dr_random_float"
+    },
+    {
+      "site": "0x1476e",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1478c",
+      "instruction": "bl",
+      "target": "__ZN8HelpMenu10InitialiseEffff8HelpType",
+      "target_address": "0x380b8",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x147d2",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x147e0",
+      "instruction": "bl",
+      "target": "__ZN11SimpleLabel9SetNumberEi",
+      "target_address": "0x2311c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x147e8",
+      "instruction": "bl",
+      "target": "__ZN4Game13GetEnemyCountE9EnemyType",
+      "target_address": "0x8cb8",
+      "category": "inventory46:dr_enemy_count"
+    },
+    {
+      "site": "0x14826",
+      "instruction": "bl",
+      "target": "__Z5RandIii8RandType",
+      "target_address": "0x1bca0",
+      "category": "inventory46:dr_random_int"
+    },
+    {
+      "site": "0x14866",
+      "instruction": "bl",
+      "target": "__ZN9Interface17UpdateShieldValueEv",
+      "target_address": "0x20294",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1486c",
+      "instruction": "bl",
+      "target": "__ZN4Game21InialiseShieldShatterEv",
+      "target_address": "0x9810",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x1487a",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x148ae",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x148f6",
+      "instruction": "bl",
+      "target": "__ZN4Tile10UpdateTextEbbb",
+      "target_address": "0x3da78",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x148fe",
+      "instruction": "bl",
+      "target": "__ZN4Tile22GetAttackLabelPositionEv",
+      "target_address": "0x3e2c0",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14916",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14920",
+      "instruction": "bl",
+      "target": "__ZN4Game12AddParticlesEP4Tile12ParticleType",
+      "target_address": "0xa914",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14984",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x149c8",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x149dc",
+      "instruction": "bl",
+      "target": "__ZN4Game11AttackSkullEP4Tileib",
+      "target_address": "0xd788",
+      "category": "inventory46:dr_attack_skull"
+    },
+    {
+      "site": "0x149ee",
+      "instruction": "bl",
+      "target": "__ZN4Game16QueueAchievementE11Achievementf",
+      "target_address": "0xbd68",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14a0c",
+      "instruction": "bl",
+      "target": "__ZN4Game16MoveMatchedTilesEv",
+      "target_address": "0x10ed8",
+      "category": "T010:dr_move_matched_tiles"
+    },
+    {
+      "site": "0x14a18",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14a3e",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14a68",
+      "instruction": "bl",
+      "target": "__ZN9Interface9SetPoisonEi",
+      "target_address": "0x201ac",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14a84",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14a92",
+      "instruction": "bl",
+      "target": "__ZN4Game15ProcessVampiresEv",
+      "target_address": "0xdaf8",
+      "category": "unrecovered-gameplay"
+    },
+    {
+      "site": "0x14a98",
+      "instruction": "bl",
+      "target": "__ZN9Interface14ShowHelpHealthEv",
+      "target_address": "0x2007c",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14ae0",
+      "instruction": "bl",
+      "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+      "target_address": "0x21130",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14b30",
+      "instruction": "bl",
+      "target": "__ZN4Quad8SetAlphaEh",
+      "target_address": "0x1c714",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    },
+    {
+      "site": "0x14b50",
+      "instruction": "bl",
+      "target": "__ZN4Quad8SetAlphaEh",
+      "target_address": "0x1c714",
+      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+    }
+  ],
+  "unique_targets": 32,
+  "recovered_partial": {
+    "start": "0x147e4",
+    "end_exclusive": "0x1487e",
+    "size": 154,
+    "original_bytes_sha256": "f4da372aa5cc61765dd417e05d7e2518d691beecf5e295bb7fe0d9d2d7750e4a",
+    "native_function": "dr_process_attack_shield_wear",
+    "source": "recovered/recovered_attack_shield.cpp",
+    "verify": "recovered/verify_attack_shield.py",
+    "inputs": [
+      "R8=Game pointer",
+      "R10=previous min(incoming damage,current armour)",
+      "Game+0xbdc8 signed loss threshold",
+      "Game+0xbda4 armour",
+      "Game+0x59c0 UI armour",
+      "existing board and six RNG streams at 0x1eac20"
+    ],
+    "boundary": "Partial instructions only; not full ProcessAttack or new complete-function count"
+  },
+  "limits": [
+    "Direct bl/blx plus external b.w only; no indirect call graph",
+    "Presentation categories still require validation when their real implementations are connected",
+    "DoCounterattack and ProcessVampires remain gameplay dependencies; phase/health logic not implemented here"
+  ]
+}
