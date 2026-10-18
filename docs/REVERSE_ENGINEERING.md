@@ -58,3 +58,7 @@
 已登记 ProcessAttack 0x14118 的 55 个直接调用点、32 个目标（含平台 stub，间接调用不在此表）。新增 `recovered_attack_shield.cpp/.hpp` 只覆盖 `[0x147e4,0x1487e)` 的 154 字节子段：指定敌人 29 / 真实 RNG 流 5 的护甲损耗、UI 同步和有序表现事件。1510 场景及 100 连续步骤与真实原指令一致，错误阈值副本被拒绝；本轮全套 21 个 verify 与构建/示例通过。
 
 原地址、字节哈希、共享字段、调用者提供的 R10 输入及未恢复边界见 T020_ATTACK.md / T020_ATTACK_CALLS.json。它不是完整 ProcessAttack，不新增完整函数数量，也未接完整敌人回合；DoCounterattack、ProcessVampires、前置伤害/阶段与后续生命扣减仍待恢复。
+
+## T020-B：攻击护甲吸收片段（Claude，2026-10-18）
+
+`[0x14790,0x147e4)` → `dr_process_attack_armour_absorb`（recovered_attack_shield.cpp）。读 Game+0xbe84 来袭伤害与护甲，算出 R10＝min(伤害,护甲) 交给 T020-A，写回剩余伤害，全吸收时置阶段 Game+0xb8a8＝7 并结算 Game+0x1553c 标签。原版差分 verify_attack_absorb.py 同时比较单段和连续 `[0x14790,0x1487e)`。字段来源、测试数和边界见 T020_ATTACK.md 的 T020-B 节；登记在 T020_ATTACK_CALLS.json 的 additional_recovered_partials。仍是局部片段，不计入完整函数数。

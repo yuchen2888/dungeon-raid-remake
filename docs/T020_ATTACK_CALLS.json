@@ -411,6 +411,30 @@
     ],
     "boundary": "Partial instructions only; not full ProcessAttack or new complete-function count"
   },
+  "additional_recovered_partials": [
+    {
+      "start": "0x14790",
+      "end_exclusive": "0x147e4",
+      "size": 84,
+      "original_bytes_sha256": "de77208b45497a3c081768728801be020d659df0b69c533b8993804b8098cd98",
+      "native_function": "dr_process_attack_armour_absorb",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_absorb.py",
+      "inputs": [
+        "R8=Game pointer; entry R4=Game+0xbe84, R5=Game+0xbda4, R6=0.5f from preceding phase-5 code",
+        "Game+0xbe84 incoming damage (InitialiseFlares attacker sum)",
+        "Game+0xbda4 armour",
+        "Game+0xb8a8 phase",
+        "Game+0x1553c enemy-type-9 damage label value"
+      ],
+      "outputs": [
+        "R10=min(incoming,armour) consumed by shield wear",
+        "Game+0xbe84=incoming-armour (may be <=0)",
+        "phase 7 and enemy-9 label flush when nothing gets through"
+      ],
+      "boundary": "Partial instructions only; chained with shield wear as contiguous [0x14790,0x1487e) in the test"
+    }
+  ],
   "limits": [
     "Direct bl/blx plus external b.w only; no indirect call graph",
     "Presentation categories still require validation when their real implementations are connected",

@@ -32,3 +32,21 @@ extern "C" std::int32_t dr_process_attack_shield_wear(ResourceState* s,
     emit(h,AttackShieldEventKind::Sound,lost>0?16:15);
     return lost;
 }
+extern "C" std::int32_t dr_process_attack_armour_absorb(AttackDamageState* s,const AttackAbsorbHooks* h) {
+    auto emit=[h](AttackAbsorbEventKind kind,int a,int b=0,int c=0,int d=0) {
+        if(h && h->event) { const AttackAbsorbEvent e{kind,a,b,c,d};h->event(h->context,&e); }
+    };
+    const std::int32_t damage=s->incoming_damage,armour=s->resources->match->preview->armour_current;
+    const std::int32_t absorbed=armour>=damage?damage:armour;
+    // Original SUBS wraps; keep that in the unsigned domain.
+    s->incoming_damage=static_cast<std::int32_t>(static_cast<std::uint32_t>(damage)-static_cast<std::uint32_t>(armour));
+    if(s->incoming_damage>0)emit(AttackAbsorbEventKind::DamageNumber,s->incoming_damage);
+    else {
+        s->phase=7;
+        if(s->enemy9_damage>0) {
+            emit(AttackAbsorbEventKind::Label,7,s->enemy9_damage,15,0x3f000000);
+            s->enemy9_damage=0;
+        }
+    }
+    return absorbed;
+}

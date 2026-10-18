@@ -81,3 +81,11 @@
 `./scripts/relay.sh verify --full` 返回 0，目录 `/Users/yuchen/.codex/.chatgpt-projects/g-p-6ad134357ce081919b8abd0e80cc78bd/dungeon-raid-independent/.relay/runs/20261018T072018.132343Z`；20 模块构建、两个示例、21 个 verify 共 24 步全部通过，运行前后输入指纹一致。新分支 810 边界场景 + 700 随机场景 + 100 连续步骤一致，观察 23417 个真实 RNG 调用；原片段、GetEnemyCount 与原 RNG 执行，仅适配 floorf 和护甲/音效表现。错误阈值 `<`→`<=` 的隔离副本被拒绝（exit 1）。
 
 4 项接力安全测试通过；T020 调用登记 --check 通过。原有 7282 文件中仅 build.sh 因增加模块有必要修改，其余原文件哈希不变。完整结果见 T020_VALIDATION.json，范围和下一单元见 T020_ATTACK.md。完整 ProcessAttack / 敌人回合尚未完成。
+
+## 2026-10-18 T020-B：护甲吸收片段（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：20 模块 macOS 双架构 / iPhone ARM64 构建、2 个示例、22 个 verify 脚本共 25 步全部通过。运行目录 `.relay/runs/20261018T073147.680153Z`，输入指纹 `68591a33…4478e3`（源码已变，旧指纹不再代表当前源码），inputs_unchanged true。
+- 新 verify_attack_absorb：1856 次比较（288 边界 + 600 随机场景，各单段 / 连续链两次 = 1776，加 80 连续步骤），731 次进入阶段 7，连续链中 12361 次真实 RandI；单段字节 SHA-256 `de77208b…98cd98`。T020-A verify_attack_shield 仍 1610 场景通过。
+- 错误副本（隔离开发副本，非 .relay/runs）：吸收判断 `>0`→`>=0`、9 号敌人 `>0`→`!=0`，均 exit 1 并在 0x147e4 处出现阶段/标签差异；真实源码与副本对比一致。
+- `python3 -m unittest discover -s tests -p test_relay.py` → 4 项通过；`t010_registry.py --check`、`t020_attack_audit.py --check` 均 matches true。
+- 边界：入口 R4/R5/R6 由测试按前一段代码设置；标签/音效/护甲 UI 为事件；不是完整 ProcessAttack 或可玩回合。

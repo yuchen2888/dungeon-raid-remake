@@ -47,3 +47,27 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 ## 下一单元
 
 先登记上游伤害/护甲输入、攻击阶段字段与 DoCounterattack 的依赖，选择一段建立实际原指令对照；继续复用已有随机、棋盘和战斗状态。完整 ProcessAttack、EndOfTurn 和输入重开仍待接通。
+
+## T020-B：护甲吸收片段（Claude，2026-10-18）
+
+起始提交 1b1ad9f，接手工作树干净，无继承未提交修改。只恢复 T020-A 的上游 `[0x14790,0x147e4)`（84 字节，SHA-256 `de77208b45497a3c081768728801be020d659df0b69c533b8993804b8098cd98`），加入同一 attack_shield 模块，未新增模块、未改 build.sh。
+
+| 字段 | 原位置 | 来源 / 行为 |
+| --- | --- | --- |
+| 本轮来袭伤害 | Game+0xbe84 | InitialiseFlares 在 0xda28 起累加攻击者 Tile::GetAttack；此段写回 伤害−护甲，可为 0 或负数（原样保留，不夹到 0） |
+| 吸收量 | R10 | min(伤害, 护甲)，有符号比较；即 T020-A 原先由调用者提供的输入 |
+| 攻击阶段 | Game+0xb8a8 | ProcessAttack 按 1..7 分支；剩余伤害 ≤0 时置 7（跳过扣血阶段） |
+| 9 号敌人伤害 | Game+0x1553c | InitialiseFlares 对 enemy_type 9 额外累加；仅在全部吸收且 >0 时出标签（类型 7、颜色 15、0.5 倍）并清零 |
+| 表现 | SimpleLabel::SetNumber / AddSimpleLabel | 剩余 >0 只更新伤害数字；标签固定位置 Game+0x15518；均为事件，不实现 UI |
+
+原生接口：`AttackDamageState{resources, phase, incoming_damage, enemy9_damage}` + `dr_process_attack_armour_absorb`，护甲直接读 resources→match→preview，不复制第二份。
+
+验证 `recovered/verify_attack_absorb.py`：每个场景在同一原版内存上跑两次——单段 `[0x14790,0x147e4)` 对 absorb；连续 `[0x14790,0x1487e)` 对 absorb 后接已恢复的 shield wear，因此 R10 由原指令算出而非假设。入口 R4/R5/R6 按前一段 phase-5 代码留下的值设置（Game+0xbe84、Game+0xbda4、0.5f）。
+
+- 288 组边界（伤害 0/1/4/5/6/40 × 护甲 0/1/5/40 × 9 号值 −1/0/3 × 阶段 5/7 × 是否有 29 号敌人）+ 600 组随机，各比较单段与连续两次，共 1776 次；另 80 个连续步骤在同一棋盘/护甲/随机流上携带状态。
+- 比较吸收量、阶段、剩余伤害、9 号值、护甲/UI、六个种子和有序事件；原版 Game 区除允许字段外无其他写入。五个分支点均被执行。
+- 错误副本：`>0` 改 `>=0`（恰好吸收完时不进阶段 7）、9 号 `>0` 改 `!=0`（负值误出标签），在隔离开发副本中均 exit 1；真实源码未改。
+
+仍未恢复：phase 1..4 与 phase 5 前半段（含 DoCounterattack 调用点 0x143a4）；0x1487e 之后读 Game+0xbe6c / +0xbe68 的分支（含 AttackSkull 0x149dc、MoveMatchedTiles 0x14a0c 调用点）；phase≠5 时 0x146d8 跳往的 0x14a14 起代码（读 0xbe84 出标签，0x14a9c 处置阶段 7 并读生命 0xbd98）；ProcessVampires 和阶段收尾。以上只是静态阅读到的位置，段边界和阶段语义尚未核实。
+
+下一单元候选：0x14a14 起的剩余伤害/扣血代码。先核实段边界、入口寄存器与阶段号，再同法差分；继续复用 T020-A/B、AttackSkull、MoveMatchedTiles，不重写。
