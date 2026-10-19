@@ -284,7 +284,7 @@
       "target": "__ZN4Tile15ActivateAbilityEv",
       "target_address": "0x3f09c",
       "size": 452,
-      "category": "unrecovered"
+      "category": "T030:dr_activate_ability (unrecovered abilities via TurnHooks.ability)"
     },
     {
       "site": "0x13b5c",
@@ -608,10 +608,6 @@
       "size": 356
     },
     {
-      "symbol": "__ZN4Tile15ActivateAbilityEv",
-      "size": 452
-    },
-    {
       "symbol": "__ZN4Game18ConvertRandomTilesEP4Tile",
       "size": 520
     },
@@ -725,6 +721,34 @@
         "HelpMenu::Initialise and Game::SerialiseState are events (boundaries)"
       ],
       "original_bytes_sha256": "dd46c0a1bc8674021bb816a6ed9af9d446ef96918f88e7a51bae63bf0e49363f"
+    },
+    {
+      "start": "0x13cda",
+      "end_exclusive": "0x13d12",
+      "extra": [
+        "0x13af2..0x13b3c ProcessCripples and ability loop",
+        "0x13daa..0x13dc8 loop head"
+      ],
+      "native_function": "dr_end_turn_abilities",
+      "verify": "recovered/verify_turn_abilities.py",
+      "callbacks": [
+        "ActivateAbility -> dr_activate_ability (verify_activate_ability.py)",
+        "19 unrecovered ability functions via TurnHooks.ability"
+      ],
+      "original_bytes_sha256": "33ec374293f1c98fea3491c1aa1595fcb8d3e7d8f2f328160ff8e4b45539335a"
+    },
+    {
+      "start": "0x13574",
+      "end_exclusive": "0x13e68",
+      "extra": [],
+      "native_function": "dr_end_of_turn",
+      "verify": "recovered/verify_end_of_turn.py",
+      "status": "whole function: composition of the segments above, differential from entry to return",
+      "callbacks": [
+        "19 unrecovered ability functions via TurnHooks.ability",
+        "Game::SerialiseState event (save format not recovered)"
+      ],
+      "original_bytes_sha256": "0a00b29d9a88ff50b41f985f56893faa811925de5bfcef3c9d7547b5bc2b06fd"
     }
   ],
   "limits": [

@@ -193,3 +193,34 @@ EndOfTurn 整函数差分（开发中）在代币累计（Game+0x165d0）上发�
 
 修正：TurnFlags 去掉 prev_be74[4] 与 arrow_pending_16491；dr_end_turn_begin 增加 RuneState* 参数，把 next_be78[0..3] 写入 SelectionState / 预览状态，箭头判断读写 RuneState。verify_turn_begin 改为从这些所属状态读回比较（原版侧仍读同一内存），400 次比较通过；错误副本"不写预览 double_*"exit 1。
 教训：按偏移新建字段前，先在 verify_*.py 中搜索该偏移是否已有所属状态。
+
+## T030-J：Tile::ActivateAbility 分派（Claude，2026-10-19）
+
+恢复整函数 `Tile::ActivateAbility` 0x3f09c（452 字节）为 `dr_activate_ability(PathState*, GenerationState*, activated[36], tile, TurnHooks*, GenerationHooks*)`。
+
+- 每回合每格只触发一次：Tile+0x254（原生 activated[]）非 0 则返回，否则置 1。
+- 按 enemy_type 跳转表（tbh，类型 3..32）：
+  - 倒计时型 3（RunAwayEnemy）、10（ExplodeEnemy）、19（TeleportEnemy，无 tile 参数）：enemy_state−1，Tile::UpdateCountdown，归 0 时触发。
+  - 28（DestroyUpgrade）：enemy_state−1，归 0 时触发并把 enemy_state 设为 5；UpdateCountdown 无论如何都调用。
+  - 17：MimicDefence（已恢复）。
+  - 32（复活）：enemy_state 为 0 则无事；flag_25e 非 0 则清掉它并返回；否则 enemy_state=0、GenerateStats(turn, Game+0x14ae0)、UpdateEnemyUV、UpdateValues、Resurrect。
+  - 4/6/7/8/11/13/14/16/18/22/23/24/25/26/31：直接触发对应能力。5/9/12/15/20/21/27/29/30 及范围外：无事。
+- 尚未恢复的 19 个能力函数暂经 TurnHooks.ability(enemy_type, tile) 有序回调；UpdateCountdown / UpdateEnemyUV 作为生成事件。
+
+验证 `recovered/verify_activate_ability.py`：整函数从入口执行，MimicDefence / Resurrect / GenerateStats / UpdateValues 为原代码。敌人类型 0..34 各 8 组单格用例 + 40 个随机棋盘按列优先依次触发，共 995 次比较。错误副本：去掉一次性守卫、复活不消耗 flag_25e、倒计时用 `<=0`，均 exit 1。
+测试细节：原版侧状态读取把 enemy_state 当无符号，本测试改为有符号以覆盖 0→−1 回绕。
+
+## T030-K：EndOfTurn 能力段（Claude，2026-10-19）
+
+恢复 `[0x13cda,0x13d12)` + `[0x13af2,0x13b3c)` + 循环头 `[0x13daa,0x13dc8)` 为 `dr_end_turn_abilities`：activated[] 全清 0 → ProcessCripples → 列优先对每个 type==1 且 enemy_type≠0 的格子调用 ActivateAbility（每次重新读取格子）。
+
+验证 `recovered/verify_turn_abilities.py`：原版从 0x13cda 执行到 0x13b3c，生成钩子只在 ActivateAbility 内部启用（ProcessCripples 的 MatchTile 走 match 钩子）。160 个随机局面 + 40 次携带状态再跑，共 200 次比较；能力回调 629、Cripple 184、复活 297、Mimic 421。错误副本：不清 activated、行优先遍历、ProcessCripples 放到循环之后，均 exit 1。
+
+## T030-L：EndOfTurn 整函数（Claude，2026-10-19）
+
+`dr_end_of_turn(ResourceState*, PathState*, GenerationState*, EndOfTurnState*, TurnHooks*, GenerationHooks*)` 依次组合 begin → 燃烧/冰冻 → 回复/毒伤 → 中毒敌人 → 能力段 → 尾段，任一 CheckEndGame 结束即返回。EndOfTurnState 汇集不属于其他模块的指针（技能、回合标志、RuneState、反击标志、结束标志、尾段标志、activated[]、回复量）。
+
+注意：activated[]（Tile+0x254）是每格状态。原版补位交换整块 Tile 时它随格子移动，因此嵌入方需在 RefillHooks 的 Swap 事件中同步交换 activated[]（测试即如此接线）。
+
+验证 `recovered/verify_end_of_turn.py`：原版 `Game::EndOfTurn` 从入口执行到返回，除下列边界外全部为原代码：19 个未恢复能力函数（记录为 ability 事件）、Game::SerialiseState（存档格式未恢复）、表现层（标签、闪光、粒子、文字、音效、成就、界面、帮助、箭头、计分界面）。150 个随机局面 + 10 局 × 8 回合，共 230 次比较；结局：正常存档 200，第 1/2/3/4 次 CheckEndGame 结束分别 18/7/2/3。错误副本：忽略回复段的结束返回、能力段先于中毒敌人段，均 exit 1。
+此测试在开发中发现了 T030-G 的状态归属错误（见上节修正）。

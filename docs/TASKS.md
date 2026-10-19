@@ -33,7 +33,10 @@
 | T030-G 修正 | 完成 / Claude，待复核 | TurnFlags 中重复的 Game+0xbe74..77、0x16491 改写入 SelectionState / 预览 / RuneState（整函数差分发现） | dr_end_turn_begin 增加 RuneState*；verify_turn_begin.py 读回所属状态；错误副本被拒 |
 | T030-H | 完成 / Claude，待复核 | EndOfTurn 循环 B 中毒敌人 [0x13a1c,0x13af2)+[0x13d88,0x13daa)，GetPoison/MatchTile 为原代码；240 次比较 | dr_end_turn_poison_enemies、verify_turn_poison.py；三个错误副本被拒 |
 | T030-I | 完成 / Claude，待复核 | EndOfTurn 尾段 [0x13b3c,0x13cda)+[0x13d12,0x13d64)+[0x13dc8,0x13e04)：免死轮换、两次 CheckEndGame、MoveMatchedTiles、生成标志、帮助、第 100 回合胜利、SerialiseState 边界；262 次比较 | dr_end_turn_finish、TurnFinishFlags、verify_turn_finish.py；三个错误副本被拒 |
-| T030-J | 待做 | 清 Tile+0x254 + ProcessCripples + 能力循环：先恢复 Tile::ActivateAbility 0x3f09c（452 字节）分派，能力函数暂为有序回调；再逐个恢复 19 个未恢复能力函数（RunAwayEnemy … StealGold），最后 EndOfTurn 整函数差分 | T030_EOT_CALLS.json activate_ability / unrecovered_by_size |
+| T030-J | 完成 / Claude，待复核 | Tile::ActivateAbility 0x3f09c 整函数（一次性守卫、跳转表、倒计时、复活）；未恢复能力经 TurnHooks.ability；995 次比较 | dr_activate_ability、verify_activate_ability.py；三个错误副本被拒 |
+| T030-K | 完成 / Claude，待复核 | EndOfTurn 能力段：清 Tile+0x254、ProcessCripples、列优先 ActivateAbility；200 次比较 | dr_end_turn_abilities、verify_turn_abilities.py；三个错误副本被拒 |
+| T030-L | 完成 / Claude，待复核 | Game::EndOfTurn 整函数组合与整函数差分（原版从入口到返回）；230 次比较，四个结束出口与存档出口全覆盖 | dr_end_of_turn、EndOfTurnState、verify_end_of_turn.py；两个错误副本被拒 |
+| T030-M | 进行中 | 逐个恢复 19 个能力函数并接入 dr_activate_ability（去掉对应 ability 回调），同步更新 activate/abilities/EndOfTurn 测试 | T030_EOT_CALLS.json unrecovered_by_size |
 | T040 | 待 T030 | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序 |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -84,5 +87,7 @@
 认领记录：`T030-G / claude / 起始 178a77e / 继承差异：无 / 目标：EndOfTurn 开头段 / 文件：recovered/recovered_turn.*、recovered/verify_turn_begin.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：循环 B（中毒敌人）`
 
 认领记录：`T030-H/I / claude / 起始 a4371b9 / 继承差异：无 / 目标：EndOfTurn 循环 B 与尾段 / 文件：recovered/recovered_turn.*、recovered/verify_turn_poison.py、recovered/verify_turn_finish.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：T030-J 能力循环`
+
+认领记录：`T030-J/K/L / claude / 起始 16470b2 / 继承差异：无 / 目标：ActivateAbility、能力段、EndOfTurn 整函数 / 文件：recovered/recovered_turn.*、recovered/build.sh、recovered/verify_activate_ability.py、recovered/verify_turn_abilities.py、recovered/verify_end_of_turn.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：T030-M 能力函数`
 
 认领记录模板：`Txxx / 工具 / 起始 HEAD / 继承差异 / 目标 / 文件 / 验收命令 / 结果路径 / 下一步`。详细活动现场存于 `.relay/active/owner.json`，持久事实随原子提交更新这里和 PROJECT_STATE.md。

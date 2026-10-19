@@ -133,6 +133,63 @@ extern "C" bool dr_end_turn_finish(ResourceState* r,PathState* p,GenerationState
     emit(h,TurnEventKind::SerialiseState,-1);
     return false;
 }
+extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t* activated,std::uint32_t tile,
+    const TurnHooks* h,const GenerationHooks* gh) {
+    if(activated[tile])return;
+    activated[tile]=1;
+    auto& rule=p->match->stroke->selection.tiles[tile].rule;
+    const auto index=static_cast<std::int32_t>(tile);
+    auto generation=[gh,index](GenerationEventKind kind) {
+        if(gh && gh->event) { const GenerationEvent e{kind,index,0,0,0,0};gh->event(gh->context,&e); }
+    };
+    auto count_down=[&] {
+        rule.enemy_state=static_cast<std::int32_t>(static_cast<std::uint32_t>(rule.enemy_state)-1u);
+        generation(GenerationEventKind::Countdown);
+        return rule.enemy_state==0;
+    };
+    const auto type=rule.enemy_type;
+    switch(type) {
+    case 3: case 10:
+        if(count_down())h->ability(h->context,type,index);
+        break;
+    case 19:
+        if(count_down())h->ability(h->context,type,-1);   // Game::TeleportEnemy()
+        break;
+    case 4: case 6: case 7: case 8: case 11: case 13: case 14: case 16: case 18:
+    case 22: case 23: case 24: case 25: case 26: case 31:
+        h->ability(h->context,type,index);
+        break;
+    case 17:
+        dr_mimic_defence(p,tile,h);
+        break;
+    case 28:
+        rule.enemy_state=static_cast<std::int32_t>(static_cast<std::uint32_t>(rule.enemy_state)-1u);
+        if(rule.enemy_state==0) {h->ability(h->context,type,index);rule.enemy_state=5;}   // Game::DestroyUpgrade
+        generation(GenerationEventKind::Countdown);
+        break;
+    case 32:
+        if(rule.enemy_state==0)break;
+        if(p->combat[tile].flag_25e) {p->combat[tile].flag_25e=0;break;}
+        rule.enemy_state=0;
+        dr_generate_stats(g,tile,p->turn,p->match->spawn_enabled_14ae0,gh);
+        generation(GenerationEventKind::EnemyUV);
+        dr_update_generated_values(g,tile,gh);
+        dr_resurrect(p->match,tile,h);
+        break;
+    default:
+        break;
+    }
+}
+extern "C" void dr_end_turn_abilities(PathState* p,GenerationState* g,std::uint8_t* activated,
+    const TurnHooks* h,const GenerationHooks* gh) {
+    for(int i=0;i<36;++i)activated[i]=0;
+    dr_process_cripples(p,h);
+    const auto& board=p->match->stroke->selection;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+        if(rule.type==1 && rule.enemy_type!=0)dr_activate_ability(p,g,activated,static_cast<std::uint32_t>(i),h,gh);
+    }
+}
 extern "C" bool dr_end_turn_regen_poison(ResourceState* r,std::int32_t regen,const TurnHooks* h) {
     if(regen>0) {
         const auto ceiling=static_cast<std::int32_t>(static_cast<std::uint32_t>(r->health_max)+static_cast<std::uint32_t>(r->health_bonus));
@@ -269,4 +326,13 @@ extern "C" bool dr_end_turn_begin(ResourceState* r,PathState* p,SkillSlots* skil
     for(int i=0;i<5;++i)m.matched_counts[i]=0;
     m.shake_progress_bd90=0;m.shake_scale_bd94=0x3f800000;
     return false;
+}
+extern "C" void dr_end_of_turn(ResourceState* r,PathState* p,GenerationState* g,EndOfTurnState* s,
+    const TurnHooks* h,const GenerationHooks* gh) {
+    if(dr_end_turn_begin(r,p,s->skills,s->flags,s->rune,s->counterattack,h))return;
+    dr_end_turn_burn_freeze(p,h);
+    if(dr_end_turn_regen_poison(r,s->regen,h))return;
+    dr_end_turn_poison_enemies(p,h);
+    dr_end_turn_abilities(p,g,s->activated,h,gh);
+    dr_end_turn_finish(r,p,g,s->end,s->finish,h);
 }

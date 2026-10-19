@@ -29,6 +29,9 @@ struct TurnHooks {
     bool (*check_end_game)(void*);
     // Game::MoveMatchedTiles: wire to dr_move_matched_tiles.
     void (*move_matched_tiles)(void*);
+    // An enemy ability not yet recovered (Game::RunAwayEnemy ... Game::FleeUp), keyed by
+    // enemy_type; tile is -1 for Game::TeleportEnemy (which takes no tile).
+    void (*ability)(void*,std::int32_t enemy_type,std::int32_t tile);
 };
 }
 namespace dungeonraid {
@@ -62,6 +65,17 @@ struct TurnFinishFlags {
     std::uint8_t next_force_coins_14af8;  // becomes GenerationState.force_coins (+0x14af6)
     std::uint8_t flag_1554c;              // cleared
     std::uint32_t help_flags_102d0;       // bit 0x8000: help 15, bit 0x200000: help 21
+};
+// Game::EndOfTurn state not owned by another recovered module.
+struct EndOfTurnState {
+    SkillSlots* skills;
+    TurnFlags* flags;
+    RuneState* rune;               // RuneState.enabled_16491 (Game+0x16491)
+    std::uint8_t* counterattack;   // Game+0xbfba
+    EndGameState* end;
+    TurnFinishFlags* finish;
+    std::uint8_t* activated;       // Tile+0x254 for the 36 tiles; per-tile: swap it on RefillHooks Swap
+    std::int32_t regen;            // Game+0xbe70
 };
 // ScoreScreen::AddScore: variant 0 = (name, turn, xp, gold, up, score, Difficulty),
 // variant 1 = (name, turn, a, b, c, score, GameMode); name is Game+0xbe38.
@@ -120,6 +134,25 @@ void dr_end_turn_poison_enemies(dungeonraid::PathState*,const dungeonraid::TurnH
 // Returns true when a CheckEndGame ended the turn (SerialiseState not reached).
 bool dr_end_turn_finish(dungeonraid::ResourceState*,dungeonraid::PathState*,dungeonraid::GenerationState*,
     dungeonraid::EndGameState*,dungeonraid::TurnFinishFlags*,const dungeonraid::TurnHooks*);
+// Original Tile::ActivateAbility 0x3f09c. Once per turn per tile (activated[] is
+// Tile+0x254, cleared by EndOfTurn). Dispatches on enemy_type: countdown abilities
+// (3, 10, 19: enemy_state-1, Countdown event, ability at 0; 28: ability at 0 then
+// enemy_state=5, Countdown always), MimicDefence (17, recovered), resurrection (32:
+// unless enemy_state is 0 or flag_25e (which is consumed), GenerateStats(turn,
+// difficulty), EnemyUV, UpdateValues, Resurrect) and the other abilities via
+// TurnHooks.ability. Countdown/EnemyUV go to the generation hooks.
+void dr_activate_ability(dungeonraid::PathState*,dungeonraid::GenerationState*,std::uint8_t* activated,std::uint32_t tile,
+    const dungeonraid::TurnHooks*,const dungeonraid::GenerationHooks*);
+// EndOfTurn [0x13cda,0x13d12) + [0x13af2,0x13b3c) + head [0x13daa,0x13dc8): clears
+// activated[] (Tile+0x254), ProcessCripples, then column-major ActivateAbility for
+// every enemy (type 1) with enemy_type != 0.
+void dr_end_turn_abilities(dungeonraid::PathState*,dungeonraid::GenerationState*,std::uint8_t* activated,
+    const dungeonraid::TurnHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::EndOfTurn 0x13574 (whole function): dr_end_turn_begin, burn/freeze,
+// regeneration/poison, poisoned enemies, abilities and dr_end_turn_finish, returning
+// early wherever CheckEndGame ends the game.
+void dr_end_of_turn(dungeonraid::ResourceState*,dungeonraid::PathState*,dungeonraid::GenerationState*,
+    dungeonraid::EndOfTurnState*,const dungeonraid::TurnHooks*,const dungeonraid::GenerationHooks*);
 // EndOfTurn [0x13574,0x13710): turn++, CheckEndGame (true: return), skill cooldowns
 // (+1 up to max unless enemy 15 is on the board; sound 10 when reaching max-1 -> max;
 // every skill deactivated), interface update, per-turn flag reset and rotation,

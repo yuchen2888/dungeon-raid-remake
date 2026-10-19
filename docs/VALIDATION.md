@@ -233,3 +233,10 @@
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、43 个 verify 脚本共 46 步通过。运行目录 `.relay/runs/20261019T182510.962112Z`（UTC），输入指纹 `07951088…080f9136`，与当前源码一致。
 - verify_turn_begin 改为从 SelectionState / 预览状态 / RuneState 读回 Game+0xbe74..77 与 0x16491：400 次比较通过。错误副本"不写预览 double_*"exit 1。
 - 发现途径：开发中的 EndOfTurn 整函数差分在 Game+0x165d0（AddToken 累计，读 0xbe75..77）上出现 120 vs 80。
+
+## 2026-10-19 T030-J / K / L：ActivateAbility、能力段与 EndOfTurn 整函数（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、46 个 verify 脚本共 49 步通过。运行目录 `.relay/runs/20261019T183618.202762Z`（UTC），输入指纹 `498f4b02…ee9864cc`，与当前源码一致。
+- verify_activate_ability 995 次（敌人类型 0..34）；verify_turn_abilities 200 次；verify_end_of_turn 230 次（存档 200，第 1/2/3/4 次 CheckEndGame 结束 18/7/2/3）。能力段 / EndOfTurn 整函数字节 SHA-256 33ec3742…5539335a / 0a00b29d…bc2b06fd。
+- 错误副本（隔离开发副本）：J——去掉一次性守卫、复活不消耗 flag_25e、倒计时 `<=0`；K——不清 activated、行优先、ProcessCripples 置后；L——忽略回复段结束返回、能力段先于中毒敌人段；均 exit 1。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 20）。

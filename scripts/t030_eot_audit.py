@@ -24,7 +24,8 @@ T030={'__ZN4Game12MimicDefenceEP4Tile':'dr_mimic_defence','__ZN4Game9ResurrectEP
       '__ZN4Game15ProcessCripplesEv':'dr_process_cripples','__ZN4Tile18SetFlameVisibilityEbib':'dr_set_flame_visibility',
       '__ZN4Game12CheckEndGameEv':'dr_check_end_game+dr_game_over','__ZN4Game8GetScoreEv':'dr_get_score',
       '__ZN4Game12GetTotalGoldEv':'dr_total_gold','__ZN4Game10GetTotalUPEv':'dr_total_up',
-      '__ZN5Skill10DeactivateEv':'inline in dr_end_turn_begin (SkillSlots.active)'}
+      '__ZN5Skill10DeactivateEv':'inline in dr_end_turn_begin (SkillSlots.active)',
+      '__ZN4Tile15ActivateAbilityEv':'dr_activate_ability (unrecovered abilities via TurnHooks.ability)'}
 PRESENTATION=('Quad','SimpleLabel','Interface','HelpMenu','Arrow','ScoreScreen','GameOverScreen')
 PRESENTATION_GAME={'__ZN4Game10QueueSoundE5Sound','__ZN4Game16QueueAchievementE11Achievementf',
     '__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif','__ZN4Game12AddParticlesEP4Tile12ParticleType',
@@ -94,7 +95,15 @@ def build():
                     native_function='dr_end_turn_finish',verify='recovered/verify_turn_finish.py',
                     callbacks=['check_end_game -> dr_check_end_game (whole function, twice)','move_matched_tiles -> dr_move_matched_tiles',
                                'HelpMenu::Initialise and Game::SerialiseState are events (boundaries)'],
-                    original_bytes_sha256=hashlib.sha256(read(0x13b3c,0x13cda-0x13b3c)+read(0x13d12,0x13d64-0x13d12)+read(0x13dc8,0x13e04-0x13dc8)).hexdigest())],
+                    original_bytes_sha256=hashlib.sha256(read(0x13b3c,0x13cda-0x13b3c)+read(0x13d12,0x13d64-0x13d12)+read(0x13dc8,0x13e04-0x13dc8)).hexdigest()),
+                    dict(start='0x13cda',end_exclusive='0x13d12',extra=['0x13af2..0x13b3c ProcessCripples and ability loop','0x13daa..0x13dc8 loop head'],
+                    native_function='dr_end_turn_abilities',verify='recovered/verify_turn_abilities.py',
+                    callbacks=['ActivateAbility -> dr_activate_ability (verify_activate_ability.py)','19 unrecovered ability functions via TurnHooks.ability'],
+                    original_bytes_sha256=hashlib.sha256(read(0x13cda,0x13d12-0x13cda)+read(0x13af2,0x13b3c-0x13af2)+read(0x13daa,0x13dc8-0x13daa)).hexdigest()),
+                    dict(start=hex(block['start']),end_exclusive=hex(block['end']),extra=[],native_function='dr_end_of_turn',verify='recovered/verify_end_of_turn.py',
+                    status='whole function: composition of the segments above, differential from entry to return',
+                    callbacks=['19 unrecovered ability functions via TurnHooks.ability','Game::SerialiseState event (save format not recovered)'],
+                    original_bytes_sha256=hashlib.sha256(read(block['start'],block['end']-block['start'])).hexdigest())],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph','ActivateAbility expanded one level only',
                         'presentation-boundary is a naming heuristic (Quad/SimpleLabel/Interface/HelpMenu/Arrow/score screens and known Game presentation calls)'])
 
