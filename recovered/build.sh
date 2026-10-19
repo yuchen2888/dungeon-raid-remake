@@ -15,7 +15,7 @@ for module in combat rules input battle round progression selection random strok
         path) set -- "$@" recovered_round.cpp recovered_match.cpp recovered_tokens.cpp recovered_battle.cpp recovered_combat.cpp recovered_rules.cpp recovered_random.cpp ;;
         generation) set -- "$@" recovered_rules.cpp recovered_random.cpp ;;
         encounters) set -- "$@" recovered_refill.cpp recovered_combat.cpp recovered_rules.cpp ;;
-        attack_shield) set -- "$@" recovered_rules.cpp recovered_random.cpp ;;
+        attack_shield) set -- "$@" recovered_rules.cpp recovered_random.cpp recovered_combat.cpp ;;
     esac
     xcrun --sdk macosx clang++ -std=c++17 -Wall -Wextra -Werror -O2 \
         -ffp-contract=off -arch arm64 -arch x86_64 -dynamiclib \

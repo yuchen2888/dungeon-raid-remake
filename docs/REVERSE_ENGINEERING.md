@@ -78,3 +78,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-G：阶段 7 遮罩淡出（Claude，2026-10-19）
 
 `[0x14ae4,0x14b56)` → `dr_process_attack_fade`。遮罩 Quad 顶点 0 的 alpha（Game+0xb92b）兼作计时器，每帧加 dt×(−900) 并向零截断，<0 时置阶段 8。常量为 0xc4610000（−900）；初版误读为 −160，被差分测试发现。原版 Quad::SetAlpha 在测试中真实执行。细节见 T020_ATTACK.md。
+
+## T020-H：InitialiseFlares 0xd9b0 与阶段 1（Claude，2026-10-19）
+
+完整原函数 InitialiseFlares → `dr_initialise_flares`：行优先累加可出手敌人的攻击，得到来袭伤害与 9 号敌人伤害，并为它们加眼睛光效。阶段 1 `[0x14126,0x141c6)` → `dr_process_attack_fade_in`：alpha 每帧 +dt×800，>200 时进入阶段 2 并调用 InitialiseFlares。原调用登记把 InitialiseFlares 误归为表现边界，已更正。AddFlare 维护的光效列表/计数仍是调用方边界。细节见 T020_ATTACK.md。

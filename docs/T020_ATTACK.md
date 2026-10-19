@@ -161,3 +161,24 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 过程记录：初版源码把常量误读为 −160（把 0xc4610000 看错），测试在 alpha=0、dt=1/240 处即失败，查字面量后改为 −900 才通过——这本身证明了测试对常量敏感。另一个错误副本 `alpha<0` 改 `<=0` 也 exit 1。
 
 有效域：有限且 0≤dt≤10；超出范围时 VCVT 的饱和行为未建模。
+
+## T020-H：InitialiseFlares 与阶段 1 淡入（Claude，2026-10-19）
+
+起始提交 4fa6eba。恢复一个**完整原函数**和一个片段，放在 attack_shield 模块（为调用 dr_get_attack，build.sh 给 attack_shield 的链接依赖加入 recovered_combat.cpp）：
+
+| 原代码 | 地址 | 原生函数 | 行为 |
+| --- | --- | --- | --- |
+| Game::InitialiseFlares | 0xd9b0（整函数） | dr_initialise_flares | 清零光效计数 Game+0xbd8c、来袭伤害 +0xbe84、9 号敌人伤害 +0x1553c；**行优先**（外层行、内层列）遍历，类型 1、未出手（Tile+0x86=0）、未冻结（Tile+0x255=0）的格子把 Tile::GetAttack 加到来袭伤害，9 号敌人另加到 9 号伤害；除"32 号敌人且状态≠0"外，每个这样的格子两只眼各加一个光效（类型 0、白色） |
+| ProcessAttack 阶段 1 | [0x14126,0x141c6) | dr_process_attack_fade_in | alpha = 向零截断(alpha + dt×800)；>200 时音效 14、阶段 2、Game+0xbd90=0 与 +0xbd94=1.0f、调用 InitialiseFlares、alpha 定为 200；随后遮罩 SetAlpha，四个界面阴影（生命/XP/UP/金币）设 −1 |
+
+这样 T020-B 的来袭伤害与 9 号伤害有了已恢复的来源，阶段 1→2 的切换也由恢复源码执行。
+
+**登记修正**：Codex 的调用登记原把 InitialiseFlares 归入"表现/成就边界"。实际上它计算来袭伤害，属于玩法逻辑，现已改为 `T020-H:dr_initialise_flares`。
+
+边界：Tile::GetEyePosition、Game::AddFlare 为表现调用。原 AddFlare 还会把光效加入列表并维护 Game+0xbd8c 计数（阶段 2/3 用它遍历光效），原生侧只清零计数，追加和计数要由调用方负责，后续恢复阶段 2/3 时必须接上。
+
+验证 `recovered/verify_attack_flares.py`：InitialiseFlares 整函数原版执行（含 Tile::GetAttack），阶段 1 片段执行时其中的 InitialiseFlares 也是原函数，Quad::SetAlpha 真实执行。
+- InitialiseFlares：540 组边界（种族 × 敌人 0/9/32 × 状态 × 攻击 × 毒 × 出手/冻结）+ 500 组随机。
+- 阶段 1：180 组边界（阶段 0/1/2 × alpha × 10 个 dt）+ 800 组随机 + 30 局逐帧从 0 淡入到阶段 2（408 帧）。
+- 共 2428 次比较，572 次进入阶段 2，35990 个光效事件；比较来袭伤害、9 号伤害、计数、阶段、抖动字段、alpha 与有序事件，并要求棋盘与 combat 不变。
+- 错误副本：列优先遍历、去掉冻结判断、`>200` 改 `>=200`，均 exit 1。

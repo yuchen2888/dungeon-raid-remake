@@ -18,7 +18,7 @@
       "instruction": "bl",
       "target": "__ZN4Game16InitialiseFlaresEv",
       "target_address": "0xd9b0",
-      "category": "presentation-or-achievement-boundary; not a recovered gameplay implementation"
+      "category": "T020-H:dr_initialise_flares (recovered_attack_shield.cpp, verify_attack_flares)"
     },
     {
       "site": "0x1419a",
@@ -512,6 +512,27 @@
         "Quad::SetAlpha on overlay and Game+0xb8ac or +0xb98c"
       ],
       "boundary": "Partial instructions only; phase 8 is handled outside ProcessAttack"
+    },
+    {
+      "start": "0x14126",
+      "end_exclusive": "0x141c6",
+      "size": 160,
+      "original_bytes_sha256": "cf758d9344c536aebba1b8a2c9b448d3513da1d0266c5cda866ddf8a821214cd",
+      "native_function": "dr_process_attack_fade_in",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_flares.py",
+      "inputs": [
+        "R0=Game pointer (entry right after the prologue)",
+        "Game+0xb8a8 phase",
+        "Game+0xb92b overlay alpha",
+        "Game+4 frame time",
+        "literal 0x44480000 = 800.0"
+      ],
+      "outputs": [
+        "alpha=trunc(alpha+dt*800); above 200: sound 14, phase 2, Game+0xbd90=0, +0xbd94=1.0f, InitialiseFlares, alpha 200",
+        "Quad::SetAlpha(overlay) and four Interface shadows -1"
+      ],
+      "boundary": "Partial instructions only; phases 2..4 not recovered"
     }
   ],
   "limits": [

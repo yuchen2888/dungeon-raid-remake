@@ -108,3 +108,47 @@ extern "C" void dr_process_attack_fade(AttackDamageState* s,std::uint8_t* overla
     };
     emit(0,byte);emit(alternate_quad?2:1,byte);
 }
+namespace {
+void flare_event(const AttackFlareHooks* h,AttackFlareEventKind kind,int tile,int a=0,int b=0,int c=0) {
+    if(h && h->event) { const AttackFlareEvent e{kind,tile,a,b,c};h->event(h->context,&e); }
+}
+int tile_attack(const PathState* p,int i) {
+    const auto& c=p->combat[i];
+    const CharacterClassState character{p->match->stroke->selection.character.race};
+    const GameContext game{&character};const TileState tile{c.attack,c.poison,&game};
+    return dr_get_attack(&tile);
+}
+}
+extern "C" void dr_initialise_flares(AttackDamageState* s,PathState* p,std::int32_t* flare_count,const AttackFlareHooks* h) {
+    *flare_count=0;s->incoming_damage=0;s->enemy9_damage=0;
+    const auto& board=p->match->stroke->selection;
+    auto add=[](std::int32_t& total,int value) {
+        total=static_cast<std::int32_t>(static_cast<std::uint32_t>(total)+static_cast<std::uint32_t>(value));
+    };
+    for(int y=0;y<6;++y)for(int x=0;x<6;++x) {
+        const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+        if(rule.type!=1 || p->combat[i].attack_flag || rule.flag_255)continue;
+        add(s->incoming_damage,tile_attack(p,i));
+        if(rule.enemy_type==9)add(s->enemy9_damage,tile_attack(p,i));
+        if(rule.enemy_type==32 && rule.enemy_state!=0)continue;
+        flare_event(h,AttackFlareEventKind::Flare,i,0,0,-1);
+        flare_event(h,AttackFlareEventKind::Flare,i,1,0,-1);
+    }
+}
+extern "C" void dr_process_attack_fade_in(AttackDamageState* s,PathState* p,std::int32_t* flare_count,
+    std::uint8_t* overlay_alpha,float dt,const AttackFlareHooks* h) {
+    if(s->phase!=1)return;
+    // Literal 0x44480000 (800); VMUL then VADD, each rounded to float.
+    const float step=dt*800.0f;
+    int alpha=static_cast<int>(static_cast<float>(*overlay_alpha)+step);
+    if(alpha>200) {
+        flare_event(h,AttackFlareEventKind::Sound,-1,14);
+        s->phase=2;p->match->shake_progress_bd90=0;p->match->shake_scale_bd94=0x3f800000;
+        dr_initialise_flares(s,p,flare_count,h);
+        alpha=200;
+    }
+    const auto byte=static_cast<std::uint8_t>(alpha);
+    *overlay_alpha=byte;
+    flare_event(h,AttackFlareEventKind::SetAlpha,-1,0,byte);
+    for(int i=0;i<4;++i)flare_event(h,AttackFlareEventKind::Shadow,-1,i,-1);
+}

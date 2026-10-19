@@ -33,6 +33,13 @@ struct AttackWeakenHooks { void* context; void (*event)(void*,const AttackWeaken
 enum class AttackFadeEventKind : std::int32_t { SetAlpha=1 };
 struct AttackFadeEvent { AttackFadeEventKind kind; std::int32_t a,b; };
 struct AttackFadeHooks { void* context; void (*event)(void*,const AttackFadeEvent*); };
+// Sound: a=sound. Flare: tile, a=eye (Tile::GetEyePosition arg), b=flare type 0,
+// c=colour bits 0xffffffff; the original Game::AddFlare also appends to the flare
+// list and maintains its count, which the caller must do. SetAlpha: a=quad 0, b=alpha.
+// Shadow: a=0 health,1 XP,2 UP,3 gold; b=-1 (Interface::Set*Shadow).
+enum class AttackFlareEventKind : std::int32_t { Sound=1, Flare, SetAlpha, Shadow };
+struct AttackFlareEvent { AttackFlareEventKind kind; std::int32_t tile,a,b,c; };
+struct AttackFlareHooks { void* context; void (*event)(void*,const AttackFlareEvent*); };
 }
 extern "C" {
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
@@ -41,6 +48,18 @@ extern "C" {
 // nothing gets through, sets phase 7 and flushes a positive enemy9_damage label.
 std::int32_t dr_process_attack_armour_absorb(dungeonraid::AttackDamageState*,
     const dungeonraid::AttackAbsorbHooks*);
+// Original Game::InitialiseFlares 0xd9b0: zero flare count (Game+0xbd8c),
+// incoming damage and enemy-9 damage, then row-major sum Tile::GetAttack of every
+// type-1 tile that has not attacked and is not frozen; eye flares for each except
+// an enemy 32 with nonzero state.
+void dr_initialise_flares(dungeonraid::AttackDamageState*,dungeonraid::PathState*,
+    std::int32_t* flare_count,const dungeonraid::AttackFlareHooks*);
+// ProcessAttack [0x14126,0x141c6): phase-1 overlay fade-in. alpha += dt*800
+// (truncated); above 200: sound 14, phase 2, shake fields reset, InitialiseFlares,
+// alpha 200. Then SetAlpha and the four interface shadows set to -1.
+// Valid domain: finite 0 <= dt <= 10.
+void dr_process_attack_fade_in(dungeonraid::AttackDamageState*,dungeonraid::PathState*,
+    std::int32_t* flare_count,std::uint8_t* overlay_alpha,float dt,const dungeonraid::AttackFlareHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.

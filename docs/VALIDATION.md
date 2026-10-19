@@ -126,3 +126,10 @@
 - 新 verify_attack_fade：2577 次比较（边界 720、随机 1500、逐帧 357），947 次进入阶段 8；字节 SHA-256 `89b6df8a…2723e2`。原版 Quad::SetAlpha 真实执行。
 - 错误版本：初版常量 −160（误读）在开发副本中失败；`alpha<=0` 副本 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T020-H：InitialiseFlares 与阶段 1（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建（attack_shield 新增 combat 依赖）、2 个示例、28 个 verify 脚本共 31 步通过。运行目录 `.relay/runs/20261019T071544.763865Z`，输入指纹 `0f9ffd45…9fa442`，与提交时源码一致。
+- 新 verify_attack_flares：2428 次比较，572 次进入阶段 2，35990 个光效事件；InitialiseFlares 字节 SHA-256 `14ee6460…86c5d7`，阶段 1 片段 `cf758d93…1214cd`。
+- 错误副本（隔离开发副本）：列优先、去掉冻结判断、`>=200`，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；两份登记 --check 均 matches true。

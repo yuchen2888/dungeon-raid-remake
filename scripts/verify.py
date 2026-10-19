@@ -54,7 +54,7 @@ def run(full=False):
                 ('stroke_demo', ['sh', 'recovered/run_stroke_demo.sh']),
                 ('rewards_demo', ['sh', 'recovered/run_rewards_demo.sh'])]
         names = [p.stem for p in sorted((work / 'recovered').glob('verify_*.py'))] if full else [
-            'verify_refill', 'verify_generation', 'verify_encounters', 'verify_refill_integration', 'verify_attack_shield', 'verify_attack_absorb', 'verify_attack_health', 'verify_vampires', 'verify_attack_vampires', 'verify_attack_weaken', 'verify_attack_fade']
+            'verify_refill', 'verify_generation', 'verify_encounters', 'verify_refill_integration', 'verify_attack_shield', 'verify_attack_absorb', 'verify_attack_health', 'verify_vampires', 'verify_attack_vampires', 'verify_attack_weaken', 'verify_attack_fade', 'verify_attack_flares']
         jobs += [(name, [sys.executable, 'recovered/' + name + '.py']) for name in names]
         for name, command in jobs:
             start = time.monotonic()

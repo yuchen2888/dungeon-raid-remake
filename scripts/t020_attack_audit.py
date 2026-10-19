@@ -19,7 +19,8 @@ def build():
     known.update({int(f['address'],16):'T010:'+f['native_function'] for f in t010['functions']})
     gameplay={'__ZN4Game15DoCounterattackEv','__ZN4Game15ProcessVampiresEv'}
     # Whole functions recovered during T020 (not in inventory46 or T010).
-    recovered_here={'__ZN4Game15ProcessVampiresEv':'T020-D:dr_process_vampires (recovered_encounters.cpp, verify_vampires)'}
+    recovered_here={'__ZN4Game15ProcessVampiresEv':'T020-D:dr_process_vampires (recovered_encounters.cpp, verify_vampires)',
+                    '__ZN4Game16InitialiseFlaresEv':'T020-H:dr_initialise_flares (recovered_attack_shield.cpp, verify_attack_flares)'}
     helpers={'__Z11InterpolateRK8GLfloat2S1_f','__Z11Interpolatefff','__Z3Sqrf'}
     calls=[]
     for line in block['body'].splitlines():
@@ -88,7 +89,16 @@ def build():
                     inputs=['R8=Game pointer','Game+0xb8a8 phase','Game+0xb92b overlay quad vertex-0 alpha (phase timer)',
                             'Game+4 frame time','Game+0xbfba alternate quad flag','literal 0xc4610000 = -900.0'],
                     outputs=['alpha=trunc(alpha+dt*-900); below 0 -> 0 and phase 8','Quad::SetAlpha on overlay and Game+0xb8ac or +0xb98c'],
-                    boundary='Partial instructions only; phase 8 is handled outside ProcessAttack')],
+                    boundary='Partial instructions only; phase 8 is handled outside ProcessAttack'),
+                    dict(start=hex(0x14126),end_exclusive=hex(0x141c6),size=0x141c6-0x14126,
+                    original_bytes_sha256=hashlib.sha256(read(0x14126,0x141c6-0x14126)).hexdigest(),
+                    native_function='dr_process_attack_fade_in',source='recovered/recovered_attack_shield.cpp',
+                    verify='recovered/verify_attack_flares.py',
+                    inputs=['R0=Game pointer (entry right after the prologue)','Game+0xb8a8 phase','Game+0xb92b overlay alpha','Game+4 frame time',
+                            'literal 0x44480000 = 800.0'],
+                    outputs=['alpha=trunc(alpha+dt*800); above 200: sound 14, phase 2, Game+0xbd90=0, +0xbd94=1.0f, InitialiseFlares, alpha 200',
+                             'Quad::SetAlpha(overlay) and four Interface shadows -1'],
+                    boundary='Partial instructions only; phases 2..4 not recovered')],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph',
                         'Presentation categories still require validation when their real implementations are connected',
                         'DoCounterattack remains an unrecovered gameplay dependency; ProcessVampires recovered in T020-D but the health segment still reaches it through an ordered callback'])
