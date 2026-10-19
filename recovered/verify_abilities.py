@@ -38,7 +38,10 @@ FUNCTIONS={'run_away':(0x11170,0x11212,'__ZN4Game12RunAwayEnemyEP4Tile','dr_run_
            'convert_random':(0x183e4,0x185e0,'__ZN4Game18ConvertRandomTilesEP4Tile','dr_convert_random_tiles'),
            'jump':(0x1086c,0x10b0c,'__ZN4Game9JumpEnemyEP4Tile','dr_jump_enemy'),
            'attract_skulls':(0x185ec,0x189d2,'__ZN4Game13AttractSkullsEP4Tile','dr_attract_skulls'),
-           'attract_shields':(0x17ddc,0x181d0,'__ZN4Game20AttractShieldsSwordsEP4Tile','dr_attract_shields_swords')}
+           'attract_shields':(0x17ddc,0x181d0,'__ZN4Game20AttractShieldsSwordsEP4Tile','dr_attract_shields_swords'),
+           'heal':(0x105f0,0x1085e,'__ZN4Game11HealOrBlessEP4Tile','dr_heal_or_bless')}
+# Helper functions that belong to an ability (their own calls are recorded as the ability's).
+HELPERS={'heal':[(0xeef0,0xefde)]}   # Game::HealOrBless(std::set<Tile*>&, bool, int)
 RANDOMISE=0xf5b8   # Game::RandomiseTile(Tile&), run as original with the generation hooks (checked below)
 MAKE_BROKEN=0x3d714   # Tile::MakeBroken, run as original with the generation hooks (checked below)
 MAKE_ACID=0x3d7b8  # Tile::MakeAcidPotion, run as original with the generation hooks
@@ -71,7 +74,7 @@ def canonical(e):
             10:lambda:['particles',e.tile,e.a],11:lambda:['health_bar',e.a],12:lambda:['label','target',e.a,e.b,e.c,e.d],
             13:lambda:['label','poison',e.a,e.b,e.c,e.d],14:lambda:['update_skills'],15:lambda:['arrow',e.a,e.b,e.c],
             16:lambda:['help',e.tile,e.a,e.b&0xffffffff,e.c&0xffffffff],17:lambda:['serialise_state'],18:lambda:['flare_target',e.a,e.b]}[k]()
-FLARE_AT=dict(run_away='center',explode='target',teleport='resting',lower='resting',flee='resting',ignite='resting',convert='resting',acid='resting',freeze='center',convert_random='center',jump='resting',attract_skulls='resting',attract_shields='resting',**{'break':'center'})   # Tile+0x54 / Interface::GetTarget / Game+0xb400
+FLARE_AT=dict(run_away='center',explode='target',teleport='resting',lower='resting',flee='resting',ignite='resting',convert='resting',acid='resting',freeze='center',convert_random='center',jump='resting',attract_skulls='resting',attract_shields='resting',heal='center',**{'break':'center'})   # Tile+0x54 / Interface::GetTarget / Game+0xb400
 SYMBOLS={'__ZN4Game10QueueSoundE5Sound':'sound','__ZN4Game8AddFlareE9FlareType8GLfloat2RK9GLcolour4':'flare',
          '__ZN4Game16QueueAchievementE11Achievementf':'achievement','__ZN9Interface15UpdateHealthBarER4Quadi':'bar',
          '__ZN9Interface9GetTargetE8TileType':'target','__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif':'label',
@@ -112,7 +115,7 @@ class AbilityMixin:
         for i,value in enumerate(values):
             node=base+32*i;self.write(node,base+32*(i+1) if i+1<len(values) else header);self.write(node+16,value)
     def set_node(self,tree,i):return SET_NODES+0x400*list(self.sets).index(tree)+32*i
-    def ability_ranges(self):return [v[:2] for v in FUNCTIONS.values()]
+    def ability_ranges(self):return [v[:2] for v in FUNCTIONS.values()]+[r for rs in HELPERS.values() for r in rs]
     def points(self,base):
         return {struct.unpack('<II',self.u.mem_read(base(i),8)):i for i in range(36)}
     def ability_hook(self,u,address,sink):
@@ -126,8 +129,9 @@ class AbilityMixin:
         if self.mode is not None:return False
         key=None
         for k,(a,b,*_) in FUNCTIONS.items():
-            if a<=address<b:self.ab_visits[hex(address)]=self.ab_visits.get(hex(address),0)+1
-            if a<lr<=b:key=k
+            for a,b in [(a,b)]+HELPERS.get(k,[]):
+                if a<=address<b:self.ab_visits[hex(address)]=self.ab_visits.get(hex(address),0)+1
+                if a<lr<=b:key=k
         if address in self.quads and FLAME<lr<=FLAME_END:
             if address==self.alpha:sink.append(['flame_overlay',self.tile_of(u.reg_read(self.regs[0]),0x140)])
             return True   # SetFlameVisibility's overlay quad runs as original code
@@ -171,7 +175,7 @@ class AbilityMixin:
                 # Tile centres can coincide while tiles move: the flare is at the tile just frozen
                 # (FreezeTiles) or at the ability's own tile (RunAwayEnemy).
                 found=[i for i in range(36) if struct.unpack('<II',self.u.mem_read(self.tile(i)+0x54,8))==xy]
-                if len(found)>1 and sink and sink[-1][0]=='freeze' and sink[-1][1] in found:found=[sink[-1][1]]
+                if len(found)>1 and sink and sink[-1][0] in ('freeze','label') and sink[-1][1] in found:found=[sink[-1][1]]
                 elif len(found)>1 and getattr(self,'ab_target',None) in found:found=[self.ab_target]   # MakeBroken's tile
                 elif len(found)>1 and self.ab_tile in found:found=[self.ab_tile]
                 e=['flare',found[0] if len(found)==1 else found,r[1],colour]
@@ -211,6 +215,7 @@ class Native(SmallNative):
         self.ab_fns['acid'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8),C.POINTER(GenerationHooks)]
         self.ab_fns['freeze'].argtypes=[C.POINTER(Path),C.c_uint32,C.POINTER(TurnHooks8)]
         self.ab_fns['break'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8),C.POINTER(GenerationHooks)]
+        self.ab_fns['heal'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8)]
         self.ab_fns['convert_random'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8),C.POINTER(GenerationHooks)]
         for f in self.ab_fns.values():f.restype=None
         def event(_,p):self.ab_events.append(canonical(p.contents))
@@ -225,6 +230,7 @@ class Native(SmallNative):
         f=self.ab_fns[key];h=C.byref(self.ab_hooks)
         if key=='run_away':f(C.byref(self.path_state),tile,h)
         elif key in ('explode','stab'):f(C.byref(self.r),C.byref(self.path_state),tile,h)
+        elif key=='heal':f(C.byref(self.gen),tile,h)
         elif key in ('convert','acid','break','convert_random'):f(C.byref(self.gen),tile,h,C.byref(self.gen_hooks))
         elif key=='teleport':f(C.byref(self.path_state),C.byref(self.gen),h)
         else:f(C.byref(self.path_state),tile,h)
@@ -232,7 +238,7 @@ class Native(SmallNative):
                     flame=[[t.self_flame,t.flame_damage] for t in self.state.selection.tiles])
 
 def main():
-    old,new=Original(),Native();rng=random.Random(0xF4C8);counts={k:0 for k in FUNCTIONS};stats=dict(achievements=0,bars=0,moved=0,swapped=0,ignited=0,lowered=0,converted=0,stabbed=0,acid=0,frozen=0,jumped=0,attracted=0)
+    old,new=Original(),Native();rng=random.Random(0xF4C8);counts={k:0 for k in FUNCTIONS};stats=dict(achievements=0,bars=0,moved=0,swapped=0,ignited=0,lowered=0,converted=0,stabbed=0,acid=0,frozen=0,jumped=0,attracted=0,healed=0,blessed=0)
     for n in range(80*len(FUNCTIONS)):
         key=list(FUNCTIONS)[n%len(FUNCTIONS)]
         c,_=scenario(rng);c['game']['race']=rng.choice([9,9,4,4,rng.randrange(10)]);c['generation']['one_health']=rng.randrange(2)
@@ -245,6 +251,8 @@ def main():
             if t['type']!=1 and rng.random()<.2:t['type']=4
             if t['type'] in (3,4):t['flag231']=int(rng.random()<.3);t['broken']=int(rng.random()<.2)
         tile=rng.choice([rng.randrange(36),30+rng.randrange(6)]);c['board'][tile].update(type=1,matched=0)
+        if key=='heal' and rng.random()<.5:   # nobody injured: HealOrBless blesses instead
+            for i in range(36):c['combat'][i]['health']=c['extras'][i]['max_health']
         old.load(c);new.load(c);a,b=old.ability(key,tile),new.ability(key,tile)
         if a!=b:
             (HERE/'abilities_failure.json').write_text(json.dumps(dict(case=c,key=key,tile=tile,original=a,native=b),indent=2))
@@ -252,6 +260,8 @@ def main():
         counts[key]+=1;stats['achievements']+=sum(1 for e in a['events'] if e[0]=='achievement')
         stats['bars']+=sum(1 for e in a['events'] if e[0]=='health_bar');stats['moved']+=bool(a['enc']['events'])
         stats['swapped']+=sum(1 for e in a['enc']['refill']['events'] if e[0]==1) if key=='flee' else 0
+        stats['healed']+=sum(1 for e in a['events'] if e[0]=='label' and e[2]==12) if key=='heal' else 0
+        stats['blessed']+=sum(1 for e in a['events'] if e[0]=='label' and e[2]==11) if key=='heal' else 0
         stats['jumped']+=sum(1 for e in a['enc']['refill']['events'] if e[0]==1) if key=='jump' else 0
         stats['attracted']+=sum(1 for e in a['enc']['refill']['events'] if e[0]==1) if key.startswith('attract') else 0
         stats['converted']+=sum(1 for e in a['events'] if e[0]=='label_rest' and key=='convert')

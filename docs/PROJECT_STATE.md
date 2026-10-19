@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-N2）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-N3a）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
@@ -40,6 +40,7 @@
 - T030-M：第一批 8 个敌人能力恢复并接入（RunAway/Explode/Teleport/LowerSkulls/FleeUp/IgniteTiles/StabAttack/ConvertSwordToSkull），在整函数差分中以原代码执行。
 - T030-N1：MakeAcidPotion、FreezeTiles、BreakRandomShieldSword 恢复并接入（测试中模拟 std::set<Tile*>）。
 - T030-N2：ConvertRandomTiles、JumpEnemy、AttractSkulls、AttractShieldsSwords 恢复并接入。
+- T030-N3a：HealOrBless（含 std::set 重载）恢复并接入。
 
 ## 验证
 
@@ -93,4 +94,4 @@
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界为 4 个能力函数（HealOrBless、StealGold、ThrowSkull、DestroyUpgrade，经 TurnHooks.ability）和 SerialiseState。下一步 T030-N3：恢复剩余 4 个能力（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N2。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界为 3 个能力函数（StealGold、ThrowSkull、DestroyUpgrade，经 TurnHooks.ability）和 SerialiseState。下一步 T030-N3：先扩展代币接口（代币数值、目标格）再恢复 ThrowSkull/StealGold，DestroyUpgrade 需物品模型（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N3a。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

@@ -428,6 +428,44 @@ extern "C" void dr_attract_skulls(PathState* p,std::uint32_t tile,const TurnHook
 extern "C" void dr_attract_shields_swords(PathState* p,std::uint32_t tile,const TurnHooks* h) {
     attract(p,tile,h,true,-1,25,33,23);   // white
 }
+extern "C" void dr_heal_or_bless(GenerationState* g,std::uint32_t tile,const TurnHooks* h) {
+    PathState* p=g->refill->path;auto& m=*p->match;const auto& board=m.stroke->selection;
+    const int sx=board.tiles[tile].rule.x,sy=board.tiles[tile].rule.y;
+    bool candidate[36]={};int n=0;bool heal=true;
+    for(int pass=0;pass<2 && !n;++pass) {
+        heal=pass==0;
+        for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+            if(x==sx && y==sy)continue;
+            const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+            if(rule.matched || rule.type!=1)continue;
+            if(heal && p->combat[i].health>=g->tiles[i].max_health)continue;
+            candidate[i]=true;++n;
+        }
+    }
+    if(!n)return;
+    emit(h,TurnEventKind::Sound,-1,36);
+    // Game::HealOrBless(std::set<Tile*>&, bool heal, int count) with count 2
+    for(int count=2;count>0 && n>0;--count) {
+        int pick=dr_random_int(&m.random,0,n-1,5);
+        for(int i=0;i<36;++i) {
+            if(!candidate[i])continue;
+            if(pick) {--pick;continue;}
+            auto& c=p->combat[i];
+            if(heal) {
+                c.health=g->tiles[i].max_health;
+                emit(h,TurnEventKind::Text,i,0,0,1);
+                emit(h,TurnEventKind::Label,i,12,0,21,0x3f800000);
+            } else {
+                c.attack=static_cast<std::int32_t>(static_cast<std::uint32_t>(c.attack)+1u);
+                emit(h,TurnEventKind::Text,i,1,0,0);
+                emit(h,TurnEventKind::Label,i,11,0,20,0x3f800000);
+            }
+            emit(h,TurnEventKind::Flare,i,1,static_cast<std::int32_t>(0xffff6464u));   // RGBA 100,100,255,255
+            candidate[i]=false;--n;break;
+        }
+    }
+    reset_attack_timers(m);
+}
 extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t* activated,std::uint32_t tile,
     const TurnHooks* h,const GenerationHooks* gh) {
     if(activated[tile])return;
@@ -465,7 +503,8 @@ extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t
     case 14: dr_jump_enemy(p,tile,h);break;
     case 24: dr_attract_skulls(p,tile,h);break;
     case 25: dr_attract_shields_swords(p,tile,h);break;
-    case 4: case 13: case 26:
+    case 4: dr_heal_or_bless(g,tile,h);break;
+    case 13: case 26:
         h->ability(h->context,type,index);   // not yet recovered
         break;
     case 17:

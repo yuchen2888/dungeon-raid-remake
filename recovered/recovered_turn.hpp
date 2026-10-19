@@ -212,6 +212,13 @@ void dr_jump_enemy(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid:
 // 25 (colour 33), sound 14 / 23, timers reset.
 void dr_attract_skulls(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
 void dr_attract_shields_swords(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::HealOrBless 0x105f0 (with its std::set overload 0xeef0): the other unmatched enemies
+// below their generated maximum health are healed; if there are none, all other unmatched
+// enemies are blessed instead. With any candidate: sound 36, then twice (while any remain)
+// RandI(0, n-1, stream 5) picks one (index order): heal sets health to the maximum (UpdateText
+// 0,0,1; label 12, colour 21), bless adds 1 attack (UpdateText 1,0,0; label 11, colour 20);
+// flare RGBA 100,100,255,255 at its centre; removed. Timers reset only with a candidate.
+void dr_heal_or_bless(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
 // Original Tile::ActivateAbility 0x3f09c. Once per turn per tile (activated[] is
 // Tile+0x254, cleared by EndOfTurn). Dispatches on enemy_type: countdown abilities
 // (3 RunAwayEnemy, 10 ExplodeEnemy, 19 TeleportEnemy: enemy_state-1, Countdown event,

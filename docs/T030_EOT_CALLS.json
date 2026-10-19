@@ -362,7 +362,7 @@
         "target": "__ZN4Game11HealOrBlessEP4Tile",
         "target_address": "0x105f0",
         "size": 636,
-        "category": "unrecovered"
+        "category": "T030:dr_heal_or_bless (incl. the std::set overload)"
       },
       {
         "site": "0x3f130",
@@ -574,10 +574,6 @@
     {
       "symbol": "__ZN4Game10ThrowSkullEP4Tile",
       "size": 620
-    },
-    {
-      "symbol": "__ZN4Game11HealOrBlessEP4Tile",
-      "size": 636
     },
     {
       "symbol": "__ZN4Game14SerialiseStateEv",

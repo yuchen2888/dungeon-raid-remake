@@ -23,7 +23,7 @@ from verify_stroke import HERE, I32, U8
 from verify_abilities import AbilityMixin, TurnHooks8, ABILITY, SWAP_FN, canonical, follow_swaps
 
 ENTRY,END=0x3f09c,0x3f25c
-ABILITIES={'__ZN4Game11HealOrBlessEP4Tile':4,'__ZN4Game9StealGoldEP4Tile':13,
+ABILITIES={'__ZN4Game9StealGoldEP4Tile':13,
     '__ZN4Game10ThrowSkullEP4Tile':26,
     '__ZN4Game14DestroyUpgradeEP4Tile':28}   # not yet recovered: recorded and skipped
 TurnHooks=TurnHooks8   # TurnHooks incl. move_matched_tiles, ability and swap_tiles

@@ -261,3 +261,10 @@
 - verify_abilities：15 个函数共 1200 次比较（JumpEnemy 交换 80、吸引类交换 417）；activate / 能力段 / 整函数测试通过。
 - 错误副本（隔离开发副本）：ConvertRandomTiles 排除已冰冻、只做一轮；JumpEnemy 不排除自身、匹配目的地；吸引距离"或"改"且"、闪光顺序对调；均 exit 1。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 5：4 个能力 + SerialiseState）。
+
+## 2026-10-19 T030-N3a：HealOrBless（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、47 个 verify 脚本共 50 步通过。运行目录 `.relay/runs/20261019T223308.730696Z`（UTC），与当前源码一致。
+- verify_abilities：16 个函数共 1280 次比较（治疗 72、祝福 88）；activate / 能力段 / 整函数测试通过。
+- 错误副本（隔离开发副本）：治疗条件 `>=` 改 `>`、不排除自身、只处理一格，均 exit 1。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 4：3 个能力 + SerialiseState）。

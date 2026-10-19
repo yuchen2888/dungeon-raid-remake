@@ -273,3 +273,13 @@ verify_abilities 现为 11 个函数共 880 次比较；activate / 能力段 / �
 测试框架：std::set 模拟扩展为同时管理多个集合（每个集合独立节点区），并接管 Game::GetSetIndex（返回第 i 个节点）。verify_abilities 现为 15 个函数共 1200 次比较（JumpEnemy 交换 80 次、吸引类交换 417 次）；activate / 能力段 / 整函数测试通过。错误副本：ConvertRandomTiles 排除已冰冻、只做一轮；JumpEnemy 不排除自身、匹配目的地；吸引距离条件改成"且"、闪光顺序对调，均被拒。
 
 仍未恢复：4 HealOrBless（含 std::set 重载）、13 StealGold、26 ThrowSkull（需代币数值）、28 DestroyUpgrade（需物品模型），以及 SerialiseState。
+
+## T030-N3a：HealOrBless（Claude，2026-10-19）
+
+| 类型 | 函数 | 地址 | 原生 | 行为要点 |
+| --- | --- | --- | --- | --- |
+| 4 | HealOrBless（含 std::set 重载 0xeef0） | 0x105f0 | dr_heal_or_bless | 候选＝自身以外、未匹配、生命低于生成上限（GeneratedTile.max_health，Tile+0xb0）的敌人 → 治疗；没有则候选＝自身以外所有未匹配敌人 → 祝福；无候选什么都不做。有候选：音效 36，然后重载（次数 2，递归）每次 RandI(0, n−1, 流 5) 选一格：治疗把生命设为上限、UpdateText(0,0,1)、标签 12（颜色 21）；祝福攻击 +1、UpdateText(1,0,0)、标签 11（颜色 20）；中心闪光 RGBA 100,100,255,255；移出集合。最后计时器复位 |
+
+测试框架：引入 HELPERS 表，把重载函数的地址范围归入所属能力（其内部调用按该能力记录）；中心闪光消歧增加"紧邻的标签所在格"。用例中一半的 HealOrBless 局面把所有敌人设为满血以覆盖祝福分支（治疗 72、祝福 88）。verify_abilities 共 16 个函数 1280 次比较；activate / 能力段 / 整函数测试通过。错误副本：治疗条件 `>=` 改 `>`、不排除自身、只处理一格，均 exit 1。
+
+仍未恢复：13 StealGold（含 set 重载，需代币目标格与金币条）、26 ThrowSkull（需代币数值 Token+0x98）、28 DestroyUpgrade（需物品模型），以及 SerialiseState。
