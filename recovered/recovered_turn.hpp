@@ -24,6 +24,21 @@ struct TurnHooks {
     bool (*check_end_game)(void*);
 };
 }
+namespace dungeonraid {
+// CheckEndGame flags not owned by another recovered module.
+struct EndGameState {
+    std::uint8_t game_over_screen; // Game+0xcac4 (GameOverScreen at +0xcac0 is showing)
+    std::uint8_t victory;          // Game+0x16611 (record-mode win)
+    std::uint8_t revive_second;    // Game+0x164a5 (cleared with ResourceState.guard_164a4)
+};
+// game_over is the end-of-game bookkeeping [0x10c04,...) (scores, class stats,
+// screens), still a boundary: called with win=true for a record-mode victory.
+struct EndGameHooks {
+    void* context;
+    void (*event)(void*,const TurnEvent*);
+    void (*game_over)(void*,bool win);
+};
+}
 extern "C" {
 // Original Game::MimicDefence 0xbd20: the tile's defence becomes the current armour.
 void dr_mimic_defence(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
@@ -49,4 +64,10 @@ void dr_end_turn_burn_freeze(dungeonraid::PathState*,const dungeonraid::TurnHook
 // health_bonus, then poison (ResourceState.poison) damage to the player and
 // CheckEndGame. Returns true when CheckEndGame ends the turn (original 0x13e04).
 bool dr_end_turn_regen_poison(dungeonraid::ResourceState*,std::int32_t regen,const dungeonraid::TurnHooks*);
+// Original Game::CheckEndGame 0x10b18, decision part [0x10b18,0x10c04): true when
+// the game is (already) over. Record-mode victory -> achievement 76 and game over;
+// health > 0 -> false; otherwise achievement 40 when the class's mortal enemy is on
+// the board, then either the one-time revive (guard_164a4: full health, sound 19,
+// label 28, achievement 61, false) or game_over(false).
+bool dr_check_end_game(dungeonraid::ResourceState*,dungeonraid::EndGameState*,const dungeonraid::EndGameHooks*);
 }

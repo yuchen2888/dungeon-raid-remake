@@ -76,7 +76,11 @@ def build():
                     original_bytes_sha256=hashlib.sha256(read(0x13710,0x13910-0x13710)+read(0x13d64,0x13d88-0x13d64)).hexdigest()),
                     dict(start='0x13910',end_exclusive='0x13a1c',extra=[],native_function='dr_end_turn_regen_poison',
                     verify='recovered/verify_turn_regen.py',callbacks=['Game::CheckEndGame (not recovered; ordered callback)'],
-                    original_bytes_sha256=hashlib.sha256(read(0x13910,0x13a1c-0x13910)).hexdigest())],
+                    original_bytes_sha256=hashlib.sha256(read(0x13910,0x13a1c-0x13910)).hexdigest()),
+                    dict(start='0x10b18',end_exclusive='0x10c04',extra=[],native_function='dr_check_end_game',
+                    verify='recovered/verify_check_end_game.py',status='Game::CheckEndGame decision/revive part only',
+                    callbacks=['end-of-game bookkeeping from 0x10c04 (game_over callback, not recovered)'],
+                    original_bytes_sha256=hashlib.sha256(read(0x10b18,0x10c04-0x10b18)).hexdigest())],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph','ActivateAbility expanded one level only',
                         'presentation-boundary is a naming heuristic (Quad/SimpleLabel/Interface/HelpMenu/Arrow/score screens and known Game presentation calls)'])
 

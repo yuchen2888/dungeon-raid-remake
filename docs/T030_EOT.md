@@ -88,3 +88,23 @@ TurnHooks 末尾追加 `check_end_game` 回调。**CheckEndGame 尚未恢复**�
 ## 测试稳健性：去掉墙钟超时（2026-10-19）
 
 一次全套验证在系统负载平均值约 74 时失败（主要是 Spotlight 索引进程占满 CPU）。verify_counterattack 与 verify_encounters 中的原版模拟撞上了 `emu_start` 的墙钟超时（5 秒和 1 秒），结果本身并没有不一致；该次运行已终止并作废。我写的测试（verify_attack_*、verify_turn_*）已改为 `timeout=0`，只保留指令数上限来防止死循环，这样结果不再受机器负载影响。继承的测试（verify_refill/path/match/motion 等）仍有墙钟超时；它们在正常负载下一直通过，是否统一修改留给下一位工具决定。
+
+## T030-E：CheckEndGame 判断与免死段（Claude，2026-10-19）
+
+起始提交 f576964。恢复 Game::CheckEndGame 0x10b18 的判断部分 `[0x10b18,0x10c04)` 为 `dr_check_end_game(ResourceState*, EndGameState*, EndGameHooks*)`（turn 模块，链接依赖加入 rules 以复用 dr_mortal_enemy / dr_enemy_count）。
+
+| 顺序 | 条件 | 行为 |
+| --- | --- | --- |
+| 1 | Game+0xcac4 非 0（游戏结束界面 GameOverScreen 位于 +0xcac0，这是它的显示中标志） | 返回 1 |
+| 2 | Game+0x16611 胜利标志 且 record 模式 且 mode_14ae8==0 | 成就 76（100），进入结束结算（胜） |
+| 3 | 生命 > 0 | 返回 0 |
+| 4 | 种族≠0 且棋盘上有该职业的宿敌 | 成就 40 |
+| 5 | 免死标志 guard_164a4（ResourceState 已有，Game+0x164a4） | 清它与 Game+0x164a5；生命 = 上限 + 加成；同步血条；音效 19；毒图标位置标签 28（颜色 36）；成就 61；返回 0 |
+| 6 | 否则 | 进入结束结算（负） |
+
+结束结算 `[0x10c04, 返回)` 暂由 `game_over(win)` 回调承接，是下一单元。已读到的内容：职业档案 games_played += 1、enemies_killed += 本局击杀 Game+0x165b4；非 record 模式按难度（Game+0x14ae0，即 MatchState 中旧名 spawn_enabled_14ae0 的字段，实为难度）更新 normal/hard/harder 最高分（无符号比较）；ScoreScreen::AddScore（计分表）；SetSkills；SerialiseClasses；GameOverScreen::Initialise(win)；然后写 Game+0x146d0=0、+0x146d4=1、+0x15546=1，成就 67，返回 1。需要先恢复 GetScore、GetTotalGold、GetTotalUP（小函数）。
+
+验证 `recovered/verify_check_end_game.py`：原版从入口执行到返回或到达 0x10c04；后一种情况读出栈上 [sp,#0x14] 作为胜负标志，与原生 game_over 回调比较。
+- 288 组边界（界面标志 × 胜利标志 × record × mode × 生命 −5/0/1 × 免死 × 种族 0/3/7 × 宿敌有无）+ 300 组随机，共 588 次比较。
+- 结果分布：继续 266、已结束 175、负 111、胜 36；免死路径已覆盖。
+- 错误副本：胜利条件改 mode==1、`>0` 改 `>=0`、免死不清 0x164a5，均 exit 1。

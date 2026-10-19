@@ -106,3 +106,31 @@ extern "C" bool dr_end_turn_regen_poison(ResourceState* r,std::int32_t regen,con
     }
     return false;
 }
+extern "C" bool dr_check_end_game(ResourceState* r,EndGameState* e,const EndGameHooks* h) {
+    auto emit=[h](TurnEventKind kind,int tile,int a=0,int b=0,int c=0,int d=0) {
+        if(h && h->event) { const TurnEvent ev{kind,tile,a,b,c,d};h->event(h->context,&ev); }
+    };
+    if(e->game_over_screen)return true;
+    const auto& stroke=*r->match->stroke;const auto& board=stroke.selection;
+    if(e->victory && stroke.record_14aed && stroke.mode_14ae8==0) {
+        emit(TurnEventKind::Achievement,-1,76,0x42c80000);
+        h->game_over(h->context,true);return true;
+    }
+    if(r->health>0)return false;
+    if(board.character.race!=0) {
+        const int mortal=dr_mortal_enemy(board.character.race);
+        RuleTile tiles[36];for(int i=0;i<36;++i)tiles[i]=board.tiles[i].rule;
+        const RuleGame view{0,board.character,tiles};
+        if(dr_enemy_count(&view,mortal)>0)emit(TurnEventKind::Achievement,-1,40,0x42c80000);
+    }
+    if(r->guard_164a4) {
+        r->guard_164a4=0;e->revive_second=0;
+        r->health=static_cast<std::int32_t>(static_cast<std::uint32_t>(r->health_max)+static_cast<std::uint32_t>(r->health_bonus));
+        if(r->health!=r->ui_health) {r->ui_health=r->health;emit(TurnEventKind::HealthBar,-1,r->health);}
+        emit(TurnEventKind::Sound,-1,19);
+        emit(TurnEventKind::LabelPoison,-1,28,0,36,0x3f800000);
+        emit(TurnEventKind::Achievement,-1,61,0x42c80000);
+        return false;
+    }
+    h->game_over(h->context,false);return true;
+}

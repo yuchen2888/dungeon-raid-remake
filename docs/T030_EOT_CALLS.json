@@ -681,6 +681,18 @@
         "Game::CheckEndGame (not recovered; ordered callback)"
       ],
       "original_bytes_sha256": "3a34e905faa32c6e0abb6bc9b0920754228680237e870d1bf452ab15e706f944"
+    },
+    {
+      "start": "0x10b18",
+      "end_exclusive": "0x10c04",
+      "extra": [],
+      "native_function": "dr_check_end_game",
+      "verify": "recovered/verify_check_end_game.py",
+      "status": "Game::CheckEndGame decision/revive part only",
+      "callbacks": [
+        "end-of-game bookkeeping from 0x10c04 (game_over callback, not recovered)"
+      ],
+      "original_bytes_sha256": "a698234cc65e320b47dfee436c88dbfca0f18b012a695728a48ffda3b0002358"
     }
   ],
   "limits": [

@@ -199,3 +199,10 @@
 - 新 verify_turn_regen：900 次比较，122 次结束；段字节 SHA-256 `3a34e905…e706f944`。
 - 错误副本（隔离开发副本）：T030-C 三个、T030-D 三个，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；T030 登记 --check matches true。
+
+## 2026-10-19 T030-E：CheckEndGame 判断与免死段（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、39 个 verify 脚本共 42 步通过。运行目录 `.relay/runs/20261019T172605.544713Z`（UTC），输入指纹 `5b7b3827…9b2b35`，与提交时源码一致。
+- 新 verify_check_end_game：588 次比较（结果：继续 266、已结束 175、负 111、胜 36）；判断段字节 SHA-256 `a698234c…b0002358`。
+- 错误副本（隔离开发副本）：mode==1、`>=0`、不清 0x164a5，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；T030 登记 --check matches true。
