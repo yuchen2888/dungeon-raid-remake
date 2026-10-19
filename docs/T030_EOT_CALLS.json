@@ -354,7 +354,7 @@
         "target": "__ZN4Game12RunAwayEnemyEP4Tile",
         "target_address": "0x11170",
         "size": 164,
-        "category": "unrecovered"
+        "category": "T030:dr_run_away_enemy"
       },
       {
         "site": "0x3f126",
@@ -378,7 +378,7 @@
         "target": "__ZN4Game11IgniteTilesEP4Tile",
         "target_address": "0xa150",
         "size": 292,
-        "category": "unrecovered"
+        "category": "T030:dr_ignite_tiles"
       },
       {
         "site": "0x3f144",
@@ -402,7 +402,7 @@
         "target": "__ZN4Game12ExplodeEnemyEP4Tile",
         "target_address": "0x12da8",
         "size": 192,
-        "category": "unrecovered"
+        "category": "T030:dr_explode_enemy"
       },
       {
         "site": "0x3f16e",
@@ -410,7 +410,7 @@
         "target": "__ZN4Game19ConvertSwordToSkullEP4Tile",
         "target_address": "0xdc38",
         "size": 356,
-        "category": "unrecovered"
+        "category": "T030:dr_convert_sword_to_skull"
       },
       {
         "site": "0x3f178",
@@ -434,7 +434,7 @@
         "target": "__ZN4Game10StabAttackEP4Tile",
         "target_address": "0x127a8",
         "size": 332,
-        "category": "unrecovered"
+        "category": "T030:dr_stab_attack"
       },
       {
         "site": "0x3f196",
@@ -466,7 +466,7 @@
         "target": "__ZN4Game13TeleportEnemyEv",
         "target_address": "0xf4c8",
         "size": 240,
-        "category": "unrecovered"
+        "category": "T030:dr_teleport_enemy"
       },
       {
         "site": "0x3f1c8",
@@ -482,7 +482,7 @@
         "target": "__ZN4Game11LowerSkullsEP4Tile",
         "target_address": "0xc9e0",
         "size": 256,
-        "category": "unrecovered"
+        "category": "T030:dr_lower_skulls"
       },
       {
         "site": "0x3f1dc",
@@ -530,7 +530,7 @@
         "target": "__ZN4Game6FleeUpEP4Tile",
         "target_address": "0xc664",
         "size": 272,
-        "category": "unrecovered"
+        "category": "T030:dr_flee_up"
       },
       {
         "site": "0x3f242",
@@ -568,44 +568,12 @@
   },
   "unrecovered_by_size": [
     {
-      "symbol": "__ZN4Game12RunAwayEnemyEP4Tile",
-      "size": 164
-    },
-    {
-      "symbol": "__ZN4Game12ExplodeEnemyEP4Tile",
-      "size": 192
-    },
-    {
-      "symbol": "__ZN4Game13TeleportEnemyEv",
-      "size": 240
-    },
-    {
-      "symbol": "__ZN4Game11LowerSkullsEP4Tile",
-      "size": 256
-    },
-    {
-      "symbol": "__ZN4Game6FleeUpEP4Tile",
-      "size": 272
-    },
-    {
-      "symbol": "__ZN4Game11IgniteTilesEP4Tile",
-      "size": 292
-    },
-    {
       "symbol": "__ZN4Game14DestroyUpgradeEP4Tile",
       "size": 308
     },
     {
-      "symbol": "__ZN4Game10StabAttackEP4Tile",
-      "size": 332
-    },
-    {
       "symbol": "__ZN4Game14MakeAcidPotionEP4Tile",
       "size": 340
-    },
-    {
-      "symbol": "__ZN4Game19ConvertSwordToSkullEP4Tile",
-      "size": 356
     },
     {
       "symbol": "__ZN4Game18ConvertRandomTilesEP4Tile",

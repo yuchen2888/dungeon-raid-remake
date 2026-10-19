@@ -240,3 +240,10 @@
 - verify_activate_ability 995 次（敌人类型 0..34）；verify_turn_abilities 200 次；verify_end_of_turn 230 次（存档 200，第 1/2/3/4 次 CheckEndGame 结束 18/7/2/3）。能力段 / EndOfTurn 整函数字节 SHA-256 33ec3742…5539335a / 0a00b29d…bc2b06fd。
 - 错误副本（隔离开发副本）：J——去掉一次性守卫、复活不消耗 flag_25e、倒计时 `<=0`；K——不清 activated、行优先、ProcessCripples 置后；L——忽略回复段结束返回、能力段先于中毒敌人段；均 exit 1。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 20）。
+
+## 2026-10-19 T030-M：第一批 8 个敌人能力（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、47 个 verify 脚本共 50 步通过。运行目录 `.relay/runs/20261019T184823.531264Z`（UTC），输入指纹 `2af61aa6…d08792e6`，与当前源码一致。
+- 新 verify_abilities：8 个函数各 80 组，共 640 次比较；verify_activate_ability 995、verify_turn_abilities 200、verify_end_of_turn 230（这 8 个能力在其中以原代码执行）。
+- 错误副本（隔离开发副本）：ExplodeEnemy 不设下限 1、LowerSkulls 不排除自身、ConvertSwordToSkull 行优先、StabAttack 忽略宿敌分支、FleeUp 顶行判断（原生越界崩溃 exit 139）、LowerSkulls 不接线，均被拒。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 12：11 个能力 + SerialiseState）。

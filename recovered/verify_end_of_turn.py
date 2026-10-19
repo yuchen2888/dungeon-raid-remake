@@ -20,6 +20,7 @@ import struct
 from verify_turn_finish import Original as FinishOriginal, Native as FinishNative, TurnFinishFlags
 from verify_turn_begin import (Original as BeginOriginal, Native as BeginNative, SkillSlots, TurnFlags, FLAG_BYTES)
 from verify_activate_ability import ABILITIES, ABILITY, TurnHooks, EVENT, MATCH
+from verify_abilities import AbilityMixin, SWAP_FN, canonical, follow_swaps
 from verify_turn_burn import FLAME, FLAME_END, FREEZE, FREEZE_END, QUAD_SYMBOLS, TILES, STRIDE, RESTING
 from verify_turn_regen import TARGET, INTERFACE, HEALTH_QUAD
 from verify_turn_small import FUNCTIONS as SMALL
@@ -54,11 +55,12 @@ def segment_of(lr):
         if any(a<lr<=b for a,b in ranges):return name
     return None
 
-class Original(FinishOriginal):
+class Original(AbilityMixin,FinishOriginal):
     ranges,entry,stop_at,extra_stops=[(ENTRY,EPILOGUE)],ENTRY,-1,()   # attack/move switching for any EndOfTurn call site; run to return
     def __init__(self):
         super().__init__();text=(HERE.parent/'armv7-disassembly.txt').read_text();self.eot_calls={};self.abilities={};self.quads=set()
-        self.eot_visits={};self.eot_running=False;self.small=None
+        self.eot_visits={};self.eot_running=False;self.small=None;self.ability_setup()
+        self.ranges=[(ENTRY,EPILOGUE)]+self.ability_ranges()   # attack/move switching also inside recovered abilities
         address=lambda s:int(re.search(r'^'+re.escape(s)+r':\n\s*([0-9a-f]+):',text,re.M)[1],16)
         for symbol,name in SYMBOLS.items():self.eot_calls[address(symbol)]=name
         for symbol,kind in ABILITIES.items():self.abilities[address(symbol)]=kind
@@ -71,6 +73,7 @@ class Original(FinishOriginal):
     def resting_index(self,x,y):
         t=[i for i in range(36) if struct.unpack('<II',self.u.mem_read(self.GAME+RESTING+8*i,8))==(x,y)];return t[0] if len(t)==1 else t
     def hook(self,u,address,size,context):
+        if self.eot_running and self.ability_hook(u,address,self.end_events):return   # recovered abilities run as original code
         if self.eot_running and self.mode is None:
             if ENTRY<=address<EPILOGUE:self.eot_visits[hex(address)]=self.eot_visits.get(hex(address),0)+1
             if address==ACTIVATE:self.gen_active=True
@@ -124,6 +127,7 @@ class Original(FinishOriginal):
     def end_of_turn(self):
         self.all_events=[];self.enc_events=[];self.gen_events=[];self.refill_events=[];self.path_events=[]
         self.match_events=[];self.token_events=[];self.motion_events=[];self.end_events=[];self.int_sets={};self.mode=None;self.pending_gen=None
+        self.ability_stack=[]
         u=self.u;u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140ff00);u.reg_write(self.LR,self.STOP|1)
         self.eot_running=self.all_running=self.recording=True
         try:
@@ -146,34 +150,16 @@ class Native(FinishNative):
         self.eot_fn=lib.dr_end_of_turn
         self.eot_fn.argtypes=[C.POINTER(Resource),C.POINTER(Path),C.POINTER(Generation),C.POINTER(EndOfTurnState),C.POINTER(TurnHooks),C.POINTER(GenerationHooks)]
         self.eot_fn.restype=None
-        def event(_,p):
-            e=p.contents;k=e.kind;ev=self.end_events.append
-            if k==1:ev(['sound',e.a])
-            elif k==2:ev(['text',e.tile,e.a,e.b,e.c])
-            elif k==3:ev(['label',e.tile,e.a,e.b,e.c,e.d])
-            elif k==4:ev(['flare',e.tile,e.a,e.b])
-            elif k==5:ev(['achievement',e.a,e.b])
-            elif k==6:ev(['label_rest',e.tile,e.a,e.b,e.c,e.d])
-            elif k==7:ev(['flare_rest',e.tile,e.a,e.b])
-            elif k==8:ev(['freeze',e.tile,e.a])
-            elif k==9:ev(['flame_overlay',e.tile])
-            elif k==10:ev(['particles',e.tile,e.a])
-            elif k==11:ev(['health_bar',e.a])
-            elif k==12:ev(['label','target',e.a,e.b,e.c,e.d])
-            elif k==13:ev(['label','poison',e.a,e.b,e.c,e.d])
-            elif k==14:ev(['update_skills'])
-            elif k==15:ev(['arrow',e.a,e.b,e.c])
-            elif k==16:ev(['help',e.tile,e.a,e.b&0xffffffff,e.c&0xffffffff])
-            elif k==17:ev(['serialise_state'])
-            else:raise AssertionError(k)
+        def event(_,p):self.end_events.append(canonical(p.contents))
         def match(_,tile,reward):self.match_fn(C.byref(self.m),tile,reward,C.byref(self.match_hooks))
         def check(_):
             self.end_events.append(['check_end']);return self.check_fn(C.byref(self.r),C.byref(self.flags),C.byref(self.end_hooks))
         def move(_):
             self.end_events.append(['move']);self.refill_lib.dr_move_matched_tiles(C.byref(self.refill),C.byref(self.refill_hooks))
         def ability(_,kind,tile):self.end_events.append(['ability',kind,tile])
-        self.eot_cb=(EVENT(event),MATCH(match),CHECK(check),MOVE_FN(move),ABILITY(ability))
-        self.eot_hooks=TurnHooks(None,self.eot_cb[0],self.eot_cb[1],self.cb[1],self.eot_cb[2],self.eot_cb[3],self.eot_cb[4])
+        def swap(_,x1,y1,x2,y2):self.refill_lib.dr_swap_tiles(C.byref(self.refill),x1,y1,x2,y2,C.byref(self.refill_hooks))
+        self.eot_cb=(EVENT(event),MATCH(match),CHECK(check),MOVE_FN(move),ABILITY(ability),SWAP_FN(swap))
+        self.eot_hooks=TurnHooks(None,self.eot_cb[0],self.eot_cb[1],self.cb[1],self.eot_cb[2],self.eot_cb[3],self.eot_cb[4],self.eot_cb[5])
         types=list(self.over_fn.argtypes);types[3]=C.POINTER(SkillSlots);self.over_fn.argtypes=types
     def load(self,c):
         super().load(c)
@@ -183,13 +169,7 @@ class Native(FinishNative):
         self.counter=U8(f['counterattack']);self.flags_254=(U8*36)(*c['activated']);self.rune=Rune();self.rune.enabled=f['arrow_pending_16491']
         self.state.selection.double_damage=f['prev_be74'][0]
         self.p.double_upgrade,self.p.double_healing,self.p.double_gold=f['prev_be74'][1:]
-        # Tile+0x254 is per-tile state: the original Tile swap moves it, so the native embedding
-        # swaps activated[] on RefillHooks Swap events (kind 1).
-        previous=self.refill_event
-        def refill_event(context,kind,i,j):
-            previous(context,kind,i,j)
-            if kind==1:self.flags_254[i],self.flags_254[j]=self.flags_254[j],self.flags_254[i]
-        self.swap_cb=type(previous)(refill_event);self.refill_hooks.event=self.swap_cb
+        follow_swaps(self)   # activated[] moves with tile swaps
         self.eot_state=EndOfTurnState(C.pointer(self.skills),C.pointer(self.turn_flags),C.pointer(self.rune),C.pointer(self.counter),C.pointer(self.flags),
                                   C.pointer(self.fin_flags),C.cast(self.flags_254,C.POINTER(U8)),c['regen'])
     def end_of_turn(self):

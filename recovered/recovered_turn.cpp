@@ -133,6 +133,130 @@ extern "C" bool dr_end_turn_finish(ResourceState* r,PathState* p,GenerationState
     emit(h,TurnEventKind::SerialiseState,-1);
     return false;
 }
+namespace {
+void reset_attack_timers(MatchState& m) {m.shake_progress_bd90=0;m.shake_scale_bd94=0x3f800000;}
+}
+extern "C" void dr_run_away_enemy(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    emit(h,TurnEventKind::Flare,static_cast<int>(tile),1,static_cast<std::int32_t>(0xff00ffffu));   // RGBA 255,255,0,255
+    emit(h,TurnEventKind::Sound,-1,35);
+    h->match_tile(h->context,static_cast<std::int32_t>(tile),7);
+    h->move_matched_tiles(h->context);
+    for(auto& c:p->combat)c.attack_flag=0;
+    reset_attack_timers(*p->match);
+}
+extern "C" void dr_explode_enemy(ResourceState* r,PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    auto& m=*p->match;
+    for(int i=0;i<5;++i)m.matched_counts[i]=0;
+    m.sound_13ec4=0;
+    h->match_tile(h->context,static_cast<std::int32_t>(tile),7);
+    emit(h,TurnEventKind::FlareTarget,-1,1,static_cast<std::int32_t>(0xff0000ffu));   // RGBA 255,0,0,255
+    const std::int32_t half=r->health/2;
+    r->health=half>0?half:1;
+    if(r->health!=r->ui_health) {r->ui_health=r->health;emit(h,TurnEventKind::HealthBar,-1,r->health);}
+    reset_attack_timers(m);
+}
+extern "C" void dr_teleport_enemy(PathState* p,GenerationState* g,const TurnHooks* h) {
+    auto& board=p->match->stroke->selection;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;auto& rule=board.tiles[i].rule;
+        if(rule.matched)continue;
+        rule.matched=1;
+        emit(h,TurnEventKind::FlareRest,i,1,static_cast<std::int32_t>(0xffff6400u));   // RGBA 0,100,255,255
+    }
+    const bool swords=dr_mortal_enemy(board.character.race)==19;
+    g->filter_swords=swords;g->filter_enabled=1;
+    reset_attack_timers(*p->match);
+    if(swords)emit(h,TurnEventKind::Achievement,-1,38,0x42c80000);
+    emit(h,TurnEventKind::Sound,-1,21);
+}
+namespace {
+std::int32_t attack_of(const PathState* p,std::uint32_t i) {
+    const auto& c=p->combat[i];
+    const CharacterClassState character{p->match->stroke->selection.character.race};
+    const GameContext game{&character};const TileState view{c.attack,c.poison,&game};
+    return dr_get_attack(&view);
+}
+}
+extern "C" void dr_lower_skulls(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    const auto& board=p->match->stroke->selection;const auto& self=board.tiles[tile].rule;
+    for(int x=0;x<6;++x)for(int y=4;y>=0;--y) {
+        const int i=y*6+x,below=i+6;
+        if(board.tiles[i].rule.type!=1 || board.tiles[below].rule.type==1)continue;
+        if(x==self.x && y==self.y)continue;
+        h->match_tile(h->context,below,7);
+        emit(h,TurnEventKind::FlareRest,below,1,static_cast<std::int32_t>(0xff143c73u));   // RGBA 115,60,20,255
+        break;
+    }
+    emit(h,TurnEventKind::Label,static_cast<int>(tile),23,0,31,0x3f800000);
+    emit(h,TurnEventKind::Sound,-1,5);
+    reset_attack_timers(*p->match);
+}
+extern "C" void dr_flee_up(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    const auto& rule=p->match->stroke->selection.tiles[tile].rule;
+    const int x=rule.x,y=rule.y;
+    emit(h,TurnEventKind::LabelRest,y*6+x,37,0,45,0x3f800000);
+    if(y==0) {
+        h->match_tile(h->context,static_cast<std::int32_t>(tile),7);
+        emit(h,TurnEventKind::FlareRest,x,1,-1);   // white
+        return;
+    }
+    h->swap_tiles(h->context,x,y-1,x,y);
+    emit(h,TurnEventKind::FlareRest,y*6+x,1,-1);
+    emit(h,TurnEventKind::FlareRest,(y-1)*6+x,1,-1);
+    emit(h,TurnEventKind::Sound,-1,35);
+    reset_attack_timers(*p->match);
+}
+extern "C" void dr_ignite_tiles(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    const auto& board=p->match->stroke->selection;const auto& self=board.tiles[tile].rule;
+    const int cx=self.x,cy=self.y;
+    for(int dx=-1;dx<=1;++dx)for(int dy=-1;dy<=1;++dy) {
+        if(!dx && !dy)continue;
+        const int x=cx+dx,y=cy+dy;
+        if(static_cast<unsigned>(x)>5u || y<0 || y>5)continue;
+        const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+        if(rule.matched || (rule.type==1 && rule.enemy_type==7))continue;
+        emit(h,TurnEventKind::FlareRest,i,1,static_cast<std::int32_t>(0xff0a96f0u));   // RGBA 240,150,10,255
+        dr_set_flame_visibility(p,static_cast<std::uint32_t>(i),true,attack_of(p,tile),false,h);
+    }
+    reset_attack_timers(*p->match);
+}
+extern "C" void dr_stab_attack(ResourceState* r,PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    const auto& board=p->match->stroke->selection;const auto& self=board.tiles[tile].rule;
+    if(dr_mortal_enemy(board.character.race)==16 && self.y!=5) {
+        const int below=(self.y+1)*6+self.x;const auto& rule=board.tiles[below].rule;
+        if(!(rule.type==1 && rule.enemy_type!=0))h->match_tile(h->context,below,7);
+        return;
+    }
+    if(self.y!=5)return;
+    emit(h,TurnEventKind::Sound,-1,27);
+    emit(h,TurnEventKind::Sound,-1,17);
+    emit(h,TurnEventKind::Label,static_cast<int>(tile),19,0,27,0x3f800000);
+    const auto damage=static_cast<std::uint32_t>(attack_of(p,tile))<<1;
+    const auto rest=static_cast<std::int32_t>(static_cast<std::uint32_t>(r->health)-damage);
+    r->health=rest<0?0:rest;
+    if(r->health!=r->ui_health) {r->ui_health=r->health;emit(h,TurnEventKind::HealthBar,-1,r->health);}
+    emit(h,TurnEventKind::LabelPoison,-1,2,static_cast<std::int32_t>(static_cast<std::uint32_t>(attack_of(p,tile))<<1),11,0x3f000000);
+}
+extern "C" void dr_convert_sword_to_skull(GenerationState* g,std::uint32_t tile,const TurnHooks* h,const GenerationHooks* gh) {
+    PathState* p=g->refill->path;auto& m=*p->match;const auto& board=m.stroke->selection;
+    auto swords=[&] {int n=0;for(const auto& t:board.tiles)if(t.rule.type==4)++n;return n;};
+    int pick=dr_random_int(&m.random,0,swords()-1,5);
+    if(swords()>0) {
+        emit(h,TurnEventKind::Label,static_cast<int>(tile),18,0,26,0x3f800000);
+        emit(h,TurnEventKind::Sound,-1,14);
+    }
+    for(int x=0;x<6 && pick>=0;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;
+        if(board.tiles[i].rule.type!=4)continue;
+        if(pick) {--pick;continue;}
+        dr_set_tile_type(g,static_cast<std::uint32_t>(i),1,p->turn,m.spawn_enabled_14ae0,gh);
+        if(g->one_health) {p->combat[i].health=1;emit(h,TurnEventKind::Text,i,0,0,1);}
+        emit(h,TurnEventKind::FlareRest,i,1,static_cast<std::int32_t>(0xff0a96f0u));   // RGBA 240,150,10,255
+        emit(h,TurnEventKind::LabelRest,i,18,0,26,0x3f800000);
+        pick=-1;break;
+    }
+    reset_attack_timers(m);
+}
 extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t* activated,std::uint32_t tile,
     const TurnHooks* h,const GenerationHooks* gh) {
     if(activated[tile])return;
@@ -149,15 +273,22 @@ extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t
     };
     const auto type=rule.enemy_type;
     switch(type) {
-    case 3: case 10:
-        if(count_down())h->ability(h->context,type,index);
+    case 3:
+        if(count_down())dr_run_away_enemy(p,tile,h);
+        break;
+    case 10:
+        if(count_down())dr_explode_enemy(g->resources,p,tile,h);
         break;
     case 19:
-        if(count_down())h->ability(h->context,type,-1);   // Game::TeleportEnemy()
+        if(count_down())dr_teleport_enemy(p,g,h);
         break;
-    case 4: case 6: case 7: case 8: case 11: case 13: case 14: case 16: case 18:
-    case 22: case 23: case 24: case 25: case 26: case 31:
-        h->ability(h->context,type,index);
+    case 7: dr_ignite_tiles(p,tile,h);break;
+    case 11: dr_convert_sword_to_skull(g,tile,h,gh);break;
+    case 16: dr_stab_attack(g->resources,p,tile,h);break;
+    case 23: dr_lower_skulls(p,tile,h);break;
+    case 31: dr_flee_up(p,tile,h);break;
+    case 4: case 6: case 8: case 13: case 14: case 18: case 22: case 24: case 25: case 26:
+        h->ability(h->context,type,index);   // not yet recovered
         break;
     case 17:
         dr_mimic_defence(p,tile,h);

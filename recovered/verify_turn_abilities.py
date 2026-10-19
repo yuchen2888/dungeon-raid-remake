@@ -32,12 +32,16 @@ class Original(ActivateOriginal):
         return super().hook(u,address,size,context)
     def run_loop(self):
         self.turn_events=[];self.ability_events=[];self.match_events=[];self.token_events=[];self.path_events=[];self.gen_events=[];self.pending_gen=None
-        self.looping=True;u=self.u
+        self.looping=True;self.ability_stack=[];self.mode=None;u=self.u
+        self.all_events=[];self.enc_events=[];self.refill_events=[];self.motion_events=[];self.int_sets={}
+        self.ranges=self.ability_ranges();self.all_running=True   # MoveMatchedTiles/SwapTiles switching inside abilities
         from unicorn.arm_const import UC_ARM_REG_R8
         u.reg_write(UC_ARM_REG_R8,self.GAME);u.reg_write(self.SP,0x140ff00);u.reg_write(self.LR,self.STOP|1)
         try:
             u.emu_start(ENTRY|1,STOP,timeout=0,count=20000000);assert u.reg_read(self.PC)==STOP,hex(u.reg_read(self.PC))
-        finally:self.looping=False;self.current=None;self.activating=False;self.gen_active=False
+        finally:
+            self.looping=False;self.current=None;self.activating=False;self.all_running=False
+            self.gen_active=self.path_active=self.refill_active=self.enc_active=False
         path,enc=self.path_status(),self.enc_status()
         for t in path['combat']+enc['refill']['combat']:t['enemy_state']=C.c_int32(t['enemy_state']).value
         return dict(path=path,enc=enc,turn=self.turn_events[:],ability=self.ability_events[:],activated=self.activated())
@@ -51,6 +55,7 @@ class Native(ActivateNative):
         self.loop_fn.argtypes=[C.POINTER(Path),C.POINTER(Generation),C.POINTER(U8),C.POINTER(TurnHooks),C.POINTER(GenerationHooks)];self.loop_fn.restype=None
     def run_loop(self):
         self.turn_events=[];self.ability_events=[];self.match_events=[];self.token_events=[];self.path_events=[];self.gen_events=[]
+        self.all_events=[];self.enc_events=[];self.refill_events=[];self.motion_events=[]
         self.loop_fn(C.byref(self.path_state),C.byref(self.gen),self.flags_254,C.byref(self.activate_hooks),C.byref(self.gen_hooks))
         return dict(path=self.path_status(),enc=self.enc_status(),turn=self.turn_events[:],ability=self.ability_events[:],activated=list(self.flags_254))
 

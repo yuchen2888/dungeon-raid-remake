@@ -20,32 +20,29 @@ from verify_turn_begin import CHECK
 from verify_generation import Generation, Hooks as GenerationHooks
 from verify_path import Path
 from verify_stroke import HERE, I32, U8
+from verify_abilities import AbilityMixin, TurnHooks8, ABILITY, SWAP_FN, canonical, follow_swaps
 
 ENTRY,END=0x3f09c,0x3f25c
-ABILITIES={'__ZN4Game12RunAwayEnemyEP4Tile':3,'__ZN4Game11HealOrBlessEP4Tile':4,'__ZN4Game14MakeAcidPotionEP4Tile':6,
-    '__ZN4Game11IgniteTilesEP4Tile':7,'__ZN4Game11FreezeTilesEP4Tile':8,'__ZN4Game12ExplodeEnemyEP4Tile':10,
-    '__ZN4Game19ConvertSwordToSkullEP4Tile':11,'__ZN4Game9StealGoldEP4Tile':13,'__ZN4Game9JumpEnemyEP4Tile':14,
-    '__ZN4Game10StabAttackEP4Tile':16,'__ZN4Game18ConvertRandomTilesEP4Tile':18,'__ZN4Game13TeleportEnemyEv':19,
-    '__ZN4Game22BreakRandomShieldSwordEP4Tile':22,'__ZN4Game11LowerSkullsEP4Tile':23,'__ZN4Game13AttractSkullsEP4Tile':24,
-    '__ZN4Game20AttractShieldsSwordsEP4Tile':25,'__ZN4Game10ThrowSkullEP4Tile':26,'__ZN4Game14DestroyUpgradeEP4Tile':28,
-    '__ZN4Game6FleeUpEP4Tile':31}
-ABILITY=C.CFUNCTYPE(None,C.c_void_p,I32,I32)
-class TurnHooks(C.Structure):
-    _fields_=[('context',C.c_void_p),('event',EVENT),('match_tile',MATCH),('attack_skull',ATTACK),('check_end_game',CHECK),
-              ('move_matched_tiles',MOVE_FN),('ability',ABILITY)]
+ABILITIES={'__ZN4Game11HealOrBlessEP4Tile':4,'__ZN4Game14MakeAcidPotionEP4Tile':6,'__ZN4Game11FreezeTilesEP4Tile':8,
+    '__ZN4Game9StealGoldEP4Tile':13,'__ZN4Game9JumpEnemyEP4Tile':14,'__ZN4Game18ConvertRandomTilesEP4Tile':18,
+    '__ZN4Game22BreakRandomShieldSwordEP4Tile':22,'__ZN4Game13AttractSkullsEP4Tile':24,'__ZN4Game20AttractShieldsSwordsEP4Tile':25,
+    '__ZN4Game10ThrowSkullEP4Tile':26,'__ZN4Game14DestroyUpgradeEP4Tile':28}   # not yet recovered: recorded and skipped
+TurnHooks=TurnHooks8   # TurnHooks incl. move_matched_tiles, ability and swap_tiles
 
-class Original(SmallOriginal):
+class Original(AbilityMixin,SmallOriginal):
+    stop_at=-1
     def __init__(self):
-        super().__init__();text=(HERE.parent/'armv7-disassembly.txt').read_text();self.abilities={};self.ability_visits={};self.activating=False
+        super().__init__();self.ability_setup();text=(HERE.parent/'armv7-disassembly.txt').read_text();self.abilities={};self.ability_visits={};self.activating=False
         for symbol,kind in ABILITIES.items():
             m=re.search(r'^'+re.escape(symbol)+r':\n\s*([0-9a-f]+):',text,re.M);assert m,symbol;self.abilities[int(m[1],16)]=kind
     def hook(self,u,address,size,context):
         if self.activating:
+            if self.ability_hook(u,address,self.turn_events):return   # recovered abilities run as original code
             if ENTRY<=address<END:self.ability_visits[hex(address)]=self.ability_visits.get(hex(address),0)+1
             kind=self.abilities.get(address)
             if kind and ENTRY<u.reg_read(self.LR)&~1<=END:
                 assert u.reg_read(self.regs[0])==self.GAME
-                self.ability_events.append(['ability',kind,-1 if kind==19 else self.tile_of(u.reg_read(self.regs[1]))])
+                self.ability_events.append(['ability',kind,self.tile_of(u.reg_read(self.regs[1]))])
                 u.reg_write(self.PC,u.reg_read(self.LR));return
         return super().hook(u,address,size,context)
     def activated(self):return [self.u.mem_read(self.tile(i)+0x254,1)[0] for i in range(36)]
@@ -54,11 +51,15 @@ class Original(SmallOriginal):
         for i in range(36):self.u.mem_write(self.tile(i)+0x254,bytes([c['activated'][i]]))
     def activate(self,tile,current):
         self.turn_events=[];self.ability_events=[];self.match_events=[];self.token_events=[];self.path_events=[];self.gen_events=[];self.pending_gen=None
-        self.current=current;self.activating=True;self.gen_active=True;u=self.u
+        self.all_events=[];self.enc_events=[];self.refill_events=[];self.motion_events=[];self.int_sets={}
+        self.current=current;self.activating=True;self.gen_active=True;self.ability_stack=[];self.mode=None;u=self.u
+        self.ranges=self.ability_ranges();self.all_running=True   # MoveMatchedTiles/SwapTiles switching inside abilities
         u.reg_write(self.regs[0],self.tile(tile));u.reg_write(self.SP,0x140ff00);u.reg_write(self.LR,self.STOP|1)
         try:
             u.emu_start(ENTRY|1,self.STOP,timeout=0,count=3000000);assert u.reg_read(self.PC)==self.STOP
-        finally:self.current=None;self.activating=False;self.gen_active=False
+        finally:
+            self.current=None;self.activating=False;self.all_running=False
+            self.gen_active=self.path_active=self.refill_active=self.enc_active=False
         path,enc=self.path_status(),self.enc_status()
         for t in path['combat']+enc['refill']['combat']:t['enemy_state']=C.c_int32(t['enemy_state']).value   # status reads it unsigned
         return dict(path=path,enc=enc,turn=self.turn_events[:],ability=self.ability_events[:],activated=self.activated())
@@ -70,12 +71,17 @@ class Native(SmallNative):
         self.activate_fn.argtypes=[C.POINTER(Path),C.POINTER(Generation),C.POINTER(U8),C.c_uint32,C.POINTER(TurnHooks),C.POINTER(GenerationHooks)]
         self.activate_fn.restype=None
         def ability(_,kind,tile):self.ability_events.append(['ability',kind,tile])
-        self.ability_cb=ABILITY(ability)
-        self.activate_hooks=TurnHooks(None,self.turn_cb[0],self.turn_cb[1],ATTACK(0),CHECK(0),MOVE_FN(0),self.ability_cb)
+        def event(_,p):self.turn_events.append(canonical(p.contents))
+        def move(_):self.refill_lib.dr_move_matched_tiles(C.byref(self.refill),C.byref(self.refill_hooks))
+        def swap(_,x1,y1,x2,y2):self.refill_lib.dr_swap_tiles(C.byref(self.refill),x1,y1,x2,y2,C.byref(self.refill_hooks))
+        self.ability_cb=(ABILITY(ability),EVENT(event),MOVE_FN(move),SWAP_FN(swap))
+        self.activate_hooks=TurnHooks8(None,self.ability_cb[1],self.turn_cb[1],ATTACK(0),CHECK(0),self.ability_cb[2],self.ability_cb[0],self.ability_cb[3])
     def load(self,c):
         super().load(c);self.flags_254=(U8*36)(*c['activated'])
+        follow_swaps(self)   # activated[] moves with tile swaps
     def activate(self,tile,current):
         self.turn_events=[];self.ability_events=[];self.match_events=[];self.token_events=[];self.path_events=[];self.gen_events=[]
+        self.all_events=[];self.enc_events=[];self.refill_events=[];self.motion_events=[]
         self.activate_fn(C.byref(self.path_state),C.byref(self.gen),self.flags_254,tile,C.byref(self.activate_hooks),C.byref(self.gen_hooks))
         return dict(path=self.path_status(),enc=self.enc_status(),turn=self.turn_events[:],ability=self.ability_events[:],activated=list(self.flags_254))
 

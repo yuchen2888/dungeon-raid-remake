@@ -25,7 +25,11 @@ T030={'__ZN4Game12MimicDefenceEP4Tile':'dr_mimic_defence','__ZN4Game9ResurrectEP
       '__ZN4Game12CheckEndGameEv':'dr_check_end_game+dr_game_over','__ZN4Game8GetScoreEv':'dr_get_score',
       '__ZN4Game12GetTotalGoldEv':'dr_total_gold','__ZN4Game10GetTotalUPEv':'dr_total_up',
       '__ZN5Skill10DeactivateEv':'inline in dr_end_turn_begin (SkillSlots.active)',
-      '__ZN4Tile15ActivateAbilityEv':'dr_activate_ability (unrecovered abilities via TurnHooks.ability)'}
+      '__ZN4Tile15ActivateAbilityEv':'dr_activate_ability (unrecovered abilities via TurnHooks.ability)',
+      '__ZN4Game12RunAwayEnemyEP4Tile':'dr_run_away_enemy','__ZN4Game12ExplodeEnemyEP4Tile':'dr_explode_enemy',
+      '__ZN4Game13TeleportEnemyEv':'dr_teleport_enemy','__ZN4Game11LowerSkullsEP4Tile':'dr_lower_skulls',
+      '__ZN4Game6FleeUpEP4Tile':'dr_flee_up','__ZN4Game11IgniteTilesEP4Tile':'dr_ignite_tiles',
+      '__ZN4Game10StabAttackEP4Tile':'dr_stab_attack','__ZN4Game19ConvertSwordToSkullEP4Tile':'dr_convert_sword_to_skull'}
 PRESENTATION=('Quad','SimpleLabel','Interface','HelpMenu','Arrow','ScoreScreen','GameOverScreen')
 PRESENTATION_GAME={'__ZN4Game10QueueSoundE5Sound','__ZN4Game16QueueAchievementE11Achievementf',
     '__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif','__ZN4Game12AddParticlesEP4Tile12ParticleType',

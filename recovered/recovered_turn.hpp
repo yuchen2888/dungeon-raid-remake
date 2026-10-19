@@ -15,8 +15,9 @@ namespace dungeonraid {
 enum class TurnEventKind : std::int32_t { Sound=1, Text, Label, Flare, Achievement,
     LabelRest, FlareRest, Freeze, FlameOverlay, Particles, HealthBar, LabelTarget, LabelPoison,
     UpdateSkills, ArrowColour,     // ArrowColour: Arrow::SetColour(a,b,c) on Game+0x3658
-    Help, SerialiseState };        // Help: HelpMenu::Initialise (Game+0x10298) at the tile center,
+    Help, SerialiseState,          // Help: HelpMenu::Initialise (Game+0x10298) at the tile center,
                                    // a=HelpType, b=c=size float bits. SerialiseState: Game::SerialiseState
+    FlareTarget };                 // FlareTarget: AddFlare at Interface::GetTarget(0), a=type, b=RGBA bytes
 struct TurnEvent { TurnEventKind kind; std::int32_t tile,a,b,c,d; };
 // match_tile is a synchronous gameplay dependency: wire it to dr_match_tile.
 struct TurnHooks {
@@ -29,9 +30,12 @@ struct TurnHooks {
     bool (*check_end_game)(void*);
     // Game::MoveMatchedTiles: wire to dr_move_matched_tiles.
     void (*move_matched_tiles)(void*);
-    // An enemy ability not yet recovered (Game::RunAwayEnemy ... Game::FleeUp), keyed by
-    // enemy_type; tile is -1 for Game::TeleportEnemy (which takes no tile).
+    // An enemy ability not yet recovered (Game::HealOrBless, MakeAcidPotion, FreezeTiles,
+    // StealGold, JumpEnemy, ConvertRandomTiles, BreakRandomShieldSword, AttractSkulls,
+    // AttractShieldsSwords, ThrowSkull, DestroyUpgrade), keyed by enemy_type.
     void (*ability)(void*,std::int32_t enemy_type,std::int32_t tile);
+    // Game::SwapTiles(x1,y1,x2,y2): wire to dr_swap_tiles.
+    void (*swap_tiles)(void*,std::int32_t x1,std::int32_t y1,std::int32_t x2,std::int32_t y2);
 };
 }
 namespace dungeonraid {
@@ -134,13 +138,50 @@ void dr_end_turn_poison_enemies(dungeonraid::PathState*,const dungeonraid::TurnH
 // Returns true when a CheckEndGame ended the turn (SerialiseState not reached).
 bool dr_end_turn_finish(dungeonraid::ResourceState*,dungeonraid::PathState*,dungeonraid::GenerationState*,
     dungeonraid::EndGameState*,dungeonraid::TurnFinishFlags*,const dungeonraid::TurnHooks*);
+// Enemy abilities (Game member functions called by Tile::ActivateAbility).
+// Game::RunAwayEnemy 0x11170: flare at the tile (RGBA 255,255,0,255), sound 35, MatchTile(7),
+// MoveMatchedTiles, attack flags cleared, attack timers reset.
+void dr_run_away_enemy(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::ExplodeEnemy 0x12da8: matched_counts and sound_13ec4 cleared, MatchTile(7), flare at the
+// interface target (RGBA 255,0,0,255), player health halved (toward zero; at least 1) with
+// the health bar updated, attack timers reset.
+void dr_explode_enemy(dungeonraid::ResourceState*,dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::TeleportEnemy 0xf4c8: every unmatched tile (column-major) is marked matched with a
+// flare at its resting position (RGBA 0,100,255,255); the generation filter is enabled
+// (swords filter when the class's mortal enemy is 19, then achievement 38), attack timers
+// reset, sound 21. MoveMatchedTiles later replaces the board.
+void dr_teleport_enemy(dungeonraid::PathState*,dungeonraid::GenerationState*,const dungeonraid::TurnHooks*);
+// Game::LowerSkulls 0xc9e0: in every column (scanning up from row 4) the lowest enemy whose
+// tile below is not an enemy (other than this tile) gets the tile below matched (MatchTile 7,
+// resting flare RGBA 115,60,20,255); then label 23 (colour 31) at this tile, sound 5, timers reset.
+void dr_lower_skulls(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::FleeUp 0xc664: label 37 (colour 45) at the resting position; on row 0 the tile is
+// matched (MatchTile 7, white resting flare) and nothing else happens; otherwise it swaps with
+// the tile above (SwapTiles), white flares at both resting positions, sound 35, timers reset.
+void dr_flee_up(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::IgniteTiles 0xa150: the eight neighbours (column-major), except matched tiles and
+// enemy 7, get a resting flare (RGBA 240,150,10,255) and SetFlameVisibility(true, this
+// tile's GetAttack, false); timers reset.
+void dr_ignite_tiles(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::StabAttack 0x127a8: when the class's mortal enemy is 16 and the tile is not on row 5,
+// the tile below is matched (MatchTile 7) unless it is an enemy with an ability; otherwise,
+// on row 5 only: sounds 27 and 17, label 19 (colour 27), player health -= 2*GetAttack
+// (floored at 0, health bar), label 2 (2*GetAttack, colour 11, scale 0.5) at the poison position.
+void dr_stab_attack(dungeonraid::ResourceState*,dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::ConvertSwordToSkull 0xdc38: RandI(0, swords-1, stream 5) picks a sword (type 4,
+// column-major); label 18 (colour 26) and sound 14 when there are swords; the picked sword
+// becomes an enemy (Tile::SetType(1, turn, difficulty); health 1 with UpdateText when
+// GenerationState.one_health), resting flare RGBA 240,150,10,255 and label 18; timers reset.
+void dr_convert_sword_to_skull(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*,
+    const dungeonraid::GenerationHooks*);
 // Original Tile::ActivateAbility 0x3f09c. Once per turn per tile (activated[] is
 // Tile+0x254, cleared by EndOfTurn). Dispatches on enemy_type: countdown abilities
-// (3, 10, 19: enemy_state-1, Countdown event, ability at 0; 28: ability at 0 then
-// enemy_state=5, Countdown always), MimicDefence (17, recovered), resurrection (32:
-// unless enemy_state is 0 or flag_25e (which is consumed), GenerateStats(turn,
-// difficulty), EnemyUV, UpdateValues, Resurrect) and the other abilities via
-// TurnHooks.ability. Countdown/EnemyUV go to the generation hooks.
+// (3 RunAwayEnemy, 10 ExplodeEnemy, 19 TeleportEnemy: enemy_state-1, Countdown event,
+// ability at 0; 28: ability at 0 then enemy_state=5, Countdown always), recovered abilities
+// (7 IgniteTiles, 11 ConvertSwordToSkull, 16 StabAttack, 17 MimicDefence, 23 LowerSkulls,
+// 31 FleeUp), resurrection (32: unless enemy_state is 0 or flag_25e (which is consumed),
+// GenerateStats(turn, difficulty), EnemyUV, UpdateValues, Resurrect) and the abilities not
+// yet recovered via TurnHooks.ability. Countdown/EnemyUV go to the generation hooks.
 void dr_activate_ability(dungeonraid::PathState*,dungeonraid::GenerationState*,std::uint8_t* activated,std::uint32_t tile,
     const dungeonraid::TurnHooks*,const dungeonraid::GenerationHooks*);
 // EndOfTurn [0x13cda,0x13d12) + [0x13af2,0x13b3c) + head [0x13daa,0x13dc8): clears

@@ -224,3 +224,26 @@ EndOfTurn 整函数差分（开发中）在代币累计（Game+0x165d0）上发�
 
 验证 `recovered/verify_end_of_turn.py`：原版 `Game::EndOfTurn` 从入口执行到返回，除下列边界外全部为原代码：19 个未恢复能力函数（记录为 ability 事件）、Game::SerialiseState（存档格式未恢复）、表现层（标签、闪光、粒子、文字、音效、成就、界面、帮助、箭头、计分界面）。150 个随机局面 + 10 局 × 8 回合，共 230 次比较；结局：正常存档 200，第 1/2/3/4 次 CheckEndGame 结束分别 18/7/2/3。错误副本：忽略回复段的结束返回、能力段先于中毒敌人段，均 exit 1。
 此测试在开发中发现了 T030-G 的状态归属错误（见上节修正）。
+
+## T030-M：第一批 8 个敌人能力（Claude，2026-10-19）
+
+恢复下列 Game 成员函数，并在 dr_activate_ability 中直接调用（对应类型不再走 TurnHooks.ability）：
+
+| 类型 | 函数 | 地址 | 原生 | 行为要点 |
+| --- | --- | --- | --- | --- |
+| 3（倒计时） | RunAwayEnemy | 0x11170 | dr_run_away_enemy | 本格闪光（黄）、音效 35、MatchTile(7)、MoveMatchedTiles、清 attack_flag、计时器复位 |
+| 10（倒计时） | ExplodeEnemy | 0x12da8 | dr_explode_enemy | 清 matched_counts 与 sound_13ec4、MatchTile(7)、目标处闪光（红）、玩家生命减半（向零取整，至少 1）并更新血条、计时器复位 |
+| 19（倒计时） | TeleportEnemy | 0xf4c8 | dr_teleport_enemy | 列优先把所有未匹配格标为已匹配并在静止位置闪光（蓝）；开启生成过滤（宿敌为 19 时只出剑并成就 38）、计时器复位、音效 21。之后 MoveMatchedTiles 换掉整个棋盘 |
+| 23 | LowerSkulls | 0xc9e0 | dr_lower_skulls | 每列自第 4 行向上找"下方不是敌人"的最低敌人（排除自身），匹配其下方格子（MatchTile 7、棕色闪光）；标签 23、音效 5、计时器复位 |
+| 31 | FleeUp | 0xc664 | dr_flee_up | 静止位置标签 37；第 0 行时 MatchTile(7) + 白色闪光后直接返回（无音效、不复位计时器）；否则与上方格子 SwapTiles、两处白色闪光、音效 35、计时器复位 |
+| 7 | IgniteTiles | 0xa150 | dr_ignite_tiles | 3×3 邻格（列优先，跳过已匹配格和 7 号敌人）橙色闪光并 SetFlameVisibility(true, 本格 GetAttack, false)；计时器复位 |
+| 16 | StabAttack | 0x127a8 | dr_stab_attack | 宿敌为 16 且不在第 5 行：匹配下方格子（若下方不是带能力的敌人）后返回；否则仅第 5 行：音效 27、17，标签 19，玩家生命 −2×GetAttack（下限 0，血条），毒位置标签 2（数值 2×GetAttack，缩放 0.5） |
+| 11 | ConvertSwordToSkull | 0xdc38 | dr_convert_sword_to_skull | RandI(0, 剑数−1, 流 5) 选一把剑（列优先）；有剑时标签 18、音效 14；被选中的剑 SetType(敌人, turn, 难度)，one_health 时生命设 1 并 UpdateText；橙色闪光与标签 18；计时器复位 |
+
+TurnHooks 末尾追加 `swap_tiles`（接 dr_swap_tiles）；TurnEventKind 追加 FlareTarget（Interface::GetTarget 处闪光）。
+
+验证 `recovered/verify_abilities.py`：每个函数从入口执行整函数原代码，MatchTile、MoveMatchedTiles、SwapTiles、SetType（生成钩子）、SetFlameVisibility 均为原代码；能力自身的 RandI 也执行原代码，其效果通过随机种子与选中结果比较。8 个函数各 80 组，共 640 次比较。同时 verify_activate_ability（995）、verify_turn_abilities（200）、verify_end_of_turn（230）改为让这 8 个函数以原代码执行（AbilityMixin 记录其表现层调用，并在其从 ActivateAbility 运行期间关闭生成钩子），全部通过。
+错误副本：ExplodeEnemy 不设下限 1、LowerSkulls 不排除自身、ConvertSwordToSkull 行优先、StabAttack 忽略宿敌分支、FleeUp 顶行判断改坏（原生越界崩溃 exit 139），以及 LowerSkulls 不接线（改回回调），均被拒。
+测试细节：闪光传的是坐标值，在落定的棋盘上格子中心与静止位置相同，因此按函数固定取点方式记录；标签传的是指针，可直接区分。
+
+仍未恢复的能力（经 TurnHooks.ability）：4 HealOrBless、6 MakeAcidPotion、8 FreezeTiles、13 StealGold、14 JumpEnemy、18 ConvertRandomTiles、22 BreakRandomShieldSword、24 AttractSkulls、25 AttractShieldsSwords、26 ThrowSkull、28 DestroyUpgrade（物品向量、Item::ReduceStat、UpdateStats）。
