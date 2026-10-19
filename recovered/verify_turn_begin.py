@@ -18,6 +18,7 @@ from verify_resources import Resource
 from verify_path import Path
 from verify_turn_burn import Event, EVENT, MATCH
 from verify_attack_all import ATTACK
+from verify_rune import Rune
 from verify_stroke import HERE, I32, U8
 
 ENTRY,LOOP=0x13574,0x13710
@@ -28,8 +29,8 @@ SYMBOLS={'__ZN4Game10QueueSoundE5Sound':'sound','__ZN9Interface12UpdateSkillsEv'
          '__ZN4Game12CheckEndGameEv':'check_end'}
 class SkillSlots(C.Structure):_fields_=[('id',I32*4),('level',I32*4),('active',U8*4)]
 class TurnFlags(C.Structure):
-    _fields_=[('b15561',U8),('b15562',U8),('b165b8',U8*5),('arrow_pending_16491',U8),('arrow_hold_16492',U8),('prev_164a7',U8),('next_164a8',U8),
-              ('prev_be74',U8*4),('next_be78',U8*4),('next_coin_bfbc',U8)]
+    _fields_=[('b15561',U8),('b15562',U8),('b165b8',U8*5),('arrow_hold_16492',U8),('prev_164a7',U8),('next_164a8',U8),
+              ('next_be78',U8*4),('next_coin_bfbc',U8)]
 CHECK=C.CFUNCTYPE(C.c_bool,C.c_void_p)
 class TurnHooks(C.Structure):
     _fields_=[('context',C.c_void_p),('event',EVENT),('match_tile',MATCH),('attack_skull',ATTACK),('check_end_game',CHECK)]
@@ -77,7 +78,7 @@ class Native(OverNative):
     def __init__(self):
         super().__init__();lib=C.CDLL(str(HERE/'recovered_turn_native.dylib'))
         self.begin_fn=lib.dr_end_turn_begin
-        self.begin_fn.argtypes=[C.POINTER(Resource),C.POINTER(Path),C.POINTER(SkillSlots),C.POINTER(TurnFlags),C.POINTER(U8),C.POINTER(TurnHooks)]
+        self.begin_fn.argtypes=[C.POINTER(Resource),C.POINTER(Path),C.POINTER(SkillSlots),C.POINTER(TurnFlags),C.POINTER(Rune),C.POINTER(U8),C.POINTER(TurnHooks)]
         self.begin_fn.restype=C.c_bool
         def event(_,p):
             e=p.contents;k=e.kind
@@ -92,19 +93,23 @@ class Native(OverNative):
     def load(self,c):
         super().load(c)
         self.skills=SkillSlots((I32*4)(*c['skill_id']),(I32*4)(*c['skill_level']),(U8*4)(*c['skill_active']))
-        f=c['flags'];self.turn_flags=TurnFlags(f['b15561'],f['b15562'],(U8*5)(*f['b165b8']),f['arrow_pending_16491'],f['arrow_hold_16492'],
-            f['prev_164a7'],f['next_164a8'],(U8*4)(*f['prev_be74']),(U8*4)(*f['next_be78']),f['next_coin_bfbc'])
-        self.counter=U8(f['counterattack'])
+        f=c['flags'];self.turn_flags=TurnFlags(f['b15561'],f['b15562'],(U8*5)(*f['b165b8']),f['arrow_hold_16492'],
+            f['prev_164a7'],f['next_164a8'],(U8*4)(*f['next_be78']),f['next_coin_bfbc'])
+        self.counter=U8(f['counterattack']);self.rune=Rune();self.rune.enabled=f['arrow_pending_16491']
+        # Game+0xbe74..0xbe77 live in the selection and preview states (as the original harness writes them).
+        self.state.selection.double_damage=f['prev_be74'][0]
+        self.p.double_upgrade,self.p.double_healing,self.p.double_gold=f['prev_be74'][1:]
     def begin_state(self):
         t=self.turn_flags
-        flags=dict(b15561=t.b15561,b15562=t.b15562,arrow_pending_16491=t.arrow_pending_16491,arrow_hold_16492=t.arrow_hold_16492,
+        flags=dict(b15561=t.b15561,b15562=t.b15562,arrow_pending_16491=self.rune.enabled,arrow_hold_16492=t.arrow_hold_16492,
                    prev_164a7=t.prev_164a7,next_164a8=t.next_164a8,next_coin_bfbc=t.next_coin_bfbc,counterattack=self.counter.value,
-                   coin=self.path_state.battle.coin_on_attack,b165b8=list(t.b165b8),prev_be74=list(t.prev_be74),next_be78=list(t.next_be78))
+                   coin=self.path_state.battle.coin_on_attack,b165b8=list(t.b165b8),
+                   prev_be74=[self.state.selection.double_damage,self.p.double_upgrade,self.p.double_healing,self.p.double_gold],next_be78=list(t.next_be78))
         skills=[[self.r.skill_current[i],self.skills.active[i]] for i in range(4)]
         return dict(flags=flags,skills=skills,turn=self.path_state.turn)
     def begin(self):
         self.end_events=[]
-        ended=self.begin_fn(C.byref(self.r),C.byref(self.path_state),C.byref(self.skills),C.byref(self.turn_flags),C.byref(self.counter),C.byref(self.begin_hooks))
+        ended=self.begin_fn(C.byref(self.r),C.byref(self.path_state),C.byref(self.skills),C.byref(self.turn_flags),C.byref(self.rune),C.byref(self.counter),C.byref(self.begin_hooks))
         return dict(path=self.path_status(),enc=self.enc_status(),events=self.end_events[:],ended=int(ended),begin=self.begin_state(),
                     cls={k:getattr(self.cls,k) for k in ('games_played','enemies_killed')})
 

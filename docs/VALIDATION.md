@@ -227,3 +227,9 @@
 - 新 verify_turn_poison：240 次比较（存活粒子 1337、种族 1 成就 449）；新 verify_turn_finish：262 次比较（164 次有生成事件；保存 / 第一次结束 / 第二次结束 / 第 100 回合胜利均出现）。段字节 SHA-256 05915cf3…7b3d4a4e / dd46c0a1…0e49363f。
 - 错误副本（隔离开发副本）：H——行优先遍历、不写回毒队列、`>=0` 判存活；I——帮助循环不 break、计时器按旧值判断下限、胜利条件漏 mode；均 exit 1。真实源码对比一致。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 21）。
+
+## 2026-10-19 T030-G 修正：开头段标志归属（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、43 个 verify 脚本共 46 步通过。运行目录 `.relay/runs/20261019T182510.962112Z`（UTC），输入指纹 `07951088…080f9136`，与当前源码一致。
+- verify_turn_begin 改为从 SelectionState / 预览状态 / RuneState 读回 Game+0xbe74..77 与 0x16491：400 次比较通过。错误副本"不写预览 double_*"exit 1。
+- 发现途径：开发中的 EndOfTurn 整函数差分在 Game+0x165d0（AddToken 累计，读 0xbe75..77）上出现 120 vs 80。

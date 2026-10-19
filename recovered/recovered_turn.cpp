@@ -237,7 +237,7 @@ extern "C" void dr_game_over(ResourceState* r,PathState* p,ClassProfile* cls,con
     e->flag_146d0=0;e->flag_146d4=1;e->flag_15546=1;
     emit(static_cast<std::int32_t>(TurnEventKind::Achievement),67,0x42c80000);
 }
-extern "C" bool dr_end_turn_begin(ResourceState* r,PathState* p,SkillSlots* skills,TurnFlags* f,
+extern "C" bool dr_end_turn_begin(ResourceState* r,PathState* p,SkillSlots* skills,TurnFlags* f,RuneState* rune,
     std::uint8_t* counterattack,const TurnHooks* h) {
     p->turn=static_cast<std::int32_t>(static_cast<std::uint32_t>(p->turn)+1u);
     if(h->check_end_game(h->context))return true;
@@ -255,13 +255,15 @@ extern "C" bool dr_end_turn_begin(ResourceState* r,PathState* p,SkillSlots* skil
     emit(h,TurnEventKind::UpdateSkills,-1);
     f->b15561=0;f->b15562=0;
     for(auto& b:f->b165b8)b=0;
-    if(f->arrow_pending_16491 && !f->arrow_hold_16492) {
+    if(rune->enabled_16491 && !f->arrow_hold_16492) {
         emit(h,TurnEventKind::ArrowColour,-1,50,255,50);
-        f->arrow_pending_16491=f->arrow_hold_16492;
+        rune->enabled_16491=f->arrow_hold_16492;
     }
     f->arrow_hold_16492=0;
     f->prev_164a7=f->next_164a8;f->next_164a8=0;
-    for(int i=0;i<4;++i) {f->prev_be74[i]=f->next_be78[i];f->next_be78[i]=0;}
+    m.stroke->selection.double_damage=f->next_be78[0];
+    m.preview->double_upgrade=f->next_be78[1];m.preview->double_healing=f->next_be78[2];m.preview->double_gold=f->next_be78[3];
+    for(auto& b:f->next_be78)b=0;
     *counterattack=0;
     p->battle.grant_coin_on_attack=f->next_coin_bfbc;f->next_coin_bfbc=0;
     for(int i=0;i<5;++i)m.matched_counts[i]=0;

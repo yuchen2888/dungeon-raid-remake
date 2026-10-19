@@ -180,3 +180,16 @@ TurnHooks 末尾追加 `check_end_game` 回调。**CheckEndGame 尚未恢复**�
 错误副本：帮助循环不 break、计时器按旧值判断下限、胜利条件漏 mode，均 exit 1。
 
 剩余：0x13cda 清 Tile+0x254 与 ProcessCripples 之后的能力循环（Tile::ActivateAbility 及 21 个能力函数），然后 EndOfTurn 整函数差分。SerialiseState（存档格式）仍为边界。
+
+## T030-G 修正：开头段标志归属（Claude，2026-10-19）
+
+EndOfTurn 整函数差分（开发中）在代币累计（Game+0x165d0）上发现差异，追查到 AddToken 读取 Game+0xbe75..0xbe77。这三个字节以及 0xbe74、0x16491 早已属于其他已恢复状态，T030-G 却在 TurnFlags 中复制了一份：
+
+| 偏移 | 所属原生字段 |
+| --- | --- |
+| Game+0xbe74 | SelectionState.double_damage（verify_selection） |
+| Game+0xbe75..0xbe77 | ResourcePreviewState.double_upgrade / double_healing / double_gold（verify_preview） |
+| Game+0x16491 | RuneState.enabled_16491（verify_rune） |
+
+修正：TurnFlags 去掉 prev_be74[4] 与 arrow_pending_16491；dr_end_turn_begin 增加 RuneState* 参数，把 next_be78[0..3] 写入 SelectionState / 预览状态，箭头判断读写 RuneState。verify_turn_begin 改为从这些所属状态读回比较（原版侧仍读同一内存），400 次比较通过；错误副本"不写预览 double_*"exit 1。
+教训：按偏移新建字段前，先在 verify_*.py 中搜索该偏移是否已有所属状态。

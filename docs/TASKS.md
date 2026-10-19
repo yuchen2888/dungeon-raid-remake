@@ -30,6 +30,7 @@
 | T030-E | 完成 / Claude，待复核 | CheckEndGame 判断与免死段 [0x10b18,0x10c04)；结束结算暂为 game_over 回调；588 次比较 | dr_check_end_game、verify_check_end_game.py；三个错误副本被拒 |
 | T030-F | 完成 / Claude，待复核 | CheckEndGame 结束结算段 + 整函数 GetScore/GetTotalGold/GetTotalUP；CheckEndGame 成为完整恢复；600 次比较 | dr_game_over 等、verify_game_over.py；三个错误副本被拒 |
 | T030-G | 完成 / Claude，待复核 | EndOfTurn 开头段 [0x13574,0x13710)：回合数、CheckEndGame（完整原函数全链）、技能冷却与 Deactivate、回合标志轮换；400 次比较 | dr_end_turn_begin、TurnFlags、verify_turn_begin.py；三个错误副本被拒 |
+| T030-G 修正 | 完成 / Claude，待复核 | TurnFlags 中重复的 Game+0xbe74..77、0x16491 改写入 SelectionState / 预览 / RuneState（整函数差分发现） | dr_end_turn_begin 增加 RuneState*；verify_turn_begin.py 读回所属状态；错误副本被拒 |
 | T030-H | 完成 / Claude，待复核 | EndOfTurn 循环 B 中毒敌人 [0x13a1c,0x13af2)+[0x13d88,0x13daa)，GetPoison/MatchTile 为原代码；240 次比较 | dr_end_turn_poison_enemies、verify_turn_poison.py；三个错误副本被拒 |
 | T030-I | 完成 / Claude，待复核 | EndOfTurn 尾段 [0x13b3c,0x13cda)+[0x13d12,0x13d64)+[0x13dc8,0x13e04)：免死轮换、两次 CheckEndGame、MoveMatchedTiles、生成标志、帮助、第 100 回合胜利、SerialiseState 边界；262 次比较 | dr_end_turn_finish、TurnFinishFlags、verify_turn_finish.py；三个错误副本被拒 |
 | T030-J | 待做 | 清 Tile+0x254 + ProcessCripples + 能力循环：先恢复 Tile::ActivateAbility 0x3f09c（452 字节）分派，能力函数暂为有序回调；再逐个恢复 19 个未恢复能力函数（RunAwayEnemy … StealGold），最后 EndOfTurn 整函数差分 | T030_EOT_CALLS.json activate_ability / unrecovered_by_size |

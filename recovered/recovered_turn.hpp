@@ -2,6 +2,7 @@
 #include "recovered_path.hpp"
 #include "recovered_resources.hpp"
 #include "recovered_generation.hpp"
+#include "recovered_rune.hpp"
 namespace dungeonraid {
 // Sound: a=sound. Text: Tile::UpdateText(a,b,c). Label: Game::AddSimpleLabel at the tile
 // center, a=type, b=number, c=colour, d=scale bits. Flare: Game::AddFlare at the tile
@@ -43,13 +44,16 @@ struct EndGameState {
 };
 // Skill objects (pointers at Game+0xbf90): +0x84 id, +0x88 level.
 struct SkillSlots { std::int32_t id[4], level[4]; std::uint8_t active[4]; };   // +0x80 active
-// EndOfTurn per-turn flags (meanings not yet confirmed; named by Game offset).
+// EndOfTurn per-turn flags (meanings not yet confirmed; named by Game offset). Flags owned by
+// other recovered states are written there: Game+0x16491 is RuneState.enabled_16491 and
+// Game+0xbe74..0xbe77 are SelectionState.double_damage and ResourcePreviewState.double_upgrade/
+// double_healing/double_gold.
 struct TurnFlags {
     std::uint8_t b15561,b15562;     // cleared
     std::uint8_t b165b8[5];         // Game+0x165b8..0x165bc cleared
-    std::uint8_t arrow_pending_16491,arrow_hold_16492;
+    std::uint8_t arrow_hold_16492;
     std::uint8_t prev_164a7,next_164a8;
-    std::uint8_t prev_be74[4],next_be78[4];
+    std::uint8_t next_be78[4];      // next turn's double_damage/upgrade/healing/gold (Game+0xbe78..0xbe7b)
     std::uint8_t next_coin_bfbc;    // becomes PathBattle.grant_coin_on_attack (Game+0xbfbb)
 };
 // EndOfTurn closing flags (meanings not yet confirmed; named by Game offset).
@@ -121,7 +125,7 @@ bool dr_end_turn_finish(dungeonraid::ResourceState*,dungeonraid::PathState*,dung
 // every skill deactivated), interface update, per-turn flag reset and rotation,
 // counterattack flag, matched_counts and attack timers reset.
 bool dr_end_turn_begin(dungeonraid::ResourceState*,dungeonraid::PathState*,dungeonraid::SkillSlots*,
-    dungeonraid::TurnFlags*,std::uint8_t* counterattack,const dungeonraid::TurnHooks*);
+    dungeonraid::TurnFlags*,dungeonraid::RuneState*,std::uint8_t* counterattack,const dungeonraid::TurnHooks*);
 // Original Game::CheckEndGame 0x10b18, decision part [0x10b18,0x10c04): true when
 // the game is (already) over. Record-mode victory -> achievement 76 and game over;
 // health > 0 -> false; otherwise achievement 40 when the class's mortal enemy is on
