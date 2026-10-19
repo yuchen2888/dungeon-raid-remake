@@ -20,7 +20,8 @@ def build():
     gameplay={'__ZN4Game15DoCounterattackEv','__ZN4Game15ProcessVampiresEv'}
     # Whole functions recovered during T020 (not in inventory46 or T010).
     recovered_here={'__ZN4Game15ProcessVampiresEv':'T020-D:dr_process_vampires (recovered_encounters.cpp, verify_vampires)',
-                    '__ZN4Game16InitialiseFlaresEv':'T020-H:dr_initialise_flares (recovered_attack_shield.cpp, verify_attack_flares)'}
+                    '__ZN4Game16InitialiseFlaresEv':'T020-H:dr_initialise_flares (recovered_attack_shield.cpp, verify_attack_flares)',
+                    '__ZN4Game15DoCounterattackEv':'T020-J:dr_do_counterattack (recovered_attack_shield.cpp, verify_counterattack)'}
     helpers={'__Z11InterpolateRK8GLfloat2S1_f','__Z11Interpolatefff','__Z3Sqrf'}
     calls=[]
     for line in block['body'].splitlines():
@@ -114,7 +115,7 @@ def build():
                     boundary='Partial instructions only; full chain verified on shared state')],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph',
                         'Presentation categories still require validation when their real implementations are connected',
-                        'DoCounterattack remains an unrecovered gameplay dependency; ProcessVampires recovered in T020-D but the health segment still reaches it through an ordered callback'])
+                        'DoCounterattack (T020-J) and ProcessVampires (T020-D) are recovered whole functions; the phase segments still reach them through ordered callbacks'])
 
 
 def main():

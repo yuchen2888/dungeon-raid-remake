@@ -141,3 +141,10 @@
 - verify_motion.py 修正（代币位置覆盖取当前格子中心）后，既有测试数字不变：motion 923 初始化 / 20627 帧、path 517 场景 / 973 步、refill_integration 20 手势 / 1550 步 / 280 奖励。
 - 错误副本（隔离开发副本）：行优先、不清 attack_flag、跳过 MoveMatchedTiles，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T020-J：DoCounterattack（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、30 个 verify 脚本共 33 步通过。运行目录 `.relay/runs/20261019T075510.798248Z`，输入指纹 `fba35d3b…129f76`，与提交时源码一致。
+- 新 verify_counterattack：586 次比较（随机 150、种族/毒 30、连续反击 24、下落帧 382），2863 次 AttackSkull、960 次击杀；字节 SHA-256 `e9cacdab…50ad1b`。参数化后的 verify_attack_all 仍为 430 次比较、2367 次攻击、699 次击杀。
+- 错误副本（隔离开发副本）：行优先、改用基础攻击力，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；两份登记 --check 均 matches true。

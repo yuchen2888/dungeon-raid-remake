@@ -27,7 +27,6 @@ RANGES=[(0x14938,0x14a14),(0x14b5e,0x14b9c),(0x14bbe,0x14be0)]
 AMOUNT=0xbe68
 ATTACK_SKULL,MOVE=0xd788,0x10ed8
 
-def in_all(address):return any(a<=address<b for a,b in RANGES)
 
 class Event(C.Structure):
     _fields_=[(k,I32) for k in ('kind','tile','a','b','c','d')]
@@ -38,6 +37,9 @@ class AllHooks(C.Structure):
     _fields_=[('context',C.c_void_p),('event',EVENT),('attack_skull',ATTACK),('move_matched_tiles',MOVE_FN)]
 
 class Original(IntegrationOriginal):
+    ranges,entry,stop_at=RANGES,START,STOP_AT
+    def in_range(self,address):return any(a<=address<b for a,b in self.ranges)
+    def label_tile(self,position):return self.index(position-0x54)   # label at tile center
     def __init__(self):
         super().__init__();text=(HERE.parent/'armv7-disassembly.txt').read_text();self.pa_calls={};self.all_running=False;self.mode=None;self.all_visits={}
         for symbol,name in [('__ZN4Game10QueueSoundE5Sound','sound'),('__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif','label'),
@@ -46,20 +48,20 @@ class Original(IntegrationOriginal):
             self.pa_calls[int(m[1],16)]=name
     def hook(self,u,address,size,context):
         if self.all_running:
-            if in_all(address):self.all_visits[hex(address)]=self.all_visits.get(hex(address),0)+1
+            if self.in_range(address):self.all_visits[hex(address)]=self.all_visits.get(hex(address),0)+1
             if self.mode is None:
-                if address==STOP_AT:u.emu_stop();return
+                if address==self.stop_at:u.emu_stop();return
                 lr=u.reg_read(self.LR)&~1;r=[u.reg_read(v) for v in self.regs];signed=lambda v:C.c_int32(v).value
                 name=self.pa_calls.get(address)
-                if name and in_all(lr):
+                if name and self.in_range(lr):
                     sp=u.reg_read(self.SP)
                     if name=='sound':e=['A',1,-1,r[1],0,0,0]
-                    elif name=='label':e=['A',2,self.index(r[2]-0x54),r[1],signed(r[3]),signed(self.read(sp)),signed(self.read(sp+4))]
+                    elif name=='label':e=['A',2,self.label_tile(r[2]),r[1],signed(r[3]),signed(self.read(sp)),signed(self.read(sp+4))]
                     else:e=['A',3,-1,r[1],signed(r[2]),0,0]
                     self.all_events.append(e);u.reg_write(self.PC,u.reg_read(self.LR));return
-                if address==ATTACK_SKULL and in_all(lr):
+                if address==ATTACK_SKULL and self.in_range(lr):
                     self.mode=('attack',lr,self.index(r[1]),signed(r[2]),r[3]&0xff);self.path_active=True
-                elif address==MOVE and in_all(lr):
+                elif address==MOVE and self.in_range(lr):
                     self.mode=('move',lr);self.refill_active=self.gen_active=self.enc_active=True
             elif address==self.mode[1]:
                 if self.mode[0]=='attack':
@@ -68,15 +70,17 @@ class Original(IntegrationOriginal):
                 self.mode=None
         return super().hook(u,address,size,context)
     def damage_all(self,amount):
+        self.write(self.GAME+AMOUNT,amount);return self.run_original()
+    def run_original(self):
         self.all_events=[];self.enc_events=[];self.gen_events=[];self.refill_events=[];self.path_events=[]
         self.match_events=[];self.token_events=[];self.motion_events=[];self.int_sets={};self.mode=None
-        self.write(self.GAME+AMOUNT,amount);u=self.u
-        u.reg_write(self.regs[0],0);u.reg_write(self.SP,0x140ff00);u.reg_write(self.LR,self.STOP|1)
+        u=self.u
+        u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140ff00);u.reg_write(self.LR,self.STOP|1)
         from unicorn.arm_const import UC_ARM_REG_R8
         u.reg_write(UC_ARM_REG_R8,self.GAME);self.all_running=True
         try:
-            u.emu_start(START|1,self.STOP,timeout=5000000,count=5000000)
-            assert u.reg_read(self.PC)==STOP_AT and self.mode is None,hex(u.reg_read(self.PC))
+            u.emu_start(self.entry|1,self.STOP,timeout=5000000,count=5000000)
+            assert u.reg_read(self.PC)==self.stop_at and self.mode is None,hex(u.reg_read(self.PC))
         finally:self.all_running=False;self.path_active=self.refill_active=self.gen_active=self.enc_active=False
         return dict(path=self.path_status(),enc=self.enc_status(),all=self.all_events[:])
 

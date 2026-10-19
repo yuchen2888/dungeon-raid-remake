@@ -102,7 +102,7 @@
       "instruction": "bl",
       "target": "__ZN4Game15DoCounterattackEv",
       "target_address": "0x11214",
-      "category": "unrecovered-gameplay"
+      "category": "T020-J:dr_do_counterattack (recovered_attack_shield.cpp, verify_counterattack)"
     },
     {
       "site": "0x143c6",
@@ -574,6 +574,6 @@
   "limits": [
     "Direct bl/blx plus external b.w only; no indirect call graph",
     "Presentation categories still require validation when their real implementations are connected",
-    "DoCounterattack remains an unrecovered gameplay dependency; ProcessVampires recovered in T020-D but the health segment still reaches it through an ordered callback"
+    "DoCounterattack (T020-J) and ProcessVampires (T020-D) are recovered whole functions; the phase segments still reach them through ordered callbacks"
   ]
 }

@@ -207,3 +207,19 @@ AttackSkull 与 MoveMatchedTiles 是同步玩法依赖，通过回调接入：
 **顺带修正的测试框架近似**：`verify_motion.py` 原生侧在代币位置覆盖时，取的是用例初始配置里的格子中心。原版传的是 `&tile->center`，即当前中心。格子被补位移动后两者会差一行。本单元在不下落、连续攻击时暴露了这一点。已改为读当前状态的格子中心，全部既有测试仍通过（见 VALIDATION.md）。
 
 仍未恢复：阶段 2..4（光效动画、DoCounterattack 0x11214 的调用点 0x143a4）、阶段 5/6 标签动画、Game+0xbe68 / +0xbe6c 的来源。DoCounterattack 同样调用 AttackSkull、MoveMatchedTiles、GetAttack，可直接复用本单元的回调接线与测试类。
+
+## T020-J：DoCounterattack（Claude，2026-10-19）
+
+起始提交 72bf218。恢复**完整原函数** Game::DoCounterattack 0x11214（296 字节，SHA-256 `e9cacdab40fcf7c559ef54503627ab92aac13b8499d77b82e7fe0a05ed50ad1b`）为 `dr_do_counterattack(PathState*, AttackAllHooks*)`，与全体伤害共用回调接线：
+
+- 清 matched_counts[0..4]。
+- 列优先遍历类型 1、attack_flag=0 的格子：先出标签 2（数值为该格 Tile::GetAttack、颜色 11、0.5 倍，位置是 Game+0xb400 静止位置表，不是当前中心）；再用该格自己的 GetAttack 作为伤害对它 AttackSkull。effects 参数传的是 attack_flag 字节，此时恒为 0。返回值不使用。
+- MoveMatchedTiles，然后清全部 attack_flag。
+- 阶段 3 的 0x143a4 处调用它，那段调度尚未恢复。
+
+至此 ProcessAttack 的直接调用里，所有玩法函数都有了恢复实现（AttackSkull、MoveMatchedTiles、GetEnemyCount、随机数、InitialiseFlares、ProcessVampires、DoCounterattack）。调用登记中 DoCounterattack 已改为 `T020-J:dr_do_counterattack`。
+
+验证 `recovered/verify_counterattack.py`：原版完整执行 DoCounterattack，其中的 GetAttack、AttackSkull（含 MatchTile、代币）、MoveMatchedTiles（含生成、Stab、JumpDown）都是原函数，测试类与 T020-I 相同（本单元把 verify_attack_all.py 的地址范围、入口、停止点和标签位置换算改为可覆盖的类属性，原测试结果不变）。
+- 150 组随机棋盘 + 30 组种族 × 毒（覆盖 GetAttack 的种族 1 带毒减半）+ 6 局 × 4 次连续反击，每次反击后逐帧下落至落定（382 帧）。
+- 共 586 次比较，2863 次 AttackSkull，960 次击杀。
+- 错误副本：行优先、伤害改用基础攻击力（绕过 GetAttack），均 exit 1。

@@ -172,3 +172,19 @@ extern "C" void dr_process_attack_damage_all(PathState* p,std::int32_t amount,co
     h->move_matched_tiles(h->context);
     for(auto& c:p->combat)c.attack_flag=0;
 }
+extern "C" void dr_do_counterattack(PathState* p,const AttackAllHooks* h) {
+    auto& m=*p->match;
+    for(int i=0;i<5;++i)m.matched_counts[i]=0;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;
+        if(m.stroke->selection.tiles[i].rule.type!=1 || p->combat[i].attack_flag)continue;
+        if(h->event) {
+            const AttackAllEvent e{AttackAllEventKind::Label,i,2,tile_attack(p,i),11,0x3f000000};
+            h->event(h->context,&e);
+        }
+        // The original passes the (zero) attack_flag byte as the effects flag.
+        h->attack_skull(h->context,i,tile_attack(p,i),false);
+    }
+    h->move_matched_tiles(h->context);
+    for(auto& c:p->combat)c.attack_flag=0;
+}

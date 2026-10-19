@@ -86,3 +86,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-I：全体伤害（Claude，2026-10-19）
 
 `[0x14938,0x14a14)`＋块 `[0x14b5e,0x14b9c)`、`[0x14bbe,0x14be0)` → `dr_process_attack_damage_all`。AttackSkull 经新增集成适配器 `dr_path_attack_skull`（不计入恢复函数），MoveMatchedTiles 经 `dr_move_matched_tiles`，在共享状态上与原版全链差分。测试框架 `verify_motion.py` 的代币位置覆盖原取用例初始中心，已改为当前中心，以对应原版的 `&tile->center`。细节见 T020_ATTACK.md。
+
+## T020-J：DoCounterattack 0x11214（Claude，2026-10-19）
+
+完整原函数 → `dr_do_counterattack`：每个未出手的敌人用自己的 GetAttack 对自己 AttackSkull（列优先），标签显示在静止位置表 Game+0xb400，随后 MoveMatchedTiles 并清 attack_flag。verify_counterattack.py 在完整共享状态上全链差分。ProcessAttack 的直接玩法调用已全部有恢复实现；剩余工作是阶段 2..4 及阶段 5/6 动画片段本身和整体调度。

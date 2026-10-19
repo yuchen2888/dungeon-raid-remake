@@ -79,6 +79,12 @@ void dr_process_attack_fade_in(dungeonraid::AttackDamageState*,dungeonraid::Path
 // an enemy 2 dies), then MoveMatchedTiles and clear every attack_flag.
 void dr_process_attack_damage_all(dungeonraid::PathState*,std::int32_t amount,
     const dungeonraid::AttackAllHooks*);
+// Original Game::DoCounterattack 0x11214: clear matched_counts[0..4]; every
+// type-1 tile without attack_flag, column-major, takes AttackSkull of its own
+// Tile::GetAttack (effects false); Label event: tile, a=type 2, b=attack, c=11,
+// d=0.5 bits, shown at the tile's resting position (Game+0xb400 table). Then
+// MoveMatchedTiles and clear every attack_flag. Uses AttackAllHooks callbacks.
+void dr_do_counterattack(dungeonraid::PathState*,const dungeonraid::AttackAllHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.
