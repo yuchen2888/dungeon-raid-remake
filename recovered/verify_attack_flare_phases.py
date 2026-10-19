@@ -44,9 +44,9 @@ def fbits(x):return struct.unpack('<I',struct.pack('<f',x))[0]
 def f32(x):return struct.unpack('<f',struct.pack('<f',x))[0]
 
 class Original(CounterOriginal):
-    ranges,entry=[(ENTRY,END),(COUNTER,COUNTER_END)],ENTRY
+    ranges,entry,anim_end=[(ENTRY,END),(COUNTER,COUNTER_END)],ENTRY,END
     def __init__(self):
-        super().__init__();self.stop_at=END;text=(HERE.parent/'armv7-disassembly.txt').read_text();self.anim_calls={}
+        super().__init__();self.stop_at=self.anim_end;text=(HERE.parent/'armv7-disassembly.txt').read_text();self.anim_calls={}
         for symbol,name in [('__ZN11SimpleLabel9SetNumberEi','number'),('__ZN11SimpleLabel11SetPositionERK8GLfloat2','position'),
                             ('__ZN4Game10QueueSoundE5Sound','sound'),('__ZN4Quad8SetAlphaEh','alpha')]:
             m=re.search(r'^'+re.escape(symbol)+r':\n\s*([0-9a-f]+):',text,re.M);assert m,symbol
@@ -55,8 +55,8 @@ class Original(CounterOriginal):
         if self.all_running and self.mode is None:
             lr=u.reg_read(self.LR)&~1;name=self.anim_calls.get(address)
             # A call's return address is after the bl, so the last call returns to END itself.
-            if address==COUNTER and ENTRY<lr<=END:self.all_events.append(['C'])
-            if name and ENTRY<lr<=END:
+            if address==COUNTER and ENTRY<lr<=self.anim_end:self.all_events.append(['C'])
+            if name and ENTRY<lr<=self.anim_end:
                 r=[u.reg_read(v) for v in self.regs]
                 if name=='alpha':
                     if r[0]==self.GAME+QUAD2:self.all_events.append(['N',6,2,r[1]&0xff,0])

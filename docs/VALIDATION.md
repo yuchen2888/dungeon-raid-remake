@@ -155,3 +155,10 @@
 - 新 verify_attack_flare_phases：989 次比较（边界 420、随机 300、逐帧 269），65 次完整反击链；片段字节 SHA-256 `10d33f17…a09534`。
 - 错误副本（隔离开发副本）：`>=1`、光效 alpha 用计时 A、不等光效结束就反击，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T020-L：阶段 4（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、32 个 verify 脚本共 35 步通过。运行目录 `.relay/runs/20261019T081607.563943Z`，输入指纹 `8f572953…3cab4e`，与提交时源码一致。
+- 新 verify_attack_phase4：856 次比较（边界 320、随机 300、逐帧 236），阶段 5、6 各进入 82 次，205 次原版 Rand(float)；片段字节 SHA-256 `36dc7ee2…fafc6c4`。T020-K 测试在 flares 改返回 bool 后照常通过。
+- 错误副本（隔离开发副本）：护甲 `>=0`、随机流 1、bd64/bd68 互换，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；两份登记 --check 均 matches true。

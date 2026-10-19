@@ -596,6 +596,28 @@
         "Game::DoCounterattack via recovered dr_do_counterattack"
       ],
       "boundary": "Partial instructions only; phase-4 work after 0x143ca not included"
+    },
+    {
+      "start": "0x143ca",
+      "end_exclusive": "0x1457c",
+      "size": 434,
+      "original_bytes_sha256": "36dc7ee2a5cc38d7698985c344b9efe027ce4107388f4c4ae3bb68271fafc6c4",
+      "native_function": "dr_process_attack_phase4",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_phase4.py",
+      "inputs": [
+        "flares-done flag [sp,#0x2c] from the shared part (returned by dr_process_attack_flares)",
+        "Game+0xbd58 progress, Game+4 frame time",
+        "Game+0xbda4 armour",
+        "Game+0xbd30/+0xbd34/+0xbd38",
+        "RNG stream 0"
+      ],
+      "outputs": [
+        "progress += 8dt; above 1 with flares done: phase 5 (armour > 0) or 6 with motion parameters bd5c/bd60/bd78",
+        "Rand(0.4, 1.0 or 0.8, stream 0) -> bd7c; bd64/bd68 copies; bd6c=0, bd70=1; HelpMenu",
+        "bd74 = bd38; Quad 0xb8ac and two labels get alpha u8(u32(progress*255))"
+      ],
+      "boundary": "Partial instructions only; phase 5/6 animation from 0x1457c not included"
     }
   ],
   "limits": [

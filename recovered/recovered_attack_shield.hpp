@@ -61,12 +61,19 @@ struct AttackAnimation {
     float poison_label_alpha;  // Game+0x15520
     std::int32_t flare_count;  // Game+0xbd8c (flare list at Game+0xbd80, stride 0x70)
     std::uint8_t counterattack;// Game+0xbfba
+    // Phase 5/6 label motion parameters, named by Game offset until their
+    // meaning is confirmed by the phase-5/6 animation code.
+    float bd30,bd34,bd5c,bd60,bd64,bd68,bd6c,bd70,bd74,bd78,bd7c;
 };
 // Sound: a=27. LabelNumber: a=label (0 damage Game+0xb9fc, 1 poison Game+0x151e4), b=number.
 // LabelPosition: a=label, b=x bits, c=y bits. FlareAlpha: a=flare, b=alpha.
 // FlareScale: a=flare, b=float bits stored to flare+0x64 and +0x68.
 // SetAlpha: a=quad 2 (Game+0xb98c), b=alpha.
-enum class AttackAnimEventKind : std::int32_t { Sound=1, LabelNumber, LabelPosition, FlareAlpha, FlareScale, SetAlpha };
+// LabelAlpha: a=label, b=alpha. HelpMenu: HelpMenu::Initialise(Game+0x10298, a=bd30 bits,
+// b=bd34 bits, 0, 0, type c=16). Random: a=low bits, b=high bits, c=stream, (result in bd7c).
+// SetAlpha quad 1 is Game+0xb8ac.
+enum class AttackAnimEventKind : std::int32_t { Sound=1, LabelNumber, LabelPosition, FlareAlpha, FlareScale, SetAlpha,
+    LabelAlpha, HelpMenu, Random };
 struct AttackAnimEvent { AttackAnimEventKind kind; std::int32_t a,b,c; };
 // counterattack must run Game::DoCounterattack (dr_do_counterattack).
 struct AttackAnimHooks {
@@ -111,8 +118,15 @@ void dr_do_counterattack(dungeonraid::PathState*,const dungeonraid::AttackAllHoo
 // animation, the phase-2 exit (to 3 with counterattack, else 4 with damage and
 // poison labels) and phase 3 (label fade; when flares are done, phase 7 and
 // DoCounterattack). Phase-4 work after 0x143ca is separate. dt finite, >= 0.
-void dr_process_attack_flares(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
+// Returns whether the flares finished this frame (the original's [sp,#0x2c]).
+bool dr_process_attack_flares(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
     float dt,const dungeonraid::AttackAnimHooks*);
+// ProcessAttack [0x143ca,0x1457c): phase 4. progress += 8dt; above 1 with the
+// flares done this frame (flares_done from dr_process_attack_flares): phase 5
+// when armour > 0 else 6, motion parameters, Rand(float) on stream 0 into bd7c,
+// HelpMenu. Then bd74 = damage-label alpha and three alphas from progress.
+void dr_process_attack_phase4(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
+    bool flares_done,float dt,const dungeonraid::AttackAnimHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.

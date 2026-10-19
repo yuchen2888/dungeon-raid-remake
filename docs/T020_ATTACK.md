@@ -245,3 +245,22 @@ VCVT.U32.F32 的语义按 ARM 实现：向零截断，负数与 NaN 得 0，过�
 - 调试中发现并修正一个测试自身的问题：判断"调用来自本段"时用了 `lr < END`，而本段最后一条 bl 的返回地址正好是 END，导致漏记事件。已改为 `ENTRY < lr <= END`。之前各单元的测试没有按 lr 区间过滤结尾调用，或最后一个调用不在区间末尾，因此不受影响。
 
 边界：SimpleLabel::SetNumber/SetPosition 与 QueueSound 为表现调用；光效列表由 AddFlare 建立，测试直接布置；未模拟 NEON 对次正规数的冲零。阶段 4 在 0x143ca 之后的部分是下一单元。
+
+## T020-L：阶段 4（Claude，2026-10-19）
+
+起始提交 b9d8ec3。恢复 `[0x143ca,0x1457c)` 为 `dr_process_attack_phase4(AttackDamageState*, AttackAnimation*, flares_done, dt, hooks)`。原版用栈上 `[sp,#0x2c]` 把"本帧光效刚结束"从共享部分传到阶段 4，因此 `dr_process_attack_flares` 改为返回这个标志（原为 void；T020-K 测试照常通过）。AttackAnimation 末尾追加阶段 5/6 标签运动参数 bd30..bd7c；含义要等阶段 5/6 动画恢复后才能确认，暂按 Game 偏移命名。
+
+| 步骤 | 行为 |
+| --- | --- |
+| 进入 | 阶段 ≠4 时到 0x1457c |
+| 进度 | 进度 += 8dt；>1 时进度=1，且本帧光效刚结束时继续下面两行 |
+| 护甲 >0 | 阶段 5；bd60=1.290625（0x3fa53333）、bd5c=0.5、bd78=0.8；Rand(0.4, 1.0, 流 0) → bd7c |
+| 否则 | 阶段 6；bd60=1.29375（0x3fa5999a）、bd5c=0.8625、bd78=0.2；Rand(0.4, 0.8, 流 0) → bd7c |
+| 公共 | bd68=bd34、bd64=bd30、bd6c=0、bd70=1；HelpMenu::Initialise(bd30, bd34, 0, 0, 16) |
+| 每帧 | bd74 = 伤害标签 alpha（bd38）；Quad 0xb8ac 与两个标签的 alpha = u8(u32(进度×255)) |
+
+随机数复用已恢复的 dr_random_float，消耗共享六流中的流 0。
+
+验证 `recovered/verify_attack_phase4.py`：原版从 0x141c6 连续执行到 0x1457c，让栈上标志自然传递；原生侧依次调用 flares 与 phase4。Rand(float) 和 Quad::SetAlpha 是原函数，到达时 DoCounterattack 也是完整原版链。
+- 320 组边界（护甲 −1/0/1/7 × 计时 B 四值 × 进度五值 × 四个 dt）+ 300 组随机 + 24 局从阶段 2 逐帧推进到阶段 5 或 6（236 帧）。共 856 次比较，阶段 5、6 各进入 82 次，205 次原版 Rand(float)。
+- 错误副本：护甲 `>=0`、随机流改 1、bd64/bd68 来源互换，均 exit 1。

@@ -199,11 +199,11 @@ std::uint32_t to_u32(float f) {
     return static_cast<std::uint32_t>(f);
 }
 }
-extern "C" void dr_process_attack_flares(AttackDamageState* s,AttackAnimation* a,float dt,const AttackAnimHooks* h) {
+extern "C" bool dr_process_attack_flares(AttackDamageState* s,AttackAnimation* a,float dt,const AttackAnimHooks* h) {
     auto emit=[h](AttackAnimEventKind kind,int x=0,int y=0,int z=0) {
         if(h && h->event) { const AttackAnimEvent e{kind,x,y,z};h->event(h->context,&e); }
     };
-    if(s->phase!=2 && s->phase!=3 && s->phase!=4)return;
+    if(s->phase!=2 && s->phase!=3 && s->phase!=4)return false;
     auto& m=*s->resources->match;
     m.shake_progress_bd90=as_bits(as_float(m.shake_progress_bd90)+dt);
     const float step=dt*-4.5f;
@@ -240,4 +240,35 @@ extern "C" void dr_process_attack_flares(AttackDamageState* s,AttackAnimation* a
         }
         emit(AttackAnimEventKind::SetAlpha,2,static_cast<std::uint8_t>(to_u32(a->label_progress*255.0f)));
     }
+    return flares_done;
+}
+extern "C" void dr_process_attack_phase4(AttackDamageState* s,AttackAnimation* a,bool flares_done,float dt,const AttackAnimHooks* h) {
+    auto emit=[h](AttackAnimEventKind kind,int x=0,int y=0,int z=0) {
+        if(h && h->event) { const AttackAnimEvent e{kind,x,y,z};h->event(h->context,&e); }
+    };
+    if(s->phase!=4)return;
+    const float step=dt*8.0f;
+    a->label_progress=a->label_progress+step;
+    if(a->label_progress>1.0f) {
+        a->label_progress=1.0f;
+        if(flares_done) {
+            auto& m=*s->resources->match;
+            float low,high;
+            if(m.preview->armour_current>0) {
+                s->phase=5;a->bd60=as_float(0x3fa53333);low=as_float(0x3ecccccd);a->bd5c=0.5f;a->bd78=as_float(0x3f4ccccd);high=1.0f;
+            } else {
+                s->phase=6;a->bd60=as_float(0x3fa5999a);low=as_float(0x3ecccccd);a->bd5c=as_float(0x3f5ccccd);
+                high=as_float(0x3f4ccccd);a->bd78=as_float(0x3e4ccccd);
+            }
+            a->bd7c=dr_random_float(&m.random,low,high,0);
+            emit(AttackAnimEventKind::Random,static_cast<int>(as_bits(low)),static_cast<int>(as_bits(high)),0);
+            a->bd68=a->bd34;a->bd64=a->bd30;a->bd6c=0.0f;a->bd70=1.0f;
+            emit(AttackAnimEventKind::HelpMenu,static_cast<int>(as_bits(a->bd30)),static_cast<int>(as_bits(a->bd34)),16);
+        }
+    }
+    a->bd74=a->damage_label_alpha;
+    const auto alpha=static_cast<std::uint8_t>(to_u32(a->label_progress*255.0f));
+    emit(AttackAnimEventKind::SetAlpha,1,alpha);
+    emit(AttackAnimEventKind::LabelAlpha,0,alpha);
+    emit(AttackAnimEventKind::LabelAlpha,1,alpha);
 }
