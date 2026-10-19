@@ -148,3 +148,10 @@
 - 新 verify_counterattack：586 次比较（随机 150、种族/毒 30、连续反击 24、下落帧 382），2863 次 AttackSkull、960 次击杀；字节 SHA-256 `e9cacdab…50ad1b`。参数化后的 verify_attack_all 仍为 430 次比较、2367 次攻击、699 次击杀。
 - 错误副本（隔离开发副本）：行优先、改用基础攻击力，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T020-K：阶段 2..4 共享部分（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、31 个 verify 脚本共 34 步通过。运行目录 `.relay/runs/20261019T080548.798273Z`，输入指纹 `3b948cef…502520`，与提交时源码一致。
+- 新 verify_attack_flare_phases：989 次比较（边界 420、随机 300、逐帧 269），65 次完整反击链；片段字节 SHA-256 `10d33f17…a09534`。
+- 错误副本（隔离开发副本）：`>=1`、光效 alpha 用计时 A、不等光效结束就反击，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；两份登记 --check 均 matches true。

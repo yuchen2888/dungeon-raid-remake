@@ -569,6 +569,33 @@
         "Game::MoveMatchedTiles via recovered dr_move_matched_tiles"
       ],
       "boundary": "Partial instructions only; full chain verified on shared state"
+    },
+    {
+      "start": "0x141c6",
+      "end_exclusive": "0x143ca",
+      "size": 516,
+      "original_bytes_sha256": "10d33f17e8f1d95ebc507950a38ad4bd76d2c8e0bc1f95166083534edca09534",
+      "native_function": "dr_process_attack_flares",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_flare_phases.py",
+      "inputs": [
+        "R8=Game pointer; phases 2..4",
+        "Game+0xbd90/+0xbd94 timers (MatchState shake fields)",
+        "Game+4 frame time",
+        "Game+0xbd58/+0xbd54/+0xbd38/+0x15520 label animation",
+        "Game+0xbd80 flare list, +0xbd8c count",
+        "Game+0xbfba counterattack flag"
+      ],
+      "outputs": [
+        "timer A += dt, timer B += dt*-4.5; below 0.5 in phase 2: phase 3 (counterattack) or 4 (labels)",
+        "below 0: timer B 0, flare count 0",
+        "flare alpha/scale",
+        "phase 3: progress += 3dt; above 1 with flares done: phase 7 + DoCounterattack"
+      ],
+      "callbacks": [
+        "Game::DoCounterattack via recovered dr_do_counterattack"
+      ],
+      "boundary": "Partial instructions only; phase-4 work after 0x143ca not included"
     }
   ],
   "limits": [

@@ -1,4 +1,5 @@
 #include "recovered_attack_shield.hpp"
+#include <cstring>
 using namespace dungeonraid;
 namespace {
 void emit(const AttackShieldHooks* h,AttackShieldEventKind kind,int a=0,int b=0,int c=0,int d=0) {
@@ -187,4 +188,56 @@ extern "C" void dr_do_counterattack(PathState* p,const AttackAllHooks* h) {
     }
     h->move_matched_tiles(h->context);
     for(auto& c:p->combat)c.attack_flag=0;
+}
+namespace {
+float as_float(std::uint32_t bits) {float f;std::memcpy(&f,&bits,4);return f;}
+std::uint32_t as_bits(float f) {std::uint32_t u;std::memcpy(&u,&f,4);return u;}
+// VCVT.U32.F32: round toward zero, saturating; NaN and negatives give 0.
+std::uint32_t to_u32(float f) {
+    if(!(f>0.0f))return 0;
+    if(f>=4294967296.0f)return 0xffffffffu;
+    return static_cast<std::uint32_t>(f);
+}
+}
+extern "C" void dr_process_attack_flares(AttackDamageState* s,AttackAnimation* a,float dt,const AttackAnimHooks* h) {
+    auto emit=[h](AttackAnimEventKind kind,int x=0,int y=0,int z=0) {
+        if(h && h->event) { const AttackAnimEvent e{kind,x,y,z};h->event(h->context,&e); }
+    };
+    if(s->phase!=2 && s->phase!=3 && s->phase!=4)return;
+    auto& m=*s->resources->match;
+    m.shake_progress_bd90=as_bits(as_float(m.shake_progress_bd90)+dt);
+    const float step=dt*-4.5f;
+    m.shake_scale_bd94=as_bits(as_float(m.shake_scale_bd94)+step);
+    bool flares_done=false;
+    if(as_float(m.shake_scale_bd94)<0.5f) {
+        if(s->phase==2) {
+            if(a->counterattack) {
+                emit(AttackAnimEventKind::Sound,27);s->phase=3;a->label_progress=0.0f;
+            } else {
+                s->phase=4;a->label_progress=0.0f;
+                emit(AttackAnimEventKind::LabelNumber,0,s->incoming_damage);
+                emit(AttackAnimEventKind::LabelPosition,0,static_cast<int>(as_bits(0.5f)),static_cast<int>(as_bits(a->label_y)));
+                a->damage_label_alpha=1.0f;
+                emit(AttackAnimEventKind::LabelNumber,1,s->enemy9_damage);
+                // Literal 0x3d4ccccd (0.05).
+                emit(AttackAnimEventKind::LabelPosition,1,static_cast<int>(as_bits(0.5f)),static_cast<int>(as_bits(a->label_y+0.05f)));
+                a->poison_label_alpha=1.0f;
+            }
+        }
+        if(as_float(m.shake_scale_bd94)<0.0f) {m.shake_scale_bd94=0;a->flare_count=0;flares_done=true;}
+    }
+    for(int i=0;i<a->flare_count;++i) {
+        // Literal 0x437f0000 (255).
+        emit(AttackAnimEventKind::FlareAlpha,i,static_cast<std::uint8_t>(to_u32(as_float(m.shake_scale_bd94)*255.0f)));
+        emit(AttackAnimEventKind::FlareScale,i,static_cast<int>(m.shake_progress_bd90));
+    }
+    if(s->phase==3) {
+        const float step3=dt*3.0f;
+        a->label_progress=a->label_progress+step3;
+        if(a->label_progress>1.0f) {
+            a->label_progress=1.0f;
+            if(flares_done) {s->phase=7;if(h && h->counterattack)h->counterattack(h->context);}
+        }
+        emit(AttackAnimEventKind::SetAlpha,2,static_cast<std::uint8_t>(to_u32(a->label_progress*255.0f)));
+    }
 }

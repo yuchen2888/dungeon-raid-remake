@@ -223,3 +223,25 @@ AttackSkull 与 MoveMatchedTiles 是同步玩法依赖，通过回调接入：
 - 150 组随机棋盘 + 30 组种族 × 毒（覆盖 GetAttack 的种族 1 带毒减半）+ 6 局 × 4 次连续反击，每次反击后逐帧下落至落定（382 帧）。
 - 共 586 次比较，2863 次 AttackSkull，960 次击杀。
 - 错误副本：行优先、伤害改用基础攻击力（绕过 GetAttack），均 exit 1。
+
+## T020-K：阶段 2..4 共享计时、光效动画与阶段 3（Claude，2026-10-19）
+
+起始提交 3b0ce5f。恢复 `[0x141c6,0x143ca)` 为 `dr_process_attack_flares(AttackDamageState*, AttackAnimation*, dt, AttackAnimHooks*)`。新增 `AttackAnimation` 结构保存原先没有归属的动画字段：标签进度 Game+0xbd58、标签 y 坐标 +0xbd54、伤害标签 alpha +0xbd38、毒标签 alpha +0x15520、光效数量 +0xbd8c、反击标志 +0xbfba。两个计时器是 MatchState 已有的 shake_progress_bd90 / shake_scale_bd94（原名沿用；它们在攻击动画中被复用为计时器）。
+
+| 步骤 | 行为 |
+| --- | --- |
+| 进入 | 阶段不是 2/3/4 时直接到 0x143ca |
+| 计时 | A += dt；B += dt×(−4.5) |
+| B < 0.5 | 阶段 2 时：有反击标志则音效 27、阶段 3、进度 0；否则阶段 4、进度 0，伤害标签显示来袭伤害（位置 (0.5, y)）、伤害 alpha=1，毒标签显示 9 号伤害（位置 (0.5, y+0.05)）、毒 alpha=1。随后 B<0 时 B=0、光效数=0，记"光效结束" |
+| 光效 | 每个光效（Game+0xbd80 数组，步长 0x70）：alpha = u8(u32(B×255))，+0x64/+0x68 = A |
+| 阶段 3 | 进度 += 3dt；>1 时进度=1，且本帧光效结束时置阶段 7 并调用 DoCounterattack；最后 Quad 0xb98c 的 alpha = u8(u32(进度×255)) |
+
+VCVT.U32.F32 的语义按 ARM 实现：向零截断，负数与 NaN 得 0，过大饱和。阶段 2 刚切到 3 的同一帧也会执行阶段 3 块，与原版一致。
+
+验证 `recovered/verify_attack_flare_phases.py`，继承 T020-J 的全链测试类：
+- 原版侧光效数组放在模拟内存（Game+0xbd80 指向它），Quad::SetAlpha 真实执行，结束后读回每个光效四个顶点的 alpha 和 +0x64/+0x68。阶段 3 结束时原版 DoCounterattack 及其 AttackSkull、MoveMatchedTiles 全部真实执行；原生侧回调 dr_do_counterattack。
+- 420 组边界（阶段 1..5 × B 六个值 × 反击标志 × 7 个 dt）+ 300 组随机 + 24 局从阶段 2（A=0、B=1）逐帧推进到阶段 4 或 7（269 帧）。共 989 次比较，其中 65 次触发完整反击链。
+- 错误副本：`>1` 改 `>=1`、光效 alpha 改用计时 A、不等光效结束就反击，均 exit 1。
+- 调试中发现并修正一个测试自身的问题：判断"调用来自本段"时用了 `lr < END`，而本段最后一条 bl 的返回地址正好是 END，导致漏记事件。已改为 `ENTRY < lr <= END`。之前各单元的测试没有按 lr 区间过滤结尾调用，或最后一个调用不在区间末尾，因此不受影响。
+
+边界：SimpleLabel::SetNumber/SetPosition 与 QueueSound 为表现调用；光效列表由 AddFlare 建立，测试直接布置；未模拟 NEON 对次正规数的冲零。阶段 4 在 0x143ca 之后的部分是下一单元。

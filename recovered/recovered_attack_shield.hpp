@@ -52,6 +52,28 @@ struct AttackAllHooks {
     bool (*attack_skull)(void*,std::int32_t tile,std::int32_t amount,bool effects);
     void (*move_matched_tiles)(void*);
 };
+// Attack label/flare animation fields not owned by another recovered module.
+// The two phase timers are MatchState shake_progress_bd90 / shake_scale_bd94.
+struct AttackAnimation {
+    float label_progress;      // Game+0xbd58
+    float label_y;             // Game+0xbd54
+    float damage_label_alpha;  // Game+0xbd38
+    float poison_label_alpha;  // Game+0x15520
+    std::int32_t flare_count;  // Game+0xbd8c (flare list at Game+0xbd80, stride 0x70)
+    std::uint8_t counterattack;// Game+0xbfba
+};
+// Sound: a=27. LabelNumber: a=label (0 damage Game+0xb9fc, 1 poison Game+0x151e4), b=number.
+// LabelPosition: a=label, b=x bits, c=y bits. FlareAlpha: a=flare, b=alpha.
+// FlareScale: a=flare, b=float bits stored to flare+0x64 and +0x68.
+// SetAlpha: a=quad 2 (Game+0xb98c), b=alpha.
+enum class AttackAnimEventKind : std::int32_t { Sound=1, LabelNumber, LabelPosition, FlareAlpha, FlareScale, SetAlpha };
+struct AttackAnimEvent { AttackAnimEventKind kind; std::int32_t a,b,c; };
+// counterattack must run Game::DoCounterattack (dr_do_counterattack).
+struct AttackAnimHooks {
+    void* context;
+    void (*event)(void*,const AttackAnimEvent*);
+    void (*counterattack)(void*);
+};
 }
 extern "C" {
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
@@ -85,6 +107,12 @@ void dr_process_attack_damage_all(dungeonraid::PathState*,std::int32_t amount,
 // d=0.5 bits, shown at the tile's resting position (Game+0xb400 table). Then
 // MoveMatchedTiles and clear every attack_flag. Uses AttackAllHooks callbacks.
 void dr_do_counterattack(dungeonraid::PathState*,const dungeonraid::AttackAllHooks*);
+// ProcessAttack [0x141c6,0x143ca): phases 2..4 shared timers and flare
+// animation, the phase-2 exit (to 3 with counterattack, else 4 with damage and
+// poison labels) and phase 3 (label fade; when flares are done, phase 7 and
+// DoCounterattack). Phase-4 work after 0x143ca is separate. dt finite, >= 0.
+void dr_process_attack_flares(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
+    float dt,const dungeonraid::AttackAnimHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.

@@ -90,3 +90,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-J：DoCounterattack 0x11214（Claude，2026-10-19）
 
 完整原函数 → `dr_do_counterattack`：每个未出手的敌人用自己的 GetAttack 对自己 AttackSkull（列优先），标签显示在静止位置表 Game+0xb400，随后 MoveMatchedTiles 并清 attack_flag。verify_counterattack.py 在完整共享状态上全链差分。ProcessAttack 的直接玩法调用已全部有恢复实现；剩余工作是阶段 2..4 及阶段 5/6 动画片段本身和整体调度。
+
+## T020-K：阶段 2..4 共享部分（Claude，2026-10-19）
+
+`[0x141c6,0x143ca)` → `dr_process_attack_flares`。Game+0xbd90 / +0xbd94（MatchState 的 shake 字段）在攻击中是两个计时器：A 每帧加 dt，B 每帧减 4.5dt。B<0.5 时阶段 2 转 3（反击标志 Game+0xbfba）或 4（伤害/毒标签）；B<0 时光效数清零。阶段 3 进度满 1 且光效结束时置阶段 7 并调用 DoCounterattack。新增 AttackAnimation 结构承载 Game+0xbd58/+0xbd54/+0xbd38/+0x15520/+0xbd8c/+0xbfba。细节见 T020_ATTACK.md。

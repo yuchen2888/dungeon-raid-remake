@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T020-J）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击中阶段 1 淡入+InitialiseFlares、阶段 5 结束（吸收+损耗+削弱+全体伤害）、阶段 6 结束（扣血+吸血鬼）、阶段 7 淡出及 DoCounterattack 已恢复；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T020-K）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击中阶段 1 淡入+InitialiseFlares、阶段 5 结束（吸收+损耗+削弱+全体伤害）、阶段 6 结束（扣血+吸血鬼）、阶段 2/3 计时与光效、阶段 7 淡出及 DoCounterattack 已恢复；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、30 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、31 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -21,6 +21,7 @@
 - T020-H：完整原函数 InitialiseFlares 0xd9b0（来袭伤害与 9 号伤害的来源）和阶段 1 淡入 `[0x14126,0x141c6)` 已恢复；调用登记中把 InitialiseFlares 当作表现边界的误分类已更正。AddFlare 的光效列表/计数仍由调用方负责。
 - T020-I：全体伤害片段恢复为 `dr_process_attack_damage_all`，AttackSkull 经新增集成适配器 `dr_path_attack_skull`、MoveMatchedTiles 经 `dr_move_matched_tiles`，在完整共享状态上与原版全链差分（含击杀、奖励代币、补位、生成、下落）。顺带修正测试框架 verify_motion.py 的位置覆盖近似。
 - T020-J：完整原函数 DoCounterattack 0x11214 恢复为 `dr_do_counterattack`，在共享状态上全链差分。ProcessAttack 直接调用的玩法函数已全部有恢复实现。
+- T020-K：阶段 2..4 共享部分 `[0x141c6,0x143ca)` 恢复为 `dr_process_attack_flares`（新增 AttackAnimation 结构），含阶段 2→3/4、光效动画和阶段 3→7 触发反击，在完整共享状态上差分。
 
 ## 验证
 
@@ -56,10 +57,12 @@
 
 2026-10-19 Claude 继续认领 T020-J（起始 72bf218）：attack_shield 追加 DoCounterattack，新增 verify_counterattack.py，verify_attack_all.py 测试类参数化（结果不变）。
 
+2026-10-19 Claude 继续认领 T020-K（起始 3b0ce5f）：attack_shield 追加 AttackAnimation 与阶段 2..4 共享部分，新增 verify_attack_flare_phases.py。
+
 活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
 
 ## 尚未完成及下一步
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-继续 T020 的下一单元：阶段 2..4 片段（0x141c6 起）——阶段 2/3/4 共用 Game+0xbd90（+=dt）与 +0xbd94（−=4.5×dt，<0.5 时推进）计时，以 Game+0xbd8c 计数遍历光效做动画（需先确认 AddFlare 维护的光效列表结构），阶段 3 在 0x143a4 调 DoCounterattack（已恢复）；之后阶段 5/6 标签动画（0x1457c 起），最后把各片段串成完整 ProcessAttack 并与原函数整体差分。不重写已恢复部分。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+继续 T020 的下一单元：阶段 4（0x143ca..0x1457c）——进度 += 8dt，满 1 且光效结束时按护甲 Game+0xbda4>0 进入阶段 5（否则 6），设置 Game+0xbd60/+0xbd5c/+0xbd78 等动画参数，调用 Rand(float, float, 流 0)（已恢复 dr_random_float）写 Game+0xbd7c，复制 Game+0xbd34/+0xbd30 到 +0xbd68/+0xbd64，HelpMenu；最后按进度设置三个 alpha。然后阶段 5/6 标签动画（0x1457c..0x146ce），最后把 T020-A..K 及以上片段串成完整 ProcessAttack 并与原函数整体差分。不重写已恢复部分。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
