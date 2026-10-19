@@ -82,6 +82,22 @@ struct AttackAnimHooks {
     void (*event)(void*,const AttackAnimEvent*);
     void (*counterattack)(void*);
 };
+// Game fields read by ProcessAttack whose producers are outside it.
+struct AttackProcessInputs {
+    std::int32_t armour_loss_chance; // Game+0xbdc8
+    std::int32_t weaken;             // Game+0xbe6c
+    std::int32_t damage_all;         // Game+0xbe68
+};
+struct AttackProcessHooks {
+    const AttackFlareHooks* flare;   // phase 1 + InitialiseFlares
+    const AttackAnimHooks* anim;     // phases 2..6 animation, counterattack
+    const AttackAbsorbHooks* absorb;
+    const AttackShieldHooks* shield;
+    const AttackWeakenHooks* weaken;
+    const AttackAllHooks* all;       // damage-all: attack_skull, move_matched_tiles
+    const AttackHealthHooks* health; // Vampires must run dr_process_vampires
+    const AttackFadeHooks* fade;
+};
 }
 extern "C" {
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
@@ -144,6 +160,14 @@ bool dr_process_attack_label_motion(dungeonraid::AttackDamageState*,dungeonraid:
 // (dr_process_attack_armour_absorb) follows in the same frame.
 void dr_process_attack_phase5_done(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
     const dungeonraid::AttackAnimHooks*);
+// Whole Game::ProcessAttack 0x14118 for one frame, composed in the original's
+// control-flow order from the recovered parts above: phase 1, phases 2..4,
+// phase 4, phase 5/6 motion, then on completion either (phase 5) the completion
+// block, absorption, shield wear, weakening and damage-all, or (phase 6) health
+// damage; finally the phase-7 fade. a->counterattack (Game+0xbfba) is also the
+// fade's alternate-quad flag. overlay_alpha is Game+0xb92b.
+void dr_process_attack(dungeonraid::AttackDamageState*,dungeonraid::PathState*,dungeonraid::AttackAnimation*,
+    std::uint8_t* overlay_alpha,float dt,const dungeonraid::AttackProcessInputs*,const dungeonraid::AttackProcessHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.

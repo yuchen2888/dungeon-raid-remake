@@ -299,3 +299,28 @@ VCVT.U32.F32 的语义按 ARM 实现：向零截断，负数与 NaN 得 0，过�
 - 错误副本：标签不取最小值、bd74 取错字段、随机上限改 1.0，均 exit 1。
 
 至此 ProcessAttack 的每一段指令都已有恢复实现，覆盖阶段 1–7 与它调用的全部玩法函数。下一步把它们按原函数控制流串成一个完整的 `dr_process_attack`，从函数入口 0x14118 与原版整体逐帧差分。
+
+## T020-O：完整 ProcessAttack 与整函数逐帧差分（Claude，2026-10-19）
+
+起始提交 d7a24e3。新增 `dr_process_attack(AttackDamageState*, PathState*, AttackAnimation*, overlay_alpha, dt, AttackProcessInputs*, AttackProcessHooks*)`，按原函数控制流把 T020-A..N 串起来，本身不含新的游戏逻辑：
+
+```
+阶段 1 淡入 [0x14126) → 阶段 2..4 共享 [0x141c6) → 阶段 4 [0x143ca) → 阶段 5/6 运动 [0x1457c)
+  └ 运动完成：阶段 5 → 完成准备 [0x146ce) → 吸收 [0x14790) → 护甲损耗 [0x147e4) → 削弱 [0x1487e) → 全体伤害 [0x14938)
+              阶段 6 → 扣血 [0x14a14)（含吸血鬼）
+→ 阶段 7 淡出 [0x14ae4) → 返回
+```
+
+外部输入 `AttackProcessInputs`：护甲损耗阈值 Game+0xbdc8、削弱值 +0xbe6c、全体伤害值 +0xbe68，三者的写入者都在 ProcessAttack 之外。各段的事件/回调通过 `AttackProcessHooks` 汇总传入。反击标志 Game+0xbfba 同时是阶段 7 淡出的交替 Quad 选择。
+
+验证 `recovered/verify_process_attack.py`：**每一帧都从入口 0x14118 调用一次原版整函数**，与原生 dr_process_attack 比较完整共享状态（棋盘、combat、代币、补位、生成、随机六流、资源、动画字段、光效、三个 Quad）和全部有序表现事件。所有玩法被调函数都以原函数执行：InitialiseFlares、GetAttack、Rand/RandI、Interpolate/Sqr、SetAlpha、DoCounterattack、AttackSkull、MatchTile、代币、MoveMatchedTiles、生成、Stab/JumpDown、GetEnemyCount、ProcessVampires、AddHealth。
+- 24 局 × 每局 2 次完整攻击（阶段 1 到 8），棋盘、随机流、资源在整局内携带；两次攻击之间让补位格子逐帧下落落定。共 48 次攻击、1985 帧、458 帧下落。
+- 各阶段帧数 1/2/3/4/5/6/7/8 = 507/192/295/131/96/301/415/48。路径覆盖：AttackSkull 374 次、反击 22 次、吸血鬼 26 次、削弱标签 53、全体伤害标签 55、毒标签 26、护甲碎裂 9 次、光效 1356 个。测试会断言每种路径都至少出现一次。
+- 编排错误副本：削弱与全体伤害顺序对调、阶段 1 放到共享块之后、跳过完成准备块，均 exit 1。
+- 测试替身（两侧一致，写在报告 boundaries 中）：平台 powf 存根用本机 C 库 powf 应答；Game::AddFlare 模拟为"追加一个光效并把 Game+0xbd8c 加 1"，光效数组放在固定模拟地址。
+- 调试中发现并修正测试自身的一处错误：原版侧读写运动参数时把字段名 "bd74" 截成偏移 0x74。修正后测试第一次就整体通过，源码没有改动。
+
+T020 的范围（ProcessAttack 每帧逻辑）至此完成，等待复核。边界：
+- 阶段 8 的处理、再次进入阶段 1 都不在 ProcessAttack 里。它们属于 Game::Process 调度、EndOfTurn 与输入重开，是 T030/T040 的范围。
+- 三个外部输入的来源未定位（装备/升级属性）。
+- AddFlare 的完整实现（光效位置、颜色）仍是表现层。

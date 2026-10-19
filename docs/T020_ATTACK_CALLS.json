@@ -667,6 +667,25 @@
       "boundary": "Partial instructions only; whole ProcessAttack orchestration is the next unit"
     }
   ],
+  "whole_function": {
+    "native_function": "dr_process_attack",
+    "source": "recovered/recovered_attack_shield.cpp",
+    "verify": "recovered/verify_process_attack.py",
+    "composition": [
+      "0x14126 fade_in",
+      "0x141c6 flares",
+      "0x143ca phase4",
+      "0x1457c label_motion",
+      "0x146ce phase5_done",
+      "0x14790 armour_absorb",
+      "0x147e4 shield_wear",
+      "0x1487e weaken",
+      "0x14938 damage_all",
+      "0x14a14 health_damage",
+      "0x14ae4 fade"
+    ],
+    "boundary": "Whole function differential per frame from entry 0x14118; caller supplies Game+0xbdc8/+0xbe6c/+0xbe68, dt, phase restarts"
+  },
   "limits": [
     "Direct bl/blx plus external b.w only; no indirect call graph",
     "Presentation categories still require validation when their real implementations are connected",

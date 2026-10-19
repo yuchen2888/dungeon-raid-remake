@@ -106,3 +106,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-N：阶段 5 完成准备块（Claude，2026-10-19）
 
 `[0x146ce,0x14790)` → `dr_process_attack_phase5_done`：阶段 6 完成则转扣血；阶段 5 完成则置阶段 6，写入下一段运动参数，调用 Rand(0.4,0.8,流 0)，显示 −min(伤害,护甲) 标签与帮助菜单，同一帧接护甲吸收。ProcessAttack 全部指令段至此都有恢复实现。细节见 T020_ATTACK.md。
+
+## T020-O：完整 ProcessAttack（Claude，2026-10-19）
+
+`dr_process_attack` 按原控制流组合 T020-A..N。verify_process_attack.py 每帧从原版入口 0x14118 调用整函数，与原生在完整共享状态上逐帧比较：48 次完整攻击（阶段 1→8）、1985 帧，所有玩法被调函数均为原函数。测试替身只有平台 powf 与 AddFlare 的追加计数模型（两侧一致）。ProcessAttack 每帧逻辑的恢复至此完成（待复核）；阶段 8 后的调度、EndOfTurn、输入重开属于 T030/T040。

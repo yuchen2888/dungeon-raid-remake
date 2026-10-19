@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T020-N）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击中阶段 1 淡入+InitialiseFlares、阶段 5 结束（吸收+损耗+削弱+全体伤害）、阶段 6 结束（扣血+吸血鬼）、阶段 2/3 计时与光效、阶段 4、阶段 5/6 标签运动、阶段 7 淡出及 DoCounterattack 已恢复；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T020-O）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击 Game::ProcessAttack 的每帧逻辑已全部恢复为 dr_process_attack，并与原版整函数逐帧差分通过（待复核）；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、34 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、35 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -25,6 +25,7 @@
 - T020-L：阶段 4 `[0x143ca,0x1457c)` 恢复为 `dr_process_attack_phase4`：按护甲进入阶段 5/6、运动参数、Rand(float) 流 0；原版栈上的“光效结束”标志改由 dr_process_attack_flares 返回。
 - T020-M：阶段 5/6 标签运动 `[0x1457c,0x146ce)` 恢复为 `dr_process_attack_label_motion`（返回是否完成，对应原版两个出口）。
 - T020-N：阶段 5 完成准备块 `[0x146ce,0x14790)` 恢复为 `dr_process_attack_phase5_done`。ProcessAttack 的每一段指令都已有恢复实现，尚未串成完整函数。
+- T020-O：`dr_process_attack` 按原控制流组合全部片段；verify_process_attack.py 每帧从原版入口 0x14118 调整函数比较完整共享状态与事件：48 次完整攻击（阶段 1→8）、1985 帧通过。测试替身仅平台 powf 与 AddFlare 追加计数模型。
 
 ## 验证
 
@@ -68,10 +69,12 @@
 
 2026-10-19 Claude 继续认领 T020-N（起始 b7c08b0）：attack_shield 追加阶段 5 完成准备块，新增 verify_attack_phase5_done.py。
 
+2026-10-19 Claude 继续认领 T020-O（起始 d7a24e3）：attack_shield 追加 dr_process_attack 编排与输入/钩子汇总结构，新增 verify_process_attack.py。
+
 活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
 
 ## 尚未完成及下一步
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-继续 T020 的下一单元：把 T020-A..N 按原控制流串成完整 `dr_process_attack`（阶段 1 淡入 → 2..4 共享与阶段 3/4 → 5/6 运动 → 完成块 → 吸收/损耗/削弱/全体伤害 或 扣血/吸血鬼 → 阶段 7 淡出），从入口 0x14118 与原函数整体逐帧差分，跨多次攻击回合；Game+0xbe68/+0xbe6c 与 dt 由调用者提供。注意 ProcessAttack 开头 0x14118..0x14126 是函数序言，各段之间无其他逻辑需核对后再确认。不重写已恢复部分。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 的 ProcessAttack 每帧逻辑已完成，等待复核。建议下一位工具先复核 T020-B..O（verify --full、两份登记 --check、抽查源码与反汇编，尤其浮点运算顺序、遍历方向、各段出口），再开始 T030 EndOfTurn 0x13574：可直接复用 verify_attack_all.py 的全链测试类与 verify_process_attack.py 的规范事件记录方式。剩余边界：Game+0xbdc8/+0xbe6c/+0xbe68 的写入者、AddFlare 表现实现、阶段 8 之后由 Game::Process 进行的调度。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

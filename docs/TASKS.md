@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | T001 | 完成 / Codex | 接力规则、隔离验证、Git 基线；全套现有测试通过，交接安全测试及只读检查；原文件逐项核对 | AGENTS.md、docs/、scripts/、tests/test_relay.py；VALIDATION.md |
 | T010 | 完成 / Claude；Codex 复核通过 | 更新恢复函数登记，给 refill/generation/encounters 标明原地址、状态字段、回调和测试；对照现有 46 流程旧清单，不重复计数。结果：17 函数 + 1 片段，零重叠，未建模直接具名调用 0；修正 UpdateCountdown 为 UI 边界 | docs/T010_REGISTRY.json、scripts/t010_registry.py、T010_REVIEW.md；登记检查及 18 段独立字节对照通过，Claude 默认游戏验证已通过且输入指纹未变 |
-| T020 | 部分完成 / Codex、Claude | 分段恢复 ProcessAttack；T020-A..N 已完成，所有指令段与玩法调用都有恢复实现。下一单元：按原控制流串成完整 dr_process_attack，从入口 0x14118 与原版整体逐帧差分（含多回合） | 0x14118 的 55 直接调用点 / 32 目标已登记；整体串联与整函数差分仍未完成 |
+| T020 | 完成 / Codex、Claude，待复核 | ProcessAttack 每帧逻辑全部恢复（T020-A..O），整函数与原版逐帧差分通过。剩余边界：Game+0xbdc8/+0xbe6c/+0xbe68 的来源、AddFlare 表现实现、阶段 8 之后的调度（转入 T030/T040） | 0x14118 的 55 直接调用点 / 32 目标已登记；见 T020_ATTACK.md |
 | T020-A | 完成 / Codex | 护甲损耗片段 0x147e4..0x1487d：特殊敌人 29、真实随机流 5、护甲/UI 状态及有序事件；1510 场景 + 100 连续步骤通过 | recovered/recovered_attack_shield.*、verify_attack_shield.py；20 模块构建 + 2 示例 + 21 verify 全部通过，错误阈值副本被拒绝；T020_ATTACK.md / T020_VALIDATION.json |
 | T020-B | 完成 / Claude，待复核 | 护甲吸收片段 0x14790..0x147e3：min(来袭伤害,护甲) 作为 T020-A 的 R10，写回剩余伤害，全吸收时阶段 7 与 9 号敌人标签；单段与连续 [0x14790,0x1487e) 差分 1776 次比较 + 80 连续步骤 | recovered_attack_shield.* 新增 dr_process_attack_armour_absorb、verify_attack_absorb.py；两个错误副本被拒；T020_ATTACK.md T020-B 节 |
 | T020-C | 完成 / Claude，待复核 | 阶段 6 扣血片段 0x14a14..0x14ae3：剩余伤害扣生命并归 0、毒＝max(9 号伤害,毒)、阶段 7；ProcessVampires 作有序回调；单段 2080 + 连续回合 240 次比较 | dr_process_attack_health_damage、verify_attack_health.py；两个错误副本被拒；T020_ATTACK.md T020-C 节 |
@@ -21,7 +21,8 @@
 | T020-L | 完成 / Claude，待复核 | 阶段 4 0x143ca..0x1457b：进度、按护甲进入阶段 5/6、运动参数、Rand(float) 流 0、HelpMenu、三个 alpha；856 次比较 | dr_process_attack_phase4、verify_attack_phase4.py；flares 函数改为返回光效结束标志；三个错误副本被拒 |
 | T020-M | 完成 / Claude，待复核 | 阶段 5/6 标签运动 0x1457c..0x146cd：速度/进度、弧线位置、powf alpha、两个出口；1001 次比较 | dr_process_attack_label_motion、verify_attack_label_motion.py；三个错误副本被拒 |
 | T020-N | 完成 / Claude，待复核 | 阶段 5 完成准备块 0x146ce..0x1478f：阶段 5→6、下一段运动参数、Rand(float)、−min(伤害,护甲) 标签、HelpMenu；三个出口；653 次比较 | dr_process_attack_phase5_done、verify_attack_phase5_done.py；三个错误副本被拒 |
-| T030 | 待 T020 | 分段恢复 EndOfTurn，验证毒/冻结/能力、再次补位与存档边界 | 原入口 0x13574；连续多回合状态/随机流对照 |
+| T020-O | 完成 / Claude，待复核 | 完整 dr_process_attack 编排；每帧从入口 0x14118 与原版整函数差分：48 次完整攻击、1985 帧、阶段 1..8 全覆盖、所有玩法被调函数为原函数 | verify_process_attack.py；三个编排错误副本被拒 |
+| T030 | 可开始（T020 待复核） | 分段恢复 EndOfTurn，验证毒/冻结/能力、再次补位与存档边界 | 原入口 0x13574；连续多回合状态/随机流对照；可复用 T020 的整函数差分框架（verify_process_attack.py / verify_attack_all.py） |
 | T040 | 待 T030 | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序 |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -54,5 +55,7 @@
 认领记录：`T020-M / claude / 起始 6b049e7 / 继承差异：无 / 目标：阶段 5/6 标签运动 / 文件：recovered/recovered_attack_shield.*、recovered/verify_attack_label_motion.py、recovered/verify_attack_all.py（多出口）、scripts/verify.py、scripts/t020_attack_audit.py、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 结果：见 VALIDATION.md T020-M 节 / 下一步：0x146ce 完成准备块`
 
 认领记录：`T020-N / claude / 起始 b7c08b0 / 继承差异：无 / 目标：阶段 5 完成准备块 / 文件：recovered/recovered_attack_shield.*、recovered/verify_attack_phase5_done.py、scripts/verify.py、scripts/t020_attack_audit.py、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 结果：见 VALIDATION.md T020-N 节 / 下一步：完整 ProcessAttack 串联`
+
+认领记录：`T020-O / claude / 起始 d7a24e3 / 继承差异：无 / 目标：完整 ProcessAttack 编排与整函数差分 / 文件：recovered/recovered_attack_shield.*、recovered/verify_process_attack.py、scripts/verify.py、scripts/t020_attack_audit.py、docs/ / 验收：verify --full 全部通过 + 编排错误副本 exit 1 / 结果：见 VALIDATION.md T020-O 节 / 下一步：Codex 复核 T020-B..O，然后 T030 EndOfTurn`
 
 认领记录模板：`Txxx / 工具 / 起始 HEAD / 继承差异 / 目标 / 文件 / 验收命令 / 结果路径 / 下一步`。详细活动现场存于 `.relay/active/owner.json`，持久事实随原子提交更新这里和 PROJECT_STATE.md。

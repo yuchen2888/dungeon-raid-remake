@@ -321,3 +321,19 @@ extern "C" void dr_process_attack_phase5_done(AttackDamageState* s,AttackAnimati
     emit(AttackAnimEventKind::AddLabel,2,static_cast<int>(0u-static_cast<std::uint32_t>(shown)),12);
     emit(AttackAnimEventKind::HelpMenu,static_cast<int>(as_bits(a->bd30)),static_cast<int>(as_bits(a->bd34)),17);
 }
+extern "C" void dr_process_attack(AttackDamageState* s,PathState* p,AttackAnimation* a,std::uint8_t* overlay_alpha,
+    float dt,const AttackProcessInputs* in,const AttackProcessHooks* h) {
+    dr_process_attack_fade_in(s,p,&a->flare_count,overlay_alpha,dt,h->flare);       // [0x14126,0x141c6)
+    const bool flares_done=dr_process_attack_flares(s,a,dt,h->anim);                 // [0x141c6,0x143ca)
+    dr_process_attack_phase4(s,a,flares_done,dt,h->anim);                            // [0x143ca,0x1457c)
+    if(dr_process_attack_label_motion(s,a,dt,h->anim)) {                             // [0x1457c,0x146ce)
+        if(s->phase==5) {
+            dr_process_attack_phase5_done(s,a,h->anim);                              // [0x146ce,0x14790)
+            const std::int32_t absorbed=dr_process_attack_armour_absorb(s,h->absorb);// [0x14790,0x147e4)
+            dr_process_attack_shield_wear(s->resources,absorbed,in->armour_loss_chance,h->shield); // [0x147e4,0x1487e)
+            dr_process_attack_weaken(p,in->weaken,h->weaken);                        // [0x1487e,0x14938)
+            dr_process_attack_damage_all(p,in->damage_all,h->all);                   // [0x14938,0x14a14)
+        } else dr_process_attack_health_damage(s,h->health);                         // [0x14a14,0x14ae4)
+    }
+    dr_process_attack_fade(s,overlay_alpha,dt,a->counterattack!=0,h->fade);         // [0x14ae4,0x14b56)
+}
