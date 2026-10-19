@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T020-L）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击中阶段 1 淡入+InitialiseFlares、阶段 5 结束（吸收+损耗+削弱+全体伤害）、阶段 6 结束（扣血+吸血鬼）、阶段 2/3 计时与光效、阶段 4、阶段 7 淡出及 DoCounterattack 已恢复；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T020-M）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击中阶段 1 淡入+InitialiseFlares、阶段 5 结束（吸收+损耗+削弱+全体伤害）、阶段 6 结束（扣血+吸血鬼）、阶段 2/3 计时与光效、阶段 4、阶段 5/6 标签运动、阶段 7 淡出及 DoCounterattack 已恢复；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、32 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、33 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -23,6 +23,7 @@
 - T020-J：完整原函数 DoCounterattack 0x11214 恢复为 `dr_do_counterattack`，在共享状态上全链差分。ProcessAttack 直接调用的玩法函数已全部有恢复实现。
 - T020-K：阶段 2..4 共享部分 `[0x141c6,0x143ca)` 恢复为 `dr_process_attack_flares`（新增 AttackAnimation 结构），含阶段 2→3/4、光效动画和阶段 3→7 触发反击，在完整共享状态上差分。
 - T020-L：阶段 4 `[0x143ca,0x1457c)` 恢复为 `dr_process_attack_phase4`：按护甲进入阶段 5/6、运动参数、Rand(float) 流 0；原版栈上的“光效结束”标志改由 dr_process_attack_flares 返回。
+- T020-M：阶段 5/6 标签运动 `[0x1457c,0x146ce)` 恢复为 `dr_process_attack_label_motion`（返回是否完成，对应原版两个出口）。
 
 ## 验证
 
@@ -62,10 +63,12 @@
 
 2026-10-19 Claude 继续认领 T020-L（起始 b9d8ec3）：attack_shield 追加阶段 4 与 AttackAnimation 运动参数，flares 函数改返回 bool，新增 verify_attack_phase4.py，verify_attack_flare_phases.py 段尾改为可覆盖。
 
+2026-10-19 Claude 继续认领 T020-M（起始 6b049e7）：attack_shield 追加标签运动，新增 verify_attack_label_motion.py，verify_attack_all.py 增加可选多停止点。
+
 活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
 
 ## 尚未完成及下一步
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-继续 T020 的下一单元：阶段 5/6 标签动画（0x1457c..0x146ce）——两阶段共用：进度 Game+0xbd70 += dt×常量并限 1，Interpolate(bd64/bd68 → bd5c/bd60 …)、Sqr、powf 计算标签位置与缩放，SimpleLabel::SetPosition，并把 bd38/+0x15520 写入；需逐条核对浮点运算顺序与 Interpolate/Sqr 两个数学 helper（可作为原函数一起恢复）。然后把 T020-A..L 及此段串成完整 ProcessAttack，从函数入口与原版整体逐帧差分。不重写已恢复部分。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+继续 T020 的下一单元：0x146ce..0x14790 阶段 5 完成准备块——阶段 6 时跳到 0x14a14 扣血（已恢复）；阶段 5 时置阶段 6、写下一段运动参数（Game+0xbd60、bd34/bd30 → bd68/bd64 等）、Rand(float) 流写某参数、标签 12（AddSimpleLabel，数值为 −min(伤害, 护甲)）、HelpMenu，然后接 0x14790 吸收（已恢复）。之后把 T020-A..M 及该块串成完整 ProcessAttack，从函数入口与原版整体逐帧差分。不重写已恢复部分。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

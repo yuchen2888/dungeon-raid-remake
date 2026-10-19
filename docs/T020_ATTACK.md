@@ -264,3 +264,21 @@ VCVT.U32.F32 的语义按 ARM 实现：向零截断，负数与 NaN 得 0，过�
 验证 `recovered/verify_attack_phase4.py`：原版从 0x141c6 连续执行到 0x1457c，让栈上标志自然传递；原生侧依次调用 flares 与 phase4。Rand(float) 和 Quad::SetAlpha 是原函数，到达时 DoCounterattack 也是完整原版链。
 - 320 组边界（护甲 −1/0/1/7 × 计时 B 四值 × 进度五值 × 四个 dt）+ 300 组随机 + 24 局从阶段 2 逐帧推进到阶段 5 或 6（236 帧）。共 856 次比较，阶段 5、6 各进入 82 次，205 次原版 Rand(float)。
 - 错误副本：护甲 `>=0`、随机流改 1、bd64/bd68 来源互换，均 exit 1。
+
+## T020-M：阶段 5/6 标签运动（Claude，2026-10-19）
+
+起始提交 6b049e7。恢复 `[0x1457c,0x146ce)` 为 `dr_process_attack_label_motion(AttackDamageState*, AttackAnimation*, dt, hooks)`，返回"本帧运动完成"。完成时原版继续执行 0x146ce（下一单元），否则跳到 0x14ae4。
+
+| 步骤 | 行为 |
+| --- | --- |
+| 进入 | 阶段不是 5/6 时跳到 0x14ae4 |
+| 速度与进度 | bd70 += 20dt；bd6c += bd70×dt；>1 时为 1，记完成 |
+| 位置 | Interpolate(GLfloat2 (bd64,bd68), (bd5c,bd60), t) = (1−t)·起点 + t·终点（逐分量，乘法分别舍入后相加）；弧线 = (0.25 − Sqr(0.5−t))×bd7c，阶段 5 从 x 减、阶段 6 从 y 减；标签 0 设到该点，标签 1 设到 (x, y+0.05) |
+| alpha | 伤害标签 alpha（bd38）= Interpolate(float bd78, bd74, powf(t,5)) = bd78·p + (1−p)·bd74，并复制到毒标签 alpha（+0x15520） |
+
+注意：Interpolate 的标量版与二维版插值方向相反（标量版第一个参数乘 t），两种都已按原指令逐条核对。由此可以看出 bd64/bd68 是标签起点，bd5c/bd60 是终点，bd7c 是弧高，bd74/bd78 是起止 alpha，bd70/bd6c 是速度与进度。字段名暂仍沿用偏移。
+
+验证 `recovered/verify_attack_label_motion.py`：原版从 0x141c6 连续执行到 0x146ce 或 0x14ae4，同一帧内依次经过共享计时、阶段 4、阶段 5/6；原生侧依次调用三个函数，用返回值选择同一出口。Interpolate 两个重载和 Sqr 作为原函数执行。平台 powf 存根由测试用本机 C 库 powf 应答，原生实现也调用同一个 powf；这是平台库边界，原 iOS 设备上的 powf 末位可能不同。
+- 320 组边界（阶段 4..7 × 进度五值 × 速度四值 × 四个 dt）+ 400 组随机 + 24 局从阶段 4 推进到运动完成（281 帧）。共 1001 次比较，296 次完成。
+- 错误副本：标量插值方向反转、阶段 5 弧线加到 y、`>1` 改 `>=1`，均 exit 1。
+- 基础测试类 verify_attack_all.py 增加可选的多个停止点（extra_stops），默认为空，原测试不变。

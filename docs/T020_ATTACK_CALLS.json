@@ -618,6 +618,31 @@
         "bd74 = bd38; Quad 0xb8ac and two labels get alpha u8(u32(progress*255))"
       ],
       "boundary": "Partial instructions only; phase 5/6 animation from 0x1457c not included"
+    },
+    {
+      "start": "0x1457c",
+      "end_exclusive": "0x146ce",
+      "size": 338,
+      "original_bytes_sha256": "8fca30c07e964d4ea5ef53cc60ee40f3962b00f4114bf93dbe9ca927ffe599e4",
+      "native_function": "dr_process_attack_label_motion",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_label_motion.py",
+      "inputs": [
+        "phases 5/6",
+        "Game+0xbd70 speed, +0xbd6c progress, +0xbd64/+0xbd68 from, +0xbd5c/+0xbd60 to, +0xbd7c arc, +0xbd74/+0xbd78 alphas",
+        "Game+4 frame time",
+        "literals 20, 0.5, 0.25, 5.0 (powf), 0.05"
+      ],
+      "outputs": [
+        "speed += 20dt; progress += speed*dt, capped at 1 (completed -> 0x146ce, else 0x14ae4)",
+        "label positions via Interpolate(vector) minus arc on x (phase 5) or y (phase 6)",
+        "damage-label alpha = Interpolate(bd78, bd74, powf(t,5)), copied to +0x15520"
+      ],
+      "callbacks": [
+        "Interpolate(vector), Interpolate(float), Sqr: math helpers reproduced inline and executed as original code in the test",
+        "powf: platform library (host C powf in both test sides)"
+      ],
+      "boundary": "Partial instructions only; completion block at 0x146ce not included"
     }
   ],
   "limits": [

@@ -127,6 +127,14 @@ bool dr_process_attack_flares(dungeonraid::AttackDamageState*,dungeonraid::Attac
 // HelpMenu. Then bd74 = damage-label alpha and three alphas from progress.
 void dr_process_attack_phase4(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
     bool flares_done,float dt,const dungeonraid::AttackAnimHooks*);
+// ProcessAttack [0x1457c,0x146ce): phases 5/6 label motion. bd70 (speed)
+// += 20dt; bd6c (progress) += bd70*dt, capped at 1 = completed. Label 0 at
+// Interpolate((bd64,bd68),(bd5c,bd60),t) minus (0.25-(0.5-t)^2)*bd7c on x (phase 5)
+// or y (phase 6); label 1 at that point + (0, 0.05); damage-label alpha (bd38)
+// = Interpolate(bd78, bd74, powf(t,5)) = bd78*p + (1-p)*bd74, copied to +0x15520.
+// Returns true when completed (original continues at 0x146ce, else 0x14ae4).
+bool dr_process_attack_label_motion(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
+    float dt,const dungeonraid::AttackAnimHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.

@@ -37,7 +37,7 @@ class AllHooks(C.Structure):
     _fields_=[('context',C.c_void_p),('event',EVENT),('attack_skull',ATTACK),('move_matched_tiles',MOVE_FN)]
 
 class Original(IntegrationOriginal):
-    ranges,entry,stop_at=RANGES,START,STOP_AT
+    ranges,entry,stop_at,extra_stops=RANGES,START,STOP_AT,()
     def in_range(self,address):return any(a<=address<b for a,b in self.ranges)
     def label_tile(self,position):return self.index(position-0x54)   # label at tile center
     def __init__(self):
@@ -50,7 +50,7 @@ class Original(IntegrationOriginal):
         if self.all_running:
             if self.in_range(address):self.all_visits[hex(address)]=self.all_visits.get(hex(address),0)+1
             if self.mode is None:
-                if address==self.stop_at:u.emu_stop();return
+                if address==self.stop_at or address in self.extra_stops:u.emu_stop();return
                 lr=u.reg_read(self.LR)&~1;r=[u.reg_read(v) for v in self.regs];signed=lambda v:C.c_int32(v).value
                 name=self.pa_calls.get(address)
                 if name and self.in_range(lr):
@@ -80,7 +80,7 @@ class Original(IntegrationOriginal):
         u.reg_write(UC_ARM_REG_R8,self.GAME);self.all_running=True
         try:
             u.emu_start(self.entry|1,self.STOP,timeout=5000000,count=5000000)
-            assert u.reg_read(self.PC)==self.stop_at and self.mode is None,hex(u.reg_read(self.PC))
+            assert (u.reg_read(self.PC)==self.stop_at or u.reg_read(self.PC) in self.extra_stops) and self.mode is None,hex(u.reg_read(self.PC))
         finally:self.all_running=False;self.path_active=self.refill_active=self.gen_active=self.enc_active=False
         return dict(path=self.path_status(),enc=self.enc_status(),all=self.all_events[:])
 

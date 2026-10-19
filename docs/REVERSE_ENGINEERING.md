@@ -98,3 +98,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-L：阶段 4（Claude，2026-10-19）
 
 `[0x143ca,0x1457c)` → `dr_process_attack_phase4`。标签进度满 1 且本帧光效刚结束（原版栈标志 [sp,#0x2c]，现由 dr_process_attack_flares 返回）时，按护甲 Game+0xbda4>0 进入阶段 5，否则进入阶段 6，并写入运动参数，调用 Rand(float) 流 0 和 HelpMenu。细节见 T020_ATTACK.md。
+
+## T020-M：阶段 5/6 标签运动（Claude，2026-10-19）
+
+`[0x1457c,0x146ce)` → `dr_process_attack_label_motion`：带加速度的进度、弧线轨迹（阶段 5 横向、阶段 6 纵向）、powf(t,5) 控制的 alpha。Interpolate 标量版为 a·t+(1−t)·b，二维版为 (1−t)·a+t·b，两者方向相反。平台 powf 是边界，测试两侧都用本机 C 库 powf。细节见 T020_ATTACK.md。

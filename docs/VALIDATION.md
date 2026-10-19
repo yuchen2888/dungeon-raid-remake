@@ -162,3 +162,10 @@
 - 新 verify_attack_phase4：856 次比较（边界 320、随机 300、逐帧 236），阶段 5、6 各进入 82 次，205 次原版 Rand(float)；片段字节 SHA-256 `36dc7ee2…fafc6c4`。T020-K 测试在 flares 改返回 bool 后照常通过。
 - 错误副本（隔离开发副本）：护甲 `>=0`、随机流 1、bd64/bd68 互换，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T020-M：阶段 5/6 标签运动（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、33 个 verify 脚本共 36 步通过。运行目录 `.relay/runs/20261019T082459.918587Z`，输入指纹 `f7a8d1c0…94bcb9`，与提交时源码一致。
+- 新 verify_attack_label_motion：1001 次比较（边界 320、随机 400、逐帧 281），296 次运动完成；片段字节 SHA-256 `8fca30c0…ffe599e4`。verify_attack_all 加入可选多停止点后，依赖它的测试数字不变。
+- 错误副本（隔离开发副本）：标量插值方向反、阶段 5 弧线加到 y、`>=1`，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；两份登记 --check 均 matches true。

@@ -1,4 +1,5 @@
 #include "recovered_attack_shield.hpp"
+#include <cmath>
 #include <cstring>
 using namespace dungeonraid;
 namespace {
@@ -271,4 +272,34 @@ extern "C" void dr_process_attack_phase4(AttackDamageState* s,AttackAnimation* a
     emit(AttackAnimEventKind::SetAlpha,1,alpha);
     emit(AttackAnimEventKind::LabelAlpha,0,alpha);
     emit(AttackAnimEventKind::LabelAlpha,1,alpha);
+}
+extern "C" bool dr_process_attack_label_motion(AttackDamageState* s,AttackAnimation* a,float dt,const AttackAnimHooks* h) {
+    auto emit=[h](AttackAnimEventKind kind,int x=0,int y=0,int z=0) {
+        if(h && h->event) { const AttackAnimEvent e{kind,x,y,z};h->event(h->context,&e); }
+    };
+    if(s->phase!=5 && s->phase!=6)return false;
+    const float accel=dt*20.0f;
+    a->bd70=a->bd70+accel;
+    const float advance=a->bd70*dt;
+    a->bd6c=a->bd6c+advance;
+    bool completed=false;
+    if(a->bd6c>1.0f) {a->bd6c=1.0f;completed=true;}
+    // Interpolate(GLfloat2 const&, GLfloat2 const&, float): (1-t)*from + t*to, per lane.
+    const float t=a->bd6c,u=1.0f-t;
+    const float ay=u*a->bd68,by=t*a->bd60,ax=u*a->bd64,bx=t*a->bd5c;
+    float x=ax+bx,y=ay+by;
+    const float d=0.5f-a->bd6c;
+    const float square=d*d;   // Sqr(float)
+    const float lift=(0.25f-square)*a->bd7c;
+    if(s->phase==5)x=x-lift; else y=y-lift;
+    emit(AttackAnimEventKind::LabelPosition,0,static_cast<int>(as_bits(x)),static_cast<int>(as_bits(y)));
+    // Literal 0x40a00000 (5); platform powf.
+    const float p=::powf(a->bd6c,5.0f);
+    // Interpolate(float a, float b, float t) = a*t + (1-t)*b.
+    const float from=a->bd78*p,rest=1.0f-p;
+    a->damage_label_alpha=from+rest*a->bd74;
+    // Literal 0x3d4ccccd (0.05).
+    emit(AttackAnimEventKind::LabelPosition,1,static_cast<int>(as_bits(x)),static_cast<int>(as_bits(y+0.05f)));
+    a->poison_label_alpha=a->damage_label_alpha;
+    return completed;
 }
