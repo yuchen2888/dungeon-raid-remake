@@ -426,7 +426,7 @@
         "target": "__ZN4Game9JumpEnemyEP4Tile",
         "target_address": "0x1086c",
         "size": 684,
-        "category": "unrecovered"
+        "category": "T030:dr_jump_enemy"
       },
       {
         "site": "0x3f18c",
@@ -450,7 +450,7 @@
         "target": "__ZN4Game18ConvertRandomTilesEP4Tile",
         "target_address": "0x183e4",
         "size": 520,
-        "category": "unrecovered"
+        "category": "T030:dr_convert_random_tiles"
       },
       {
         "site": "0x3f1b0",
@@ -490,7 +490,7 @@
         "target": "__ZN4Game13AttractSkullsEP4Tile",
         "target_address": "0x185ec",
         "size": 1012,
-        "category": "unrecovered"
+        "category": "T030:dr_attract_skulls"
       },
       {
         "site": "0x3f1e6",
@@ -498,7 +498,7 @@
         "target": "__ZN4Game20AttractShieldsSwordsEP4Tile",
         "target_address": "0x17ddc",
         "size": 1020,
-        "category": "unrecovered"
+        "category": "T030:dr_attract_shields_swords"
       },
       {
         "site": "0x3f1f0",
@@ -572,10 +572,6 @@
       "size": 308
     },
     {
-      "symbol": "__ZN4Game18ConvertRandomTilesEP4Tile",
-      "size": 520
-    },
-    {
       "symbol": "__ZN4Game10ThrowSkullEP4Tile",
       "size": 620
     },
@@ -584,20 +580,8 @@
       "size": 636
     },
     {
-      "symbol": "__ZN4Game9JumpEnemyEP4Tile",
-      "size": 684
-    },
-    {
       "symbol": "__ZN4Game14SerialiseStateEv",
       "size": 896
-    },
-    {
-      "symbol": "__ZN4Game13AttractSkullsEP4Tile",
-      "size": 1012
-    },
-    {
-      "symbol": "__ZN4Game20AttractShieldsSwordsEP4Tile",
-      "size": 1020
     },
     {
       "symbol": "__ZN4Game9StealGoldEP4Tile",

@@ -34,7 +34,12 @@ FUNCTIONS={'run_away':(0x11170,0x11212,'__ZN4Game12RunAwayEnemyEP4Tile','dr_run_
            'convert':(0xdc38,0xdd94,'__ZN4Game19ConvertSwordToSkullEP4Tile','dr_convert_sword_to_skull'),
            'acid':(0xafdc,0xb130,'__ZN4Game14MakeAcidPotionEP4Tile','dr_make_acid_potion'),
            'freeze':(0x103d8,0x105e2,'__ZN4Game11FreezeTilesEP4Tile','dr_freeze_tiles'),
-           'break':(0x181d8,0x183d8,'__ZN4Game22BreakRandomShieldSwordEP4Tile','dr_break_random_shield_sword')}
+           'break':(0x181d8,0x183d8,'__ZN4Game22BreakRandomShieldSwordEP4Tile','dr_break_random_shield_sword'),
+           'convert_random':(0x183e4,0x185e0,'__ZN4Game18ConvertRandomTilesEP4Tile','dr_convert_random_tiles'),
+           'jump':(0x1086c,0x10b0c,'__ZN4Game9JumpEnemyEP4Tile','dr_jump_enemy'),
+           'attract_skulls':(0x185ec,0x189d2,'__ZN4Game13AttractSkullsEP4Tile','dr_attract_skulls'),
+           'attract_shields':(0x17ddc,0x181d0,'__ZN4Game20AttractShieldsSwordsEP4Tile','dr_attract_shields_swords')}
+RANDOMISE=0xf5b8   # Game::RandomiseTile(Tile&), run as original with the generation hooks (checked below)
 MAKE_BROKEN=0x3d714   # Tile::MakeBroken, run as original with the generation hooks (checked below)
 MAKE_ACID=0x3d7b8  # Tile::MakeAcidPotion, run as original with the generation hooks
 # std::set<Tile*> in FreezeTiles: the tree is modelled here (as verify_refill.py does) with nodes
@@ -44,7 +49,8 @@ SET_NODES=0x1518000
 SET_SYMBOLS={'__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE13_Rb_tree_implIS5_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS1_EERKS5_':'tree',
              '__ZNSt3setIP4TileSt4lessIS1_ESaIS1_EE6insertERKS1_':'insert',
              '__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE5eraseESt23_Rb_tree_const_iteratorIS1_E':'erase',
-             '__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE8_M_eraseEPSt13_Rb_tree_nodeIS1_E':'clear'}
+             '__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE8_M_eraseEPSt13_Rb_tree_nodeIS1_E':'clear',
+             '__ZN4Game11GetSetIndexERSt3setIP4TileSt4lessIS2_ESaIS2_EEi':'index'}   # i-th node of a set
 STUBS={0x194cec:'unwind',0x194cf4:'unwind',0x194d30:'increment'}   # __Unwind_SjLj_(Un)Register, _Rb_tree_increment
 RAND_I=0x1bca0     # RandI(int, int, RandType)
 SET_TYPE=0x3f32c   # Tile::SetType, run as original with the generation hooks (checked below)
@@ -65,7 +71,7 @@ def canonical(e):
             10:lambda:['particles',e.tile,e.a],11:lambda:['health_bar',e.a],12:lambda:['label','target',e.a,e.b,e.c,e.d],
             13:lambda:['label','poison',e.a,e.b,e.c,e.d],14:lambda:['update_skills'],15:lambda:['arrow',e.a,e.b,e.c],
             16:lambda:['help',e.tile,e.a,e.b&0xffffffff,e.c&0xffffffff],17:lambda:['serialise_state'],18:lambda:['flare_target',e.a,e.b]}[k]()
-FLARE_AT=dict(run_away='center',explode='target',teleport='resting',lower='resting',flee='resting',ignite='resting',convert='resting',acid='resting',freeze='center',**{'break':'center'})   # Tile+0x54 / Interface::GetTarget / Game+0xb400
+FLARE_AT=dict(run_away='center',explode='target',teleport='resting',lower='resting',flee='resting',ignite='resting',convert='resting',acid='resting',freeze='center',convert_random='center',jump='resting',attract_skulls='resting',attract_shields='resting',**{'break':'center'})   # Tile+0x54 / Interface::GetTarget / Game+0xb400
 SYMBOLS={'__ZN4Game10QueueSoundE5Sound':'sound','__ZN4Game8AddFlareE9FlareType8GLfloat2RK9GLcolour4':'flare',
          '__ZN4Game16QueueAchievementE11Achievementf':'achievement','__ZN9Interface15UpdateHealthBarER4Quadi':'bar',
          '__ZN9Interface9GetTargetE8TileType':'target','__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif':'label',
@@ -98,18 +104,21 @@ class AbilityMixin:
         self.ab_starts={v[0]:k for k,v in FUNCTIONS.items()}
         self.set_calls={address(s):n for s,n in SET_SYMBOLS.items()};self.set_calls.update(STUBS)
         assert address('__ZN4Tile14MakeAcidPotionEv')==MAKE_ACID and address('__ZN4Tile10MakeBrokenEv')==MAKE_BROKEN
-    def write_set(self):
-        values=sorted(self.set_values);tree=self.set_tree;header=tree+4
-        self.write(tree+0x14,len(values));self.write(tree+0xc,SET_NODES if values else header)
+        assert address('__ZN4Game13RandomiseTileER4Tile')==RANDOMISE
+    def write_set(self,tree):
+        # Each live set gets its own node area (0x400 bytes) after SET_NODES.
+        values=sorted(self.sets[tree]);header=tree+4;base=SET_NODES+0x400*list(self.sets).index(tree)
+        self.write(tree+0x14,len(values));self.write(tree+0xc,base if values else header)
         for i,value in enumerate(values):
-            node=SET_NODES+32*i;self.write(node,SET_NODES+32*(i+1) if i+1<len(values) else header);self.write(node+16,value)
+            node=base+32*i;self.write(node,base+32*(i+1) if i+1<len(values) else header);self.write(node+16,value)
+    def set_node(self,tree,i):return SET_NODES+0x400*list(self.sets).index(tree)+32*i
     def ability_ranges(self):return [v[:2] for v in FUNCTIONS.values()]
     def points(self,base):
         return {struct.unpack('<II',self.u.mem_read(base(i),8)):i for i in range(36)}
     def ability_hook(self,u,address,sink):
         """True when the call was handled here (the caller returns without the lower hooks)."""
         lr=u.reg_read(self.LR)&~1
-        if address in self.ab_starts:self.ab_target=None;self.ab_tile=self.tile_of(u.reg_read(self.regs[1])) if self.ab_starts[address]!='teleport' else None
+        if address in self.ab_starts:self.sets={};self.ab_target=None;self.ab_tile=self.tile_of(u.reg_read(self.regs[1])) if self.ab_starts[address]!='teleport' else None
         if address in self.ab_starts and ACTIVATE<lr<=ACTIVATE_END:
             self.ability_stack.append((lr,self.gen_active));self.gen_active=False
         elif self.ability_stack and address==self.ability_stack[-1][0] and self.mode is None:
@@ -127,14 +136,17 @@ class AbilityMixin:
         op=self.set_calls.get(address)
         if op:
             r=[u.reg_read(v) for v in self.regs]
-            if op=='tree':self.set_tree=r[0];self.set_values=set();self.write_set()
-            elif op=='insert':assert r[1]==self.set_tree;self.set_values.add(self.read(r[2]));self.write_set()
-            elif op=='erase':assert r[0]==self.set_tree;self.set_values.remove(self.read(r[1]+16));self.write_set()
+            if op=='tree':self.sets=getattr(self,'sets',{});self.sets[r[0]]=set();self.write_set(r[0])
+            elif op=='insert':self.sets[r[1]].add(self.read(r[2]));self.write_set(r[1])
+            elif op=='erase':self.sets[r[0]].remove(self.read(r[1]+16));self.write_set(r[0])
+            elif op=='index':u.reg_write(self.regs[0],self.set_node(r[0],r[1]))
+            elif op=='clear':self.sets.pop(r[0],None)
             elif op=='increment':u.reg_write(self.regs[0],self.read(r[0]))
             u.reg_write(self.PC,u.reg_read(self.LR));return True   # 'clear' and 'unwind': nothing to do
         if address==RAND_I:return True   # the ability's own RandI runs as original code; compared through the RNG seeds and its outcome
-        if address in (SET_TYPE,MAKE_ACID,MAKE_BROKEN):
-            self.ab_target=self.tile_of(u.reg_read(self.regs[0]));self.mode=('settype',lr);self.gen_active=True;return False
+        if address in (SET_TYPE,MAKE_ACID,MAKE_BROKEN,RANDOMISE):
+            self.ab_target=self.tile_of(u.reg_read(self.regs[1 if address==RANDOMISE else 0]))
+            self.mode=('settype',lr);self.gen_active=True;return False
         if address==SWAP:self.mode=('swap',lr);self.refill_active=self.gen_active=self.enc_active=True;return False
         name=self.ab_calls.get(address)
         if not name:return False
@@ -193,12 +205,13 @@ class Native(SmallNative):
         self.ab_fns['run_away'].argtypes=[C.POINTER(Path),C.c_uint32,C.POINTER(TurnHooks8)]
         self.ab_fns['explode'].argtypes=[C.POINTER(Resource),C.POINTER(Path),C.c_uint32,C.POINTER(TurnHooks8)]
         self.ab_fns['teleport'].argtypes=[C.POINTER(Path),C.POINTER(Generation),C.POINTER(TurnHooks8)]
-        for k in ('lower','flee','ignite'):self.ab_fns[k].argtypes=[C.POINTER(Path),C.c_uint32,C.POINTER(TurnHooks8)]
+        for k in ('lower','flee','ignite','jump','attract_skulls','attract_shields'):self.ab_fns[k].argtypes=[C.POINTER(Path),C.c_uint32,C.POINTER(TurnHooks8)]
         self.ab_fns['stab'].argtypes=[C.POINTER(Resource),C.POINTER(Path),C.c_uint32,C.POINTER(TurnHooks8)]
         self.ab_fns['convert'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8),C.POINTER(GenerationHooks)]
         self.ab_fns['acid'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8),C.POINTER(GenerationHooks)]
         self.ab_fns['freeze'].argtypes=[C.POINTER(Path),C.c_uint32,C.POINTER(TurnHooks8)]
         self.ab_fns['break'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8),C.POINTER(GenerationHooks)]
+        self.ab_fns['convert_random'].argtypes=[C.POINTER(Generation),C.c_uint32,C.POINTER(TurnHooks8),C.POINTER(GenerationHooks)]
         for f in self.ab_fns.values():f.restype=None
         def event(_,p):self.ab_events.append(canonical(p.contents))
         def match(_,tile,reward):self.match_fn(C.byref(self.m),tile,reward,C.byref(self.match_hooks))
@@ -212,14 +225,14 @@ class Native(SmallNative):
         f=self.ab_fns[key];h=C.byref(self.ab_hooks)
         if key=='run_away':f(C.byref(self.path_state),tile,h)
         elif key in ('explode','stab'):f(C.byref(self.r),C.byref(self.path_state),tile,h)
-        elif key in ('convert','acid','break'):f(C.byref(self.gen),tile,h,C.byref(self.gen_hooks))
+        elif key in ('convert','acid','break','convert_random'):f(C.byref(self.gen),tile,h,C.byref(self.gen_hooks))
         elif key=='teleport':f(C.byref(self.path_state),C.byref(self.gen),h)
         else:f(C.byref(self.path_state),tile,h)
         return dict(path=self.path_status(),enc=self.enc_status(),events=self.ab_events[:],
                     flame=[[t.self_flame,t.flame_damage] for t in self.state.selection.tiles])
 
 def main():
-    old,new=Original(),Native();rng=random.Random(0xF4C8);counts={k:0 for k in FUNCTIONS};stats=dict(achievements=0,bars=0,moved=0,swapped=0,ignited=0,lowered=0,converted=0,stabbed=0,acid=0,frozen=0)
+    old,new=Original(),Native();rng=random.Random(0xF4C8);counts={k:0 for k in FUNCTIONS};stats=dict(achievements=0,bars=0,moved=0,swapped=0,ignited=0,lowered=0,converted=0,stabbed=0,acid=0,frozen=0,jumped=0,attracted=0)
     for n in range(80*len(FUNCTIONS)):
         key=list(FUNCTIONS)[n%len(FUNCTIONS)]
         c,_=scenario(rng);c['game']['race']=rng.choice([9,9,4,4,rng.randrange(10)]);c['generation']['one_health']=rng.randrange(2)
@@ -239,6 +252,8 @@ def main():
         counts[key]+=1;stats['achievements']+=sum(1 for e in a['events'] if e[0]=='achievement')
         stats['bars']+=sum(1 for e in a['events'] if e[0]=='health_bar');stats['moved']+=bool(a['enc']['events'])
         stats['swapped']+=sum(1 for e in a['enc']['refill']['events'] if e[0]==1) if key=='flee' else 0
+        stats['jumped']+=sum(1 for e in a['enc']['refill']['events'] if e[0]==1) if key=='jump' else 0
+        stats['attracted']+=sum(1 for e in a['enc']['refill']['events'] if e[0]==1) if key.startswith('attract') else 0
         stats['converted']+=sum(1 for e in a['events'] if e[0]=='label_rest' and key=='convert')
         stats['acid']+=sum(1 for e in a['events'] if e[0]=='flare_rest' and key=='acid');stats['frozen']+=sum(1 for e in a['events'] if e[0]=='freeze')
         stats['stabbed']+=sum(1 for e in a['events'] if e[0]=='label' and e[1]=='poison')

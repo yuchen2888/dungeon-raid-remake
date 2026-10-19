@@ -1,5 +1,6 @@
 #include "recovered_turn.hpp"
 #include <cstring>
+#include <cstdlib>
 using namespace dungeonraid;
 namespace {
 void emit(const TurnHooks* h,TurnEventKind kind,int tile,int a=0,int b=0,int c=0,int d=0) {
@@ -334,6 +335,99 @@ extern "C" void dr_break_random_shield_sword(GenerationState* g,std::uint32_t ti
     emit(h,TurnEventKind::Sound,-1,16);
     reset_attack_timers(m);
 }
+extern "C" void dr_convert_random_tiles(GenerationState* g,std::uint32_t tile,const TurnHooks* h,const GenerationHooks* gh) {
+    PathState* p=g->refill->path;auto& m=*p->match;const auto& board=m.stroke->selection;
+    bool candidate[36]={};
+    for(int i=0;i<36;++i) {
+        const auto& rule=board.tiles[i].rule;
+        candidate[i]=!rule.matched && !(rule.type==1 && rule.enemy_type!=0);
+    }
+    for(int round=0;round<2;++round) {
+        int n=0;for(bool b:candidate)n+=b;
+        if(!n)break;
+        int pick=dr_random_int(&m.random,0,n-1,5);
+        for(int i=0;i<36;++i) {
+            if(!candidate[i])continue;
+            if(pick) {--pick;continue;}
+            dr_randomise_tile(g,static_cast<std::uint32_t>(i),gh);
+            emit(h,TurnEventKind::Flare,i,1,static_cast<std::int32_t>(0xff00ffffu));   // RGBA 255,255,0,255
+            candidate[i]=false;break;
+        }
+    }
+    emit(h,TurnEventKind::Label,static_cast<int>(tile),21,0,29,0x3f800000);
+    emit(h,TurnEventKind::Sound,-1,24);
+    reset_attack_timers(m);
+}
+extern "C" void dr_jump_enemy(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    auto& m=*p->match;const auto& board=m.stroke->selection;
+    const int sx=board.tiles[tile].rule.x,sy=board.tiles[tile].rule.y;
+    bool candidate[36]={};int n=0;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+        candidate[i]=!rule.matched && !(rule.type==1 && rule.enemy_type!=0) && !(x==sx && y==sy);
+        n+=candidate[i];
+    }
+    if(!n)return;
+    int pick=dr_random_int(&m.random,0,n-1,5);
+    int tx=0,ty=0;
+    for(int i=0;i<36;++i) {
+        if(!candidate[i])continue;
+        if(pick) {--pick;continue;}
+        tx=board.tiles[i].rule.x;ty=board.tiles[i].rule.y;break;
+    }
+    h->swap_tiles(h->context,tx,ty,sx,sy);
+    h->match_tile(h->context,sy*6+sx,7);
+    emit(h,TurnEventKind::FlareRest,sy*6+sx,1,-1);   // white
+    emit(h,TurnEventKind::FlareRest,ty*6+tx,1,-1);
+    emit(h,TurnEventKind::LabelRest,ty*6+tx,15,0,24,0x3f800000);
+    emit(h,TurnEventKind::Sound,-1,35);
+    reset_attack_timers(m);
+}
+namespace {
+// Shared body of AttractSkulls and AttractShieldsSwords.
+void attract(PathState* p,std::uint32_t tile,const TurnHooks* h,bool shields,std::int32_t colour,
+    int label,int label_colour,int sound) {
+    auto& m=*p->match;const auto& board=m.stroke->selection;
+    const auto target=[&](int i) {
+        const int type=board.tiles[i].rule.type;return shields?(type==3 || type==4):type==1;
+    };
+    const int sx=board.tiles[tile].rule.x,sy=board.tiles[tile].rule.y;
+    bool far[36]={},near[36]={};int nfar=0,nnear=0;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;
+        if(board.tiles[i].rule.matched || !target(i))continue;
+        if(std::abs(x-sx)>1 || std::abs(y-sy)>1) {far[i]=true;++nfar;}
+    }
+    if(!nfar)return;
+    for(int x=sx-1;x<=sx+1;++x)for(int y=sy-1;y<=sy+1;++y) {
+        if(x==sx && y==sy)continue;
+        if(static_cast<unsigned>(x)>5u || y<0 || y>5)continue;
+        const int i=y*6+x;
+        if(board.tiles[i].rule.matched || target(i))continue;
+        near[i]=true;++nnear;
+    }
+    if(!nnear)return;
+    const auto nth=[](const bool* set,int n) {for(int i=0;i<36;++i)if(set[i] && n--==0)return i;return -1;};
+    while(nfar && nnear) {
+        const int a=nth(far,dr_random_int(&m.random,0,nfar-1,5));
+        const int b=nth(near,dr_random_int(&m.random,0,nnear-1,5));
+        const int ax=board.tiles[a].rule.x,ay=board.tiles[a].rule.y,bx=board.tiles[b].rule.x,by=board.tiles[b].rule.y;
+        h->swap_tiles(h->context,ax,ay,bx,by);
+        emit(h,TurnEventKind::FlareRest,by*6+bx,1,colour);
+        emit(h,TurnEventKind::FlareRest,ay*6+ax,1,colour);
+        far[a]=false;--nfar;near[b]=false;--nnear;
+    }
+    emit(h,TurnEventKind::Label,static_cast<int>(tile),label,0,label_colour,0x3f800000);
+    emit(h,TurnEventKind::Sound,-1,sound);
+    reset_attack_timers(m);
+}
+}
+extern "C" void dr_attract_skulls(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    attract(p,tile,h,false,static_cast<std::int32_t>(0xff00ffffu),24,32,14);   // RGBA 255,255,0,255
+}
+extern "C" void dr_attract_shields_swords(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    attract(p,tile,h,true,-1,25,33,23);   // white
+}
 extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t* activated,std::uint32_t tile,
     const TurnHooks* h,const GenerationHooks* gh) {
     if(activated[tile])return;
@@ -367,7 +461,11 @@ extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t
     case 6: dr_make_acid_potion(g,tile,h,gh);break;
     case 8: dr_freeze_tiles(p,tile,h);break;
     case 22: dr_break_random_shield_sword(g,tile,h,gh);break;
-    case 4: case 13: case 14: case 18: case 24: case 25: case 26:
+    case 18: dr_convert_random_tiles(g,tile,h,gh);break;
+    case 14: dr_jump_enemy(p,tile,h);break;
+    case 24: dr_attract_skulls(p,tile,h);break;
+    case 25: dr_attract_shields_swords(p,tile,h);break;
+    case 4: case 13: case 26:
         h->ability(h->context,type,index);   // not yet recovered
         break;
     case 17:

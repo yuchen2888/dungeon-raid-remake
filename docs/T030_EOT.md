@@ -260,3 +260,16 @@ TurnHooks 末尾追加 `swap_tiles`（接 dr_swap_tiles）；TurnEventKind 追�
 verify_abilities 现为 11 个函数共 880 次比较；activate / 能力段 / 整函数测试改为让这 3 个函数以原代码执行，均通过。错误副本：冰冻候选不排除已冰冻、普通药水判断漏 0x234、破损候选包含魔剑、破损候选不排除已破损、FreezeTiles 不接线，均被拒（"包含魔剑"一项起初存活，用例补入随机魔剑与破损标志后被拒）。
 
 仍未恢复：4 HealOrBless、13 StealGold、14 JumpEnemy、18 ConvertRandomTiles、24 AttractSkulls、25 AttractShieldsSwords、26 ThrowSkull、28 DestroyUpgrade。
+
+## T030-N2：ConvertRandomTiles、JumpEnemy、AttractSkulls、AttractShieldsSwords（Claude，2026-10-19）
+
+| 类型 | 函数 | 地址 | 原生 | 行为要点 |
+| --- | --- | --- | --- | --- |
+| 18 | ConvertRandomTiles | 0x183e4 | dr_convert_random_tiles | 同 FreezeTiles 的两轮挑选，候选＝未匹配且非带能力敌人（不排除已冰冻）；选中格 Game::RandomiseTile 后黄色中心闪光；标签 21、音效 24、计时器复位 |
+| 14 | JumpEnemy | 0x1086c | dr_jump_enemy | 候选＝自身以外未匹配且非带能力敌人；无候选什么都不做；否则选一格与自身 SwapTiles，再匹配自身原位置（此时是换来的格子，MatchTile 7）；两处白色静止闪光，目的地标签 15、音效 35、计时器复位 |
+| 24 | AttractSkulls | 0x185ec | dr_attract_skulls | 集合 A＝距离大于 1 的未匹配敌人；集合 B＝自身周围在界内、未匹配、非敌人的格子；任一为空则什么都不做；否则两集合都非空时反复各随机取一（Game::GetSetIndex）SwapTiles，两处黄色静止闪光（先 B 后 A），各自移除；最后标签 24、音效 14、计时器复位 |
+| 25 | AttractShieldsSwords | 0x17ddc | dr_attract_shields_swords | 同上，目标为盾/剑（type 3/4），B 为周围非盾非剑格（可含敌人）；白色闪光，标签 25、音效 23 |
+
+测试框架：std::set 模拟扩展为同时管理多个集合（每个集合独立节点区），并接管 Game::GetSetIndex（返回第 i 个节点）。verify_abilities 现为 15 个函数共 1200 次比较（JumpEnemy 交换 80 次、吸引类交换 417 次）；activate / 能力段 / 整函数测试通过。错误副本：ConvertRandomTiles 排除已冰冻、只做一轮；JumpEnemy 不排除自身、匹配目的地；吸引距离条件改成"且"、闪光顺序对调，均被拒。
+
+仍未恢复：4 HealOrBless（含 std::set 重载）、13 StealGold、26 ThrowSkull（需代币数值）、28 DestroyUpgrade（需物品模型），以及 SerialiseState。

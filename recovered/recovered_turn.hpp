@@ -191,6 +191,27 @@ void dr_freeze_tiles(dungeonraid::PathState*,std::uint32_t tile,const dungeonrai
 // (colour 30), sound 16, timers reset.
 void dr_break_random_shield_sword(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*,
     const dungeonraid::GenerationHooks*);
+// Game::ConvertRandomTiles 0x183e4: as FreezeTiles with candidates that are not matched and
+// not an enemy with an ability; each pick is re-randomised (Game::RandomiseTile) with a
+// yellow centre flare; then label 21 (colour 29), sound 24, timers reset.
+void dr_convert_random_tiles(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*,
+    const dungeonraid::GenerationHooks*);
+// Game::JumpEnemy 0x1086c: candidates are tiles (other than this one) that are not matched and
+// not an enemy with an ability (std::set<Tile*>, index order); none: nothing happens. Otherwise
+// RandI(0, n-1, stream 5) picks one, which swaps with this tile (SwapTiles); the tile now at
+// this tile's old position is matched (MatchTile 7); white resting flares at both positions,
+// label 15 (colour 24) at the destination, sound 35, timers reset.
+void dr_jump_enemy(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::AttractSkulls 0x185ec / Game::AttractShieldsSwords 0x17ddc: set A holds the unmatched
+// targets (enemies / shields and swords) farther than one tile from this tile; set B holds the
+// unmatched in-bounds neighbours (not this tile) that are not targets (B for skulls also
+// excludes nothing else; for shields/swords enemies may be swapped in). Either set empty:
+// nothing happens. Otherwise, while both are non-empty: RandI picks a from A and b from B
+// (stream 5, index order, Game::GetSetIndex), SwapTiles(a, b), flares at b's then a's resting
+// position (skulls: yellow; shields/swords: white), both removed. Then label 24 (colour 32) /
+// 25 (colour 33), sound 14 / 23, timers reset.
+void dr_attract_skulls(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+void dr_attract_shields_swords(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
 // Original Tile::ActivateAbility 0x3f09c. Once per turn per tile (activated[] is
 // Tile+0x254, cleared by EndOfTurn). Dispatches on enemy_type: countdown abilities
 // (3 RunAwayEnemy, 10 ExplodeEnemy, 19 TeleportEnemy: enemy_state-1, Countdown event,

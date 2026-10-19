@@ -254,3 +254,10 @@
 - verify_abilities：11 个函数共 880 次比较；activate / 能力段 / 整函数测试均通过（这 3 个能力以原代码执行）。
 - 错误副本（隔离开发副本）：冰冻候选不排除已冰冻、普通药水漏 0x234、破损候选含魔剑、破损候选不排除已破损、FreezeTiles 不接线，均被拒。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 9：8 个能力 + SerialiseState）。
+
+## 2026-10-19 T030-N2：ConvertRandomTiles、JumpEnemy、AttractSkulls、AttractShieldsSwords（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、47 个 verify 脚本共 50 步通过。运行目录 `.relay/runs/20261019T222010.290295Z`（UTC），输入指纹 `72c0ba46…6dd727a6`，与当前源码一致。
+- verify_abilities：15 个函数共 1200 次比较（JumpEnemy 交换 80、吸引类交换 417）；activate / 能力段 / 整函数测试通过。
+- 错误副本（隔离开发副本）：ConvertRandomTiles 排除已冰冻、只做一轮；JumpEnemy 不排除自身、匹配目的地；吸引距离"或"改"且"、闪光顺序对调；均 exit 1。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 5：4 个能力 + SerialiseState）。
