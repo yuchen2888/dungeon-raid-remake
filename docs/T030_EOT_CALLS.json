@@ -276,7 +276,7 @@
       "target": "__ZN4Game15ProcessCripplesEv",
       "target_address": "0xcae0",
       "size": 228,
-      "category": "unrecovered"
+      "category": "T030:dr_process_cripples"
     },
     {
       "site": "0x13b26",
@@ -442,7 +442,7 @@
         "target": "__ZN4Game12MimicDefenceEP4Tile",
         "target_address": "0xbd20",
         "size": 72,
-        "category": "unrecovered"
+        "category": "T030:dr_mimic_defence"
       },
       {
         "site": "0x3f1a0",
@@ -562,7 +562,7 @@
         "target": "__ZN4Game9ResurrectEP4Tile",
         "target_address": "0xaf68",
         "size": 116,
-        "category": "unrecovered"
+        "category": "T030:dr_resurrect"
       }
     ]
   },
@@ -570,14 +570,6 @@
     {
       "symbol": "__ZN5Skill10DeactivateEv",
       "size": 8
-    },
-    {
-      "symbol": "__ZN4Game12MimicDefenceEP4Tile",
-      "size": 72
-    },
-    {
-      "symbol": "__ZN4Game9ResurrectEP4Tile",
-      "size": 116
     },
     {
       "symbol": "__ZN4Tile18SetFlameVisibilityEbib",
@@ -590,10 +582,6 @@
     {
       "symbol": "__ZN4Game12ExplodeEnemyEP4Tile",
       "size": 192
-    },
-    {
-      "symbol": "__ZN4Game15ProcessCripplesEv",
-      "size": 228
     },
     {
       "symbol": "__ZN4Game13TeleportEnemyEv",

@@ -183,3 +183,10 @@
 - 新 verify_process_attack（30.5 秒）：24 局 × 2 次完整攻击 = 48 次、1985 帧（阶段 1..8 帧数 507/192/295/131/96/301/415/48）、攻击间下落 458 帧、22 次完整反击链。每帧从原版入口 0x14118 调整函数。
 - 编排错误副本（隔离开发副本）：削弱/全体伤害对调、阶段 1 放在共享块之后、跳过完成准备块，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T030-B：MimicDefence / Resurrect / ProcessCripples（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：21 模块（新增 turn）macOS 双架构 / iPhone ARM64 构建、2 个示例、36 个 verify 脚本共 39 步通过。运行目录 `.relay/runs/20261019T090215.018187Z`，输入指纹 `98cfd5c5…a1a811`，与提交时源码一致。
+- 新 verify_turn_small：420 次比较（MimicDefence 240、Resurrect 60、ProcessCripples 120），64 个骷髅经原版 MatchTile 消灭。
+- 错误副本（隔离开发副本）：去掉种族判断、`>=` 改 `>`、列优先，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；T030 登记 --check matches true（未恢复数 27→24）。

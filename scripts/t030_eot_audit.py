@@ -19,6 +19,9 @@ from t010_registry import ROOT, armv7_slice, disassembly
 T020={'__ZN4Game15ProcessVampiresEv':'dr_process_vampires','__ZN4Tile9AddHealthEi':'dr_tile_add_health',
       '__ZN4Game16InitialiseFlaresEv':'dr_initialise_flares','__ZN4Game15DoCounterattackEv':'dr_do_counterattack',
       '__ZN4Game13ProcessAttackEv':'dr_process_attack'}
+# Whole functions recovered during T030.
+T030={'__ZN4Game12MimicDefenceEP4Tile':'dr_mimic_defence','__ZN4Game9ResurrectEP4Tile':'dr_resurrect',
+      '__ZN4Game15ProcessCripplesEv':'dr_process_cripples'}
 PRESENTATION=('Quad','SimpleLabel','Interface','HelpMenu','Arrow','ScoreScreen','GameOverScreen')
 PRESENTATION_GAME={'__ZN4Game10QueueSoundE5Sound','__ZN4Game16QueueAchievementE11Achievementf',
     '__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif','__ZN4Game12AddParticlesEP4Tile12ParticleType',
@@ -35,6 +38,7 @@ def build():
     t010=json.loads((ROOT/'docs/T010_REGISTRY.json').read_text())
     known.update({f['original_symbol']:'T010:'+f['native_function'] for f in t010['functions']})
     known.update({k:'T020:'+v for k,v in T020.items()})
+    known.update({k:'T030:'+v for k,v in T030.items()})
     def classify(symbol):
         if symbol in known:return known[symbol]
         cls=re.match(r'__ZN(\d+)',symbol)

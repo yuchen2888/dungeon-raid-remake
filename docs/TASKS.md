@@ -24,6 +24,7 @@
 | T020-O | 完成 / Claude，待复核 | 完整 dr_process_attack 编排；每帧从入口 0x14118 与原版整函数差分：48 次完整攻击、1985 帧、阶段 1..8 全覆盖、所有玩法被调函数为原函数 | verify_process_attack.py；三个编排错误副本被拒 |
 | T030 | 进行中 / Claude | 分段恢复 EndOfTurn，验证毒/冻结/能力、再次补位与存档边界。T030-A 调用登记已完成：41 调用点 / 24 目标，未恢复玩法 6 个 + ActivateAbility 下 21 个能力函数 | 原入口 0x13574；docs/T030_EOT.md、T030_EOT_CALLS.json；建议先做小的整函数（Skill::Deactivate、MimicDefence、Resurrect、ProcessCripples、SetFlameVisibility） |
 | T030-A | 完成 / Claude，待复核 | EndOfTurn 与 ActivateAbility 一层的调用登记、分类与大小排序 | scripts/t030_eot_audit.py、docs/T030_EOT_CALLS.json；--check 通过 |
+| T030-B | 完成 / Claude，待复核 | 完整原函数 MimicDefence 0xbd20、Resurrect 0xaf68、ProcessCripples 0xcae0；新 turn 模块；420 次比较 | recovered_turn.*、verify_turn_small.py；build.sh 加 turn；三个错误副本被拒 |
 | T040 | 待 T030 | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序 |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -60,5 +61,7 @@
 认领记录：`T020-O / claude / 起始 d7a24e3 / 继承差异：无 / 目标：完整 ProcessAttack 编排与整函数差分 / 文件：recovered/recovered_attack_shield.*、recovered/verify_process_attack.py、scripts/verify.py、scripts/t020_attack_audit.py、docs/ / 验收：verify --full 全部通过 + 编排错误副本 exit 1 / 结果：见 VALIDATION.md T020-O 节 / 下一步：Codex 复核 T020-B..O，然后 T030 EndOfTurn`
 
 认领记录：`T030-A / claude / 起始 ad116bd / 继承差异：无 / 目标：EndOfTurn 调用登记 / 文件：scripts/t030_eot_audit.py、docs/T030_EOT_CALLS.json、docs/T030_EOT.md、docs/TASKS.md、docs/PROJECT_STATE.md / 验收：t030_eot_audit.py --check / 下一步：小整函数恢复`
+
+认领记录：`T030-B / claude / 起始 caed5c5 / 继承差异：无 / 目标：三个小整函数 / 文件：recovered/recovered_turn.*、recovered/build.sh、recovered/verify_turn_small.py、scripts/verify.py、scripts/t030_eot_audit.py、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：SetFlameVisibility 与 EndOfTurn 开头段`
 
 认领记录模板：`Txxx / 工具 / 起始 HEAD / 继承差异 / 目标 / 文件 / 验收命令 / 结果路径 / 下一步`。详细活动现场存于 `.relay/active/owner.json`，持久事实随原子提交更新这里和 PROJECT_STATE.md。

@@ -35,3 +35,19 @@ Tile::ActivateAbility 按敌人能力分派，展开一层后共有 21 个未恢
 3. EndOfTurn 主体按段恢复（技能冷却、标志重置、逐格冰冻/毒/燃烧、能力触发、补位、存档边界），沿用 T020 的段差分方法和全链测试类。
 4. ActivateAbility 与各能力函数，可每次恢复一组。
 5. 最后与 T020 一样做整函数逐回合差分。
+
+## T030-B：MimicDefence、Resurrect、ProcessCripples（Claude，2026-10-19）
+
+起始提交 caed5c5。新增模块 `recovered_turn.cpp/.hpp`（build.sh 增加 turn 模块并加入 iPhone 静态库），恢复三个**完整原函数**：
+
+| 原函数 | 地址 | 原生函数 | 行为 |
+| --- | --- | --- | --- |
+| Game::MimicDefence | 0xbd20 | dr_mimic_defence | 格子防御 = 玩家当前护甲；UpdateText(0,1,0)、标签 20（颜色 28）、音效 23 |
+| Game::Resurrect | 0xaf68 | dr_resurrect | 音效 22、14；黄色光效（RGBA 255,255,0,255，类型 1）；标签 38（颜色 46）；计时器 bd94=1.0、bd90=0。复活本身由调用方（ActivateAbility）完成 |
+| Game::ProcessCripples | 0xcae0 | dr_process_cripples | 仅职业种族为 7 时生效：行优先遍历未匹配的普通骷髅（类型 1、敌人 0），生命 < 防御的格子 MatchTile(奖励 5)，标签 36（颜色 44）、成就 53（2.0） |
+
+MatchTile 以同步回调 `match_tile` 接入已恢复的 dr_match_tile。Skill::Deactivate（只把技能 +0x80 清 0）会并入之后的 EndOfTurn 技能段，不单独建函数。
+
+验证 `recovered/verify_turn_small.py`（建立在 T020 的全链测试类上）：三个原函数都从入口完整执行；ProcessCripples 的 MatchTile 及其奖励、代币是原函数，原生侧用同一组 match 钩子调用 dr_match_tile。
+- MimicDefence 240 次（护甲 −3/0/7/99）、Resurrect 60 次、ProcessCripples 120 次（10 个种族 × 12 块棋盘），共 420 次比较；种族 7 时有 64 个骷髅被消灭。
+- 错误副本：去掉种族判断、`>=` 改 `>`、改为列优先，均 exit 1。

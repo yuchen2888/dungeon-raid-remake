@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")"
-for module in combat rules input battle round progression selection random stroke preview rune match tokens resources motion path refill generation encounters attack_shield; do
+for module in combat rules input battle round progression selection random stroke preview rune match tokens resources motion path refill generation encounters attack_shield turn; do
     set -- "recovered_${module}.cpp"
     case "$module" in
         battle) set -- "$@" recovered_combat.cpp ;;
@@ -30,5 +30,5 @@ xcrun --sdk iphoneos libtool -static -o libDungeonRaidRecovered-ios-arm64.a \
     recovered_selection_ios_arm64.o recovered_random_ios_arm64.o \
     recovered_stroke_ios_arm64.o recovered_preview_ios_arm64.o recovered_rune_ios_arm64.o \
     recovered_match_ios_arm64.o recovered_tokens_ios_arm64.o recovered_resources_ios_arm64.o \
-    recovered_motion_ios_arm64.o recovered_path_ios_arm64.o recovered_refill_ios_arm64.o recovered_generation_ios_arm64.o recovered_encounters_ios_arm64.o recovered_attack_shield_ios_arm64.o
+    recovered_motion_ios_arm64.o recovered_path_ios_arm64.o recovered_refill_ios_arm64.o recovered_generation_ios_arm64.o recovered_encounters_ios_arm64.o recovered_attack_shield_ios_arm64.o recovered_turn_ios_arm64.o
 printf '%s\n' 'Built native macOS libraries and iPhone ARM64 static library.'

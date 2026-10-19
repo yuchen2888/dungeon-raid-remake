@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-A）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-B）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 20 个 `recovered_*.cpp` 模块、15 个头文件、35 个 verify 脚本、两个独立源码示例。新增 attack_shield 是局部恢复，不计作完整 ProcessAttack；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 21 个 `recovered_*.cpp` 模块、16 个头文件、36 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -27,6 +27,7 @@
 - T020-N：阶段 5 完成准备块 `[0x146ce,0x14790)` 恢复为 `dr_process_attack_phase5_done`。ProcessAttack 的每一段指令都已有恢复实现，尚未串成完整函数。
 - T020-O：`dr_process_attack` 按原控制流组合全部片段；verify_process_attack.py 每帧从原版入口 0x14118 调整函数比较完整共享状态与事件：48 次完整攻击（阶段 1→8）、1985 帧通过。测试替身仅平台 powf 与 AddFlare 追加计数模型。
 - T030-A：EndOfTurn 0x13574 调用登记（docs/T030_EOT_CALLS.json、T030_EOT.md）：41 调用点 / 24 目标；未恢复玩法 CheckEndGame、Skill::Deactivate、SetFlameVisibility、ProcessCripples、ActivateAbility（下有 21 个能力函数）、SerialiseState。
+- T030-B：新增 turn 模块，完整原函数 MimicDefence、Resurrect、ProcessCripples 恢复并在全链共享状态上差分（ProcessCripples 的 MatchTile 为原函数）。
 
 ## 验证
 
@@ -71,6 +72,8 @@
 2026-10-19 Claude 继续认领 T020-N（起始 b7c08b0）：attack_shield 追加阶段 5 完成准备块，新增 verify_attack_phase5_done.py。
 
 2026-10-19 Claude 继续认领 T020-O（起始 d7a24e3）：attack_shield 追加 dr_process_attack 编排与输入/钩子汇总结构，新增 verify_process_attack.py。
+
+2026-10-19 Claude 认领 T030（起始 ad116bd）：T030-A 新增 scripts/t030_eot_audit.py 与登记；T030-B 新增 recovered_turn.* 模块（build.sh 加入）与 verify_turn_small.py。
 
 活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
 
