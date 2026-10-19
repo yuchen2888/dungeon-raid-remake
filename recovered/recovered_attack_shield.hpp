@@ -72,8 +72,9 @@ struct AttackAnimation {
 // LabelAlpha: a=label, b=alpha. HelpMenu: HelpMenu::Initialise(Game+0x10298, a=bd30 bits,
 // b=bd34 bits, 0, 0, type c=16). Random: a=low bits, b=high bits, c=stream, (result in bd7c).
 // SetAlpha quad 1 is Game+0xb8ac.
+// AddLabel: Game::AddSimpleLabel(a=type, position &bd30, b=number, c=colour, scale 0.5).
 enum class AttackAnimEventKind : std::int32_t { Sound=1, LabelNumber, LabelPosition, FlareAlpha, FlareScale, SetAlpha,
-    LabelAlpha, HelpMenu, Random };
+    LabelAlpha, HelpMenu, Random, AddLabel };
 struct AttackAnimEvent { AttackAnimEventKind kind; std::int32_t a,b,c; };
 // counterattack must run Game::DoCounterattack (dr_do_counterattack).
 struct AttackAnimHooks {
@@ -135,6 +136,14 @@ void dr_process_attack_phase4(dungeonraid::AttackDamageState*,dungeonraid::Attac
 // Returns true when completed (original continues at 0x146ce, else 0x14ae4).
 bool dr_process_attack_label_motion(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
     float dt,const dungeonraid::AttackAnimHooks*);
+// ProcessAttack [0x146ce,0x14790), reached when the label motion completes.
+// Phase 6 continues at 0x14a14 (dr_process_attack_health_damage), nothing here.
+// Phase 5: phase 6 and the next motion (to (0.8625,1.29375) from (bd30,bd34),
+// alpha bd38 -> 0.2, arc Rand(0.4,0.8,stream 0)), label 2 showing
+// -min(incoming damage, armour), HelpMenu type 17; then 0x14790 absorption
+// (dr_process_attack_armour_absorb) follows in the same frame.
+void dr_process_attack_phase5_done(dungeonraid::AttackDamageState*,dungeonraid::AttackAnimation*,
+    const dungeonraid::AttackAnimHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.

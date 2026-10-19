@@ -102,3 +102,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-M：阶段 5/6 标签运动（Claude，2026-10-19）
 
 `[0x1457c,0x146ce)` → `dr_process_attack_label_motion`：带加速度的进度、弧线轨迹（阶段 5 横向、阶段 6 纵向）、powf(t,5) 控制的 alpha。Interpolate 标量版为 a·t+(1−t)·b，二维版为 (1−t)·a+t·b，两者方向相反。平台 powf 是边界，测试两侧都用本机 C 库 powf。细节见 T020_ATTACK.md。
+
+## T020-N：阶段 5 完成准备块（Claude，2026-10-19）
+
+`[0x146ce,0x14790)` → `dr_process_attack_phase5_done`：阶段 6 完成则转扣血；阶段 5 完成则置阶段 6，写入下一段运动参数，调用 Rand(0.4,0.8,流 0)，显示 −min(伤害,护甲) 标签与帮助菜单，同一帧接护甲吸收。ProcessAttack 全部指令段至此都有恢复实现。细节见 T020_ATTACK.md。

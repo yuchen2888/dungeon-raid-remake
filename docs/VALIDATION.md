@@ -169,3 +169,10 @@
 - 新 verify_attack_label_motion：1001 次比较（边界 320、随机 400、逐帧 281），296 次运动完成；片段字节 SHA-256 `8fca30c0…ffe599e4`。verify_attack_all 加入可选多停止点后，依赖它的测试数字不变。
 - 错误副本（隔离开发副本）：标量插值方向反、阶段 5 弧线加到 y、`>=1`，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T020-N：阶段 5 完成准备块（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、34 个 verify 脚本共 37 步通过。运行目录 `.relay/runs/20261019T083259.063272Z`，输入指纹 `eb9f3f48…32dc74`，与提交时源码一致。
+- 新 verify_attack_phase5_done：653 次比较，三个出口 0x14790 / 0x14a14 / 0x14ae4 分别 199 / 103 / 351 次；片段字节 SHA-256 `ce170d81…a1765159e`。
+- 错误副本（隔离开发副本）：不取最小值、bd74 取错、随机上限 1.0，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；两份登记 --check 均 matches true。

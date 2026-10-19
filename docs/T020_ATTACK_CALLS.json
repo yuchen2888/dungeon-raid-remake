@@ -643,6 +643,28 @@
         "powf: platform library (host C powf in both test sides)"
       ],
       "boundary": "Partial instructions only; completion block at 0x146ce not included"
+    },
+    {
+      "start": "0x146ce",
+      "end_exclusive": "0x14790",
+      "size": 194,
+      "original_bytes_sha256": "ce170d81e27d8d8ddfe98c48b3c9024cef95cfc2a4b3122f5fcdf26a1765159e",
+      "native_function": "dr_process_attack_phase5_done",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_phase5_done.py",
+      "inputs": [
+        "reached when the phase 5/6 motion completes; registers r4..r11 and stack slots set by the motion segment",
+        "Game+0xb8a8 phase",
+        "Game+0xbd30/+0xbd34/+0xbd38",
+        "Game+0xbe84 incoming damage, Game+0xbda4 armour",
+        "RNG stream 0"
+      ],
+      "outputs": [
+        "phase 6 -> 0x14a14 health damage (T020-C)",
+        "phase 5: phase 6, next motion bd5c/bd60/bd64/bd68/bd6c/bd70/bd74/bd78, Rand(0.4,0.8,0) -> bd7c",
+        "label 2 showing -min(incoming, armour), HelpMenu type 17; continues at 0x14790 absorption (T020-B)"
+      ],
+      "boundary": "Partial instructions only; whole ProcessAttack orchestration is the next unit"
     }
   ],
   "limits": [

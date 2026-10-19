@@ -303,3 +303,21 @@ extern "C" bool dr_process_attack_label_motion(AttackDamageState* s,AttackAnimat
     a->poison_label_alpha=a->damage_label_alpha;
     return completed;
 }
+extern "C" void dr_process_attack_phase5_done(AttackDamageState* s,AttackAnimation* a,const AttackAnimHooks* h) {
+    auto emit=[h](AttackAnimEventKind kind,int x=0,int y=0,int z=0) {
+        if(h && h->event) { const AttackAnimEvent e{kind,x,y,z};h->event(h->context,&e); }
+    };
+    if(s->phase!=5)return;
+    auto& m=*s->resources->match;
+    s->phase=6;
+    a->bd60=as_float(0x3fa5999a);a->bd5c=as_float(0x3f5ccccd);
+    a->bd68=a->bd34;a->bd64=a->bd30;a->bd6c=0.0f;
+    a->bd74=a->damage_label_alpha;a->bd70=1.0f;a->bd78=as_float(0x3e4ccccd);
+    const float low=as_float(0x3ecccccd),high=as_float(0x3f4ccccd);
+    a->bd7c=dr_random_float(&m.random,low,high,0);
+    emit(AttackAnimEventKind::Random,static_cast<int>(as_bits(low)),static_cast<int>(as_bits(high)),0);
+    const std::int32_t armour=m.preview->armour_current;
+    const std::int32_t shown=armour>=s->incoming_damage?s->incoming_damage:armour;
+    emit(AttackAnimEventKind::AddLabel,2,static_cast<int>(0u-static_cast<std::uint32_t>(shown)),12);
+    emit(AttackAnimEventKind::HelpMenu,static_cast<int>(as_bits(a->bd30)),static_cast<int>(as_bits(a->bd34)),17);
+}
