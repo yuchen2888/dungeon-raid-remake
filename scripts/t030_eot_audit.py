@@ -21,7 +21,7 @@ T020={'__ZN4Game15ProcessVampiresEv':'dr_process_vampires','__ZN4Tile9AddHealthE
       '__ZN4Game13ProcessAttackEv':'dr_process_attack'}
 # Whole functions recovered during T030.
 T030={'__ZN4Game12MimicDefenceEP4Tile':'dr_mimic_defence','__ZN4Game9ResurrectEP4Tile':'dr_resurrect',
-      '__ZN4Game15ProcessCripplesEv':'dr_process_cripples'}
+      '__ZN4Game15ProcessCripplesEv':'dr_process_cripples','__ZN4Tile18SetFlameVisibilityEbib':'dr_set_flame_visibility'}
 PRESENTATION=('Quad','SimpleLabel','Interface','HelpMenu','Arrow','ScoreScreen','GameOverScreen')
 PRESENTATION_GAME={'__ZN4Game10QueueSoundE5Sound','__ZN4Game16QueueAchievementE11Achievementf',
     '__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif','__ZN4Game12AddParticlesEP4Tile12ParticleType',
@@ -71,6 +71,12 @@ def build():
                 call_sites=calls,unique_targets=len({c['target'] for c in calls}),
                 activate_ability=dict(address=hex(ability['start']),size=ability['end']-ability['start'],call_sites=abilities),
                 unrecovered_by_size=[dict(symbol=s,size=n) for s,n in unrecovered],
+                recovered_segments=[dict(start='0x13710',end_exclusive='0x13910',extra=['0x13d64..0x13d88 loop head'],
+                    native_function='dr_end_turn_burn_freeze',verify='recovered/verify_turn_burn.py',
+                    original_bytes_sha256=hashlib.sha256(read(0x13710,0x13910-0x13710)+read(0x13d64,0x13d88-0x13d64)).hexdigest()),
+                    dict(start='0x13910',end_exclusive='0x13a1c',extra=[],native_function='dr_end_turn_regen_poison',
+                    verify='recovered/verify_turn_regen.py',callbacks=['Game::CheckEndGame (not recovered; ordered callback)'],
+                    original_bytes_sha256=hashlib.sha256(read(0x13910,0x13a1c-0x13910)).hexdigest())],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph','ActivateAbility expanded one level only',
                         'presentation-boundary is a naming heuristic (Quad/SimpleLabel/Interface/HelpMenu/Arrow/score screens and known Game presentation calls)'])
 

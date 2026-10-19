@@ -140,7 +140,7 @@
       "target": "__ZN4Tile18SetFlameVisibilityEbib",
       "target_address": "0x3d89c",
       "size": 152,
-      "category": "unrecovered"
+      "category": "T030:dr_set_flame_visibility"
     },
     {
       "site": "0x1393e",
@@ -572,10 +572,6 @@
       "size": 8
     },
     {
-      "symbol": "__ZN4Tile18SetFlameVisibilityEbib",
-      "size": 152
-    },
-    {
       "symbol": "__ZN4Game12RunAwayEnemyEP4Tile",
       "size": 164
     },
@@ -662,6 +658,29 @@
     {
       "symbol": "__ZN4Game9StealGoldEP4Tile",
       "size": 1204
+    }
+  ],
+  "recovered_segments": [
+    {
+      "start": "0x13710",
+      "end_exclusive": "0x13910",
+      "extra": [
+        "0x13d64..0x13d88 loop head"
+      ],
+      "native_function": "dr_end_turn_burn_freeze",
+      "verify": "recovered/verify_turn_burn.py",
+      "original_bytes_sha256": "a66cda6245f9a6f0b23591665bed37bb12c75c7f28f5d314225ae6ebc0bf31cf"
+    },
+    {
+      "start": "0x13910",
+      "end_exclusive": "0x13a1c",
+      "extra": [],
+      "native_function": "dr_end_turn_regen_poison",
+      "verify": "recovered/verify_turn_regen.py",
+      "callbacks": [
+        "Game::CheckEndGame (not recovered; ordered callback)"
+      ],
+      "original_bytes_sha256": "3a34e905faa32c6e0abb6bc9b0920754228680237e870d1bf452ab15e706f944"
     }
   ],
   "limits": [

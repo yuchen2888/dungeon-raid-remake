@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-B）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-D）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 21 个 `recovered_*.cpp` 模块、16 个头文件、36 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 21 个 `recovered_*.cpp` 模块、16 个头文件、38 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -28,6 +28,8 @@
 - T020-O：`dr_process_attack` 按原控制流组合全部片段；verify_process_attack.py 每帧从原版入口 0x14118 调整函数比较完整共享状态与事件：48 次完整攻击（阶段 1→8）、1985 帧通过。测试替身仅平台 powf 与 AddFlare 追加计数模型。
 - T030-A：EndOfTurn 0x13574 调用登记（docs/T030_EOT_CALLS.json、T030_EOT.md）：41 调用点 / 24 目标；未恢复玩法 CheckEndGame、Skill::Deactivate、SetFlameVisibility、ProcessCripples、ActivateAbility（下有 21 个能力函数）、SerialiseState。
 - T030-B：新增 turn 模块，完整原函数 MimicDefence、Resurrect、ProcessCripples 恢复并在全链共享状态上差分（ProcessCripples 的 MatchTile 为原函数）。
+- T030-C：完整原函数 SetFlameVisibility 与 EndOfTurn 冰冻/燃烧结算循环恢复（dr_set_flame_visibility、dr_end_turn_burn_freeze），在全链共享状态上差分。
+- T030-D：EndOfTurn 生命回复与毒伤段恢复（dr_end_turn_regen_poison），CheckEndGame 暂为有序回调。另将自写测试的 emu_start 墙钟超时改为 0（系统过载时曾导致假失败）；继承测试仍有墙钟超时，见 T030_EOT.md。
 
 ## 验证
 
@@ -81,4 +83,4 @@
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：按 docs/T030_EOT.md 的建议顺序，先恢复小的整函数（Skill::Deactivate、MimicDefence、Resurrect、ProcessCripples、SetFlameVisibility），再 CheckEndGame、EndOfTurn 主体分段、ActivateAbility 各能力，最后整函数逐回合差分；沿用 T020 的段差分方法与全链测试类（verify_attack_all.py、verify_process_attack.py）。建议下一位工具先复核 T020-B..O。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..D。下一步恢复 Game::CheckEndGame 0x10b18（免死、死亡结算与职业统计；计分/结束界面为表现），把 T030-D 的回调换成真实实现；然后 EndOfTurn 开头段（回合数、技能冷却/Deactivate、标志重置）、逐格循环 B（中毒敌人 0x13a22 起）、ProcessCripples 之后的能力触发与补位、SerialiseState 边界，以及 ActivateAbility 各能力。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..D。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

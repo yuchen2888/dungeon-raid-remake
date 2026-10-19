@@ -25,6 +25,8 @@
 | T030 | 进行中 / Claude | 分段恢复 EndOfTurn，验证毒/冻结/能力、再次补位与存档边界。T030-A 调用登记已完成：41 调用点 / 24 目标，未恢复玩法 6 个 + ActivateAbility 下 21 个能力函数 | 原入口 0x13574；docs/T030_EOT.md、T030_EOT_CALLS.json；建议先做小的整函数（Skill::Deactivate、MimicDefence、Resurrect、ProcessCripples、SetFlameVisibility） |
 | T030-A | 完成 / Claude，待复核 | EndOfTurn 与 ActivateAbility 一层的调用登记、分类与大小排序 | scripts/t030_eot_audit.py、docs/T030_EOT_CALLS.json；--check 通过 |
 | T030-B | 完成 / Claude，待复核 | 完整原函数 MimicDefence 0xbd20、Resurrect 0xaf68、ProcessCripples 0xcae0；新 turn 模块；420 次比较 | recovered_turn.*、verify_turn_small.py；build.sh 加 turn；三个错误副本被拒 |
+| T030-C | 完成 / Claude，待复核 | 完整原函数 SetFlameVisibility 0x3d89c + EndOfTurn 冰冻/燃烧结算循环 [0x13710,0x13910)＋循环头；400 次比较、108 次烧死 | dr_set_flame_visibility、dr_end_turn_burn_freeze、verify_turn_burn.py；三个错误副本被拒 |
+| T030-D | 完成 / Claude，待复核 | EndOfTurn 生命回复与毒伤玩家段 [0x13910,0x13a1c)；CheckEndGame 暂为有序回调（未恢复）；900 次比较 | dr_end_turn_regen_poison、verify_turn_regen.py；三个错误副本被拒 |
 | T040 | 待 T030 | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序 |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -63,5 +65,9 @@
 认领记录：`T030-A / claude / 起始 ad116bd / 继承差异：无 / 目标：EndOfTurn 调用登记 / 文件：scripts/t030_eot_audit.py、docs/T030_EOT_CALLS.json、docs/T030_EOT.md、docs/TASKS.md、docs/PROJECT_STATE.md / 验收：t030_eot_audit.py --check / 下一步：小整函数恢复`
 
 认领记录：`T030-B / claude / 起始 caed5c5 / 继承差异：无 / 目标：三个小整函数 / 文件：recovered/recovered_turn.*、recovered/build.sh、recovered/verify_turn_small.py、scripts/verify.py、scripts/t030_eot_audit.py、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：SetFlameVisibility 与 EndOfTurn 开头段`
+
+认领记录：`T030-C / claude / 起始 1825640 / 继承差异：无 / 目标：SetFlameVisibility 与冰冻/燃烧循环 / 文件：recovered/recovered_turn.*、recovered/build.sh、recovered/verify_turn_burn.py、scripts/verify.py、scripts/t030_eot_audit.py、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：生命回复与毒伤玩家段 0x13910..0x13a1c`
+
+认领记录：`T030-D / claude / 起始 1825640（与 T030-C 同轮）/ 继承差异：无 / 目标：回复与毒伤段 + 测试去墙钟超时 / 文件：recovered/recovered_turn.*、recovered/verify_turn_regen.py、recovered/verify_attack_*.py、verify_turn_*.py（timeout=0）、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：CheckEndGame`
 
 认领记录模板：`Txxx / 工具 / 起始 HEAD / 继承差异 / 目标 / 文件 / 验收命令 / 结果路径 / 下一步`。详细活动现场存于 `.relay/active/owner.json`，持久事实随原子提交更新这里和 PROJECT_STATE.md。

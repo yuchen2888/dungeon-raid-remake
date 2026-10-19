@@ -190,3 +190,12 @@
 - 新 verify_turn_small：420 次比较（MimicDefence 240、Resurrect 60、ProcessCripples 120），64 个骷髅经原版 MatchTile 消灭。
 - 错误副本（隔离开发副本）：去掉种族判断、`>=` 改 `>`、列优先，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；T030 登记 --check matches true（未恢复数 27→24）。
+
+## 2026-10-19 T030-C / T030-D 与测试去墙钟超时（Claude）
+
+- 先前一次 verify --full 在系统负载平均值约 74 时，verify_counterattack 与 verify_encounters 因 emu_start 墙钟超时失败（不是结果不一致），该运行已手动终止并作废（日志 `.relay/runs/20261019T091547.451970Z`）。
+- 自写测试改为 timeout=0 后重跑：`./scripts/relay.sh verify --full` → exit 0，21 模块构建、2 个示例、38 个 verify 脚本共 41 步通过。运行目录 `.relay/runs/20261019T171541.668427Z`（UTC），输入指纹 `ec460f5f…1664f1`，与本次提交后的源码一致；该次运行覆盖 a638bfd（超时修改）与随后 T030-C/D 提交的合并状态。
+- 新 verify_turn_burn：400 次比较（SetFlameVisibility 240、循环 160），108 次烧死；SetFlameVisibility 字节 SHA-256 `d31d3448…bb5e3`。
+- 新 verify_turn_regen：900 次比较，122 次结束；段字节 SHA-256 `3a34e905…e706f944`。
+- 错误副本（隔离开发副本）：T030-C 三个、T030-D 三个，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；T030 登记 --check matches true。
