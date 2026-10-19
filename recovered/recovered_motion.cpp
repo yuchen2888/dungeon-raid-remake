@@ -76,3 +76,10 @@ extern "C" bool dr_process_reward_tokens(TokenMotion* tokens,std::uint32_t* pend
     }
     *pending=last;return true;
 }
+extern "C" void dr_token_set_target_tile(TokenMotion* t,const StrokeState* s,std::int32_t tile) {
+    t->linked_tile=tile;
+    if(tile<0)return;
+    const Point centre=s->selection.tiles[tile].geometry.center;
+    const float dx=centre.x-t->position.x,dy=centre.y-t->position.y;
+    t->initial_distance=std::sqrt(dx*dx+dy*dy);
+}

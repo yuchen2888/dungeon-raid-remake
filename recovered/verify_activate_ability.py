@@ -23,7 +23,7 @@ from verify_stroke import HERE, I32, U8
 from verify_abilities import AbilityMixin, TurnHooksFull, ABILITY, SWAP_FN, canonical, follow_swaps, push_token_hook
 
 ENTRY,END=0x3f09c,0x3f25c
-ABILITIES={'__ZN4Game9StealGoldEP4Tile':13,'__ZN4Game14DestroyUpgradeEP4Tile':28}   # not yet recovered: recorded and skipped
+ABILITIES={'__ZN4Game14DestroyUpgradeEP4Tile':28}   # not yet recovered: recorded and skipped
 TurnHooks=TurnHooksFull   # TurnHooks incl. move_matched_tiles, ability and swap_tiles
 
 class Original(AbilityMixin,SmallOriginal):
@@ -72,8 +72,8 @@ class Native(SmallNative):
         def move(_):self.refill_lib.dr_move_matched_tiles(C.byref(self.refill),C.byref(self.refill_hooks))
         def swap(_,x1,y1,x2,y2):self.refill_lib.dr_swap_tiles(C.byref(self.refill),x1,y1,x2,y2,C.byref(self.refill_hooks))
         self.ability_cb=(ABILITY(ability),EVENT(event),MOVE_FN(move),SWAP_FN(swap))
-        self.push_cb=push_token_hook(self)
-        self.activate_hooks=TurnHooksFull(None,self.ability_cb[1],self.turn_cb[1],ATTACK(0),CHECK(0),self.ability_cb[2],self.ability_cb[0],self.ability_cb[3],self.push_cb)
+        self.token_cb=push_token_hook(self)
+        self.activate_hooks=TurnHooksFull(None,self.ability_cb[1],self.turn_cb[1],ATTACK(0),CHECK(0),self.ability_cb[2],self.ability_cb[0],self.ability_cb[3],*self.token_cb)
     def load(self,c):
         super().load(c);self.flags_254=(U8*36)(*c['activated'])
         follow_swaps(self)   # activated[] moves with tile swaps

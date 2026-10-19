@@ -26,6 +26,9 @@ extern "C" {
 void dr_initialise_token(dungeonraid::TokenMotion*,dungeonraid::MatchState*,
     std::uint32_t tile,std::int32_t reward,const dungeonraid::Point* position,
     std::int32_t incoming_type,const dungeonraid::MotionHooks*);
+// Original Token::SetTargetTile 0x1b4d4: linked tile; with a tile, the initial distance becomes
+// the distance from the token to that tile's centre.
+void dr_token_set_target_tile(dungeonraid::TokenMotion*,const dungeonraid::StrokeState*,std::int32_t tile);
 // Exact Token::Process math. Caller checks active before invoking, as original
 // Game::Process does. Position/delta-time must be finite ordinary game values.
 void dr_process_token(dungeonraid::TokenMotion*,const dungeonraid::StrokeState*,

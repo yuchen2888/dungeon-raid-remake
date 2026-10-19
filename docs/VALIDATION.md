@@ -275,3 +275,10 @@
 - verify_abilities：17 个函数共 1360 次比较（ThrowSkull 生成代币 70 个，数值经代币动作状态 amount 比较）；activate / 能力段 / 整函数测试通过。含测试框架修正：RandomiseTile 同时启用补位/生成/遭遇钩子（JumpDown）。
 - 错误副本（隔离开发副本）：不检查 attack_flag、行优先、代币数值改用攻击力，均 exit 1。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 3：StealGold、DestroyUpgrade、SerialiseState）。
+
+## 2026-10-19 T030-N3c：StealGold（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、47 个 verify 脚本共 50 步通过。运行目录 `.relay/runs/20261019T230736.815473Z`（UTC），输入指纹 `1db063a2…eebb7295`，与当前源码一致。
+- verify_abilities：18 个函数共 1440 次比较（StealGold 生成代币 176 个、金币条更新 32 次）；activate / 能力段 / 整函数测试通过。
+- 错误副本（隔离开发副本）：不标记金币已匹配、改位置后不重算距离、宿敌判断改 14、金币条件 `>=0`，均 exit 1。
+- 接力单测 4 项通过；T010 / T020 / T030 登记 --check matches true（T030 未恢复数 2：DestroyUpgrade、SerialiseState）。

@@ -17,7 +17,8 @@ enum class TurnEventKind : std::int32_t { Sound=1, Text, Label, Flare, Achieveme
     UpdateSkills, ArrowColour,     // ArrowColour: Arrow::SetColour(a,b,c) on Game+0x3658
     Help, SerialiseState,          // Help: HelpMenu::Initialise (Game+0x10298) at the tile center,
                                    // a=HelpType, b=c=size float bits. SerialiseState: Game::SerialiseState
-    FlareTarget };                 // FlareTarget: AddFlare at Interface::GetTarget(0), a=type, b=RGBA bytes
+    FlareTarget,                   // FlareTarget: AddFlare at Interface::GetTarget(c), a=type, b=RGBA bytes
+    GoldBar };                     // GoldBar: Interface::UpdateGoldBar, a=gold
 struct TurnEvent { TurnEventKind kind; std::int32_t tile,a,b,c,d; };
 // match_tile is a synchronous gameplay dependency: wire it to dr_match_tile.
 struct TurnHooks {
@@ -30,14 +31,18 @@ struct TurnHooks {
     bool (*check_end_game)(void*);
     // Game::MoveMatchedTiles: wire to dr_move_matched_tiles.
     void (*move_matched_tiles)(void*);
-    // An enemy ability not yet recovered (Game::StealGold, Game::DestroyUpgrade), keyed by enemy_type.
+    // An enemy ability not yet recovered (Game::DestroyUpgrade, which needs the item model), keyed by enemy_type.
     void (*ability)(void*,std::int32_t enemy_type,std::int32_t tile);
     // Game::SwapTiles(x1,y1,x2,y2): wire to dr_swap_tiles.
     void (*swap_tiles)(void*,std::int32_t x1,std::int32_t y1,std::int32_t x2,std::int32_t y2);
     // Direct token (Token::InitialiseFromTile without AddToken): wire to dr_token_queue_push
-    // (position_override -1), then set the new slot's TokenMotion.target_or_amount (Token+0x98)
-    // to value once the token is initialised.
-    void (*push_token)(void*,std::int32_t tile,std::int32_t reward,std::int32_t token_type,std::int32_t value);
+    // (position_override -1); returns the slot. value >= 0 sets the token's
+    // TokenMotion.target_or_amount (Token+0x98) once it is initialised.
+    std::uint32_t (*push_token)(void*,std::int32_t tile,std::int32_t reward,std::int32_t token_type,std::int32_t value);
+    // Token::SetTargetTile(tile) on a slot: wire to dr_token_set_target_tile.
+    void (*token_target)(void*,std::uint32_t slot,std::int32_t tile);
+    // A slot's token position := Interface::GetTarget(kind).
+    void (*token_start)(void*,std::uint32_t slot,std::int32_t kind);
 };
 }
 namespace dungeonraid {
@@ -226,12 +231,22 @@ void dr_heal_or_bless(dungeonraid::GenerationState*,std::uint32_t tile,const dun
 // n-1, stream 5) picks one: MatchTile(7), yellow centre flare, a token of type 3 (reward 1)
 // from that tile carrying its health (Token+0x98); label 31 (colour 39), sound 26, timers reset.
 void dr_throw_skull(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::StealGold 0x128f4 (with its std::set overload 0xf300). Unmatched coins (type 2): label
+// 13 (colour 22), then twice (while any remain) RandI(0, n-1, stream 5) picks one: marked
+// matched (no MatchTile), a gold token (reward 2) from it flying to this tile, yellow centre
+// flare. No coins: if the player has gold, a yellow flare at Interface::GetTarget(2), then twice
+// while gold > 0: a gold token starting at GetTarget(2) flying to this tile, gold-1, and when
+// the class's mortal enemy is 13 also a token (reward 0) from GetTarget(0) and health -=
+// GetAttack; then label 13, gold and health bars. Timers reset (also with no gold and no coins).
+void dr_steal_gold(dungeonraid::ResourceState*,dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
 // Original Tile::ActivateAbility 0x3f09c. Once per turn per tile (activated[] is
 // Tile+0x254, cleared by EndOfTurn). Dispatches on enemy_type: countdown abilities
 // (3 RunAwayEnemy, 10 ExplodeEnemy, 19 TeleportEnemy: enemy_state-1, Countdown event,
 // ability at 0; 28: ability at 0 then enemy_state=5, Countdown always), recovered abilities
-// (7 IgniteTiles, 11 ConvertSwordToSkull, 16 StabAttack, 17 MimicDefence, 23 LowerSkulls,
-// 31 FleeUp), resurrection (32: unless enemy_state is 0 or flag_25e (which is consumed),
+// (4 HealOrBless, 6 MakeAcidPotion, 7 IgniteTiles, 8 FreezeTiles, 11 ConvertSwordToSkull,
+// 13 StealGold, 14 JumpEnemy, 16 StabAttack, 17 MimicDefence, 18 ConvertRandomTiles,
+// 22 BreakRandomShieldSword, 23 LowerSkulls, 24 AttractSkulls, 25 AttractShieldsSwords,
+// 26 ThrowSkull, 31 FleeUp), resurrection (32: unless enemy_state is 0 or flag_25e (which is consumed),
 // GenerateStats(turn, difficulty), EnemyUV, UpdateValues, Resurrect) and the abilities not
 // yet recovered via TurnHooks.ability. Countdown/EnemyUV go to the generation hooks.
 void dr_activate_ability(dungeonraid::PathState*,dungeonraid::GenerationState*,std::uint8_t* activated,std::uint32_t tile,

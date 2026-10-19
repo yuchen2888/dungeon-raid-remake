@@ -418,7 +418,7 @@
         "target": "__ZN4Game9StealGoldEP4Tile",
         "target_address": "0x128f4",
         "size": 1204,
-        "category": "unrecovered"
+        "category": "T030:dr_steal_gold (incl. the std::set overload; Token::SetTargetTile via dr_token_set_target_tile)"
       },
       {
         "site": "0x3f182",
@@ -574,10 +574,6 @@
     {
       "symbol": "__ZN4Game14SerialiseStateEv",
       "size": 896
-    },
-    {
-      "symbol": "__ZN4Game9StealGoldEP4Tile",
-      "size": 1204
     }
   ],
   "recovered_segments": [

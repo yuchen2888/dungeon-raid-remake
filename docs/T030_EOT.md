@@ -298,3 +298,17 @@ verify_abilities 现为 11 个函数共 880 次比较；activate / 能力段 / �
 verify_abilities 共 17 个函数 1360 次比较（ThrowSkull 生成代币 70 个）；activate / 能力段 / 整函数测试通过。错误副本：不检查 attack_flag、行优先、代币数值改用攻击力，均 exit 1。
 
 仍未恢复：13 StealGold（含 set 重载、代币目标格 Token::SetTargetTile、金币条、宿敌 13 时扣生命）、28 DestroyUpgrade（物品向量、Item::ReduceStat、UpdateStats），以及 SerialiseState。
+
+## T030-N3c：StealGold（Claude，2026-10-19）
+
+| 类型 | 函数 | 地址 | 原生 | 行为要点 |
+| --- | --- | --- | --- | --- |
+| 13 | StealGold（含 set 重载 0xf300） | 0x128f4 | dr_steal_gold | 有未匹配金币（type 2）：标签 13（颜色 22），重载（次数 2）每次 RandI(0, n−1, 流 5) 选一枚：直接标为已匹配（不调用 MatchTile）、创建金币代币（奖励 2，代币类型 0，Token::SetTargetTile(本格)）、黄色中心闪光、移出集合。没有金币：玩家金币 > 0 时，界面目标 2 处黄色闪光，然后最多两次（每次先检查金币 > 0）：创建金币代币（源为 0 号格）→ SetTargetTile(本格) → 位置改为 Interface::GetTarget(2) → 再 SetTargetTile(本格) 重算距离 → 金币 −1；宿敌为 13 时再创建奖励 0 的代币，起点为 GetTarget(0)，玩家生命 −= 本格 GetAttack；最后标签 13、金币条（金币 ≠ 界面金币时）、血条（生命 ≠ 界面生命时）。任何情况下最后计时器复位 |
+
+- 动作模块新增 `dr_token_set_target_tile`（原版 Token::SetTargetTile 0x1b4d4：linked_tile=格子；有格子时 initial_distance = 到该格中心的距离，各步单独舍入）。
+- TurnHooks：push_token 改为返回槽位（value < 0 表示不设数值）；新增 `token_target(slot, tile)`、`token_start(slot, kind)`（位置 := Interface::GetTarget(kind)）。TurnEventKind 新增 GoldBar；FlareTarget 带目标种类（c）。
+- 测试框架：界面目标点由能力入口统一写入；闪光若紧接 Interface::GetTarget 则按界面目标记录；StealGold 的 set 重载登记在 HELPERS。用例中 60% 的 StealGold 局面去掉金币，并随机玩家金币与种族 3（宿敌 13）。
+
+verify_abilities 共 18 个函数 1440 次比较（StealGold：金币分支 29、偷玩家金币 41（其中宿敌 13 额外代币 28）、什么都不做 10）；activate / 能力段 / 整函数测试通过。错误副本：不标记金币已匹配、改位置后不重算距离、宿敌判断改 14、金币条件 `>=0`，均 exit 1。
+
+至此 EndOfTurn 能触发的能力只剩 28 DestroyUpgrade（需物品模型：物品向量 Game+0xbe9c、Item::ReduceStat / GetStatDowngrade / MakeStats、Game::UpdateStats），以及 SerialiseState（存档格式）。

@@ -151,7 +151,7 @@ extern "C" void dr_explode_enemy(ResourceState* r,PathState* p,std::uint32_t til
     for(int i=0;i<5;++i)m.matched_counts[i]=0;
     m.sound_13ec4=0;
     h->match_tile(h->context,static_cast<std::int32_t>(tile),7);
-    emit(h,TurnEventKind::FlareTarget,-1,1,static_cast<std::int32_t>(0xff0000ffu));   // RGBA 255,0,0,255
+    emit(h,TurnEventKind::FlareTarget,-1,1,static_cast<std::int32_t>(0xff0000ffu),0);   // RGBA 255,0,0,255
     const std::int32_t half=r->health/2;
     r->health=half>0?half:1;
     if(r->health!=r->ui_health) {r->ui_health=r->health;emit(h,TurnEventKind::HealthBar,-1,r->health);}
@@ -478,9 +478,51 @@ extern "C" void dr_throw_skull(PathState* p,std::uint32_t tile,const TurnHooks* 
     const int i=candidates[dr_random_int(&m.random,0,n-1,5)];
     h->match_tile(h->context,i,7);
     emit(h,TurnEventKind::Flare,i,1,static_cast<std::int32_t>(0xff00ffffu));   // RGBA 255,255,0,255
-    h->push_token(h->context,i,1,3,p->combat[i].health);
+    (void)h->push_token(h->context,i,1,3,p->combat[i].health);
     emit(h,TurnEventKind::Label,static_cast<int>(tile),31,0,39,0x3f800000);
     emit(h,TurnEventKind::Sound,-1,26);
+    reset_attack_timers(m);
+}
+extern "C" void dr_steal_gold(ResourceState* r,PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    auto& m=*p->match;auto& board=m.stroke->selection;
+    bool coin[36]={};int n=0;
+    for(int i=0;i<36;++i)if(board.tiles[i].rule.type==2 && !board.tiles[i].rule.matched) {coin[i]=true;++n;}
+    const std::int32_t self=static_cast<std::int32_t>(tile);
+    if(n) {
+        emit(h,TurnEventKind::Label,self,13,0,22,0x3f800000);
+        // Game::StealGold(Tile*, std::set<Tile*>&, int count) with count 2
+        for(int count=2;count>0 && n>0;--count) {
+            int pick=dr_random_int(&m.random,0,n-1,5);
+            for(int i=0;i<36;++i) {
+                if(!coin[i])continue;
+                if(pick) {--pick;continue;}
+                board.tiles[i].rule.matched=1;
+                const auto slot=h->push_token(h->context,i,2,0,-1);
+                h->token_target(h->context,slot,self);
+                emit(h,TurnEventKind::Flare,i,1,static_cast<std::int32_t>(0xff00ffffu));   // RGBA 255,255,0,255
+                coin[i]=false;--n;break;
+            }
+        }
+    } else if(r->gold>0) {
+        emit(h,TurnEventKind::FlareTarget,-1,1,static_cast<std::int32_t>(0xff00ffffu),2);
+        for(int k=0;k<2 && r->gold>0;++k) {
+            auto slot=h->push_token(h->context,0,2,0,-1);
+            h->token_target(h->context,slot,self);
+            h->token_start(h->context,slot,2);
+            h->token_target(h->context,slot,self);
+            r->gold=static_cast<std::int32_t>(static_cast<std::uint32_t>(r->gold)-1u);
+            if(dr_mortal_enemy(board.character.race)==13) {
+                slot=h->push_token(h->context,0,0,0,-1);
+                h->token_target(h->context,slot,self);
+                h->token_start(h->context,slot,0);
+                h->token_target(h->context,slot,self);
+                r->health=static_cast<std::int32_t>(static_cast<std::uint32_t>(r->health)-static_cast<std::uint32_t>(attack_of(p,tile)));
+            }
+        }
+        emit(h,TurnEventKind::Label,self,13,0,22,0x3f800000);
+        if(r->gold!=r->ui_gold) {r->ui_gold=r->gold;emit(h,TurnEventKind::GoldBar,-1,r->gold);}
+        if(r->health!=r->ui_health) {r->ui_health=r->health;emit(h,TurnEventKind::HealthBar,-1,r->health);}
+    }
     reset_attack_timers(m);
 }
 extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t* activated,std::uint32_t tile,
@@ -522,9 +564,7 @@ extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t
     case 25: dr_attract_shields_swords(p,tile,h);break;
     case 4: dr_heal_or_bless(g,tile,h);break;
     case 26: dr_throw_skull(p,tile,h);break;
-    case 13:
-        h->ability(h->context,type,index);   // not yet recovered
-        break;
+    case 13: dr_steal_gold(g->resources,p,tile,h);break;
     case 17:
         dr_mimic_defence(p,tile,h);
         break;

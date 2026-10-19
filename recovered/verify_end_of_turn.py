@@ -159,8 +159,8 @@ class Native(FinishNative):
         def ability(_,kind,tile):self.end_events.append(['ability',kind,tile])
         def swap(_,x1,y1,x2,y2):self.refill_lib.dr_swap_tiles(C.byref(self.refill),x1,y1,x2,y2,C.byref(self.refill_hooks))
         self.eot_cb=(EVENT(event),MATCH(match),CHECK(check),MOVE_FN(move),ABILITY(ability),SWAP_FN(swap))
-        self.push_cb=push_token_hook(self)
-        self.eot_hooks=TurnHooks(None,self.eot_cb[0],self.eot_cb[1],self.cb[1],self.eot_cb[2],self.eot_cb[3],self.eot_cb[4],self.eot_cb[5],self.push_cb)
+        self.token_cb=push_token_hook(self)
+        self.eot_hooks=TurnHooks(None,self.eot_cb[0],self.eot_cb[1],self.cb[1],self.eot_cb[2],self.eot_cb[3],self.eot_cb[4],self.eot_cb[5],*self.token_cb)
         types=list(self.over_fn.argtypes);types[3]=C.POINTER(SkillSlots);self.over_fn.argtypes=types
     def load(self,c):
         super().load(c)
