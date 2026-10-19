@@ -66,7 +66,7 @@ class Original(ShieldOriginal):
     def run(self):
         self.events=[];before=bytearray(self.u.mem_read(GAME,0x20000))
         for reg,value in [(UC_ARM_REG_R8,GAME),(UC_ARM_REG_SP,TILE+0xf00),(UC_ARM_REG_LR,STOP|1)]:self.u.reg_write(reg,value)
-        self.u.emu_start(START|1,STOP,timeout=1000000,count=100000)
+        self.u.emu_start(START|1,STOP,timeout=0,count=100000)
         assert self.u.reg_read(UC_ARM_REG_PC)==END
         for i in range(36):o=TILES+STRIDE*i+0xa4;before[o:o+4]=self.u.mem_read(GAME+o,4)
         assert bytes(before)==bytes(self.u.mem_read(GAME,0x20000)),'unexpected gameplay write'

@@ -79,7 +79,7 @@ class Original(IntegrationOriginal):
         from unicorn.arm_const import UC_ARM_REG_R8
         u.reg_write(UC_ARM_REG_R8,self.GAME);self.all_running=True
         try:
-            u.emu_start(self.entry|1,self.STOP,timeout=5000000,count=5000000)
+            u.emu_start(self.entry|1,self.STOP,timeout=0,count=5000000)
             assert (u.reg_read(self.PC)==self.stop_at or u.reg_read(self.PC) in self.extra_stops) and self.mode is None,hex(u.reg_read(self.PC))
         finally:self.all_running=False;self.path_active=self.refill_active=self.gen_active=self.enc_active=False
         return dict(path=self.path_status(),enc=self.enc_status(),all=self.all_events[:])

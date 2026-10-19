@@ -59,7 +59,7 @@ class Original(HealthOriginal):
     def health(self):
         self.events=[];self.in_health=True;before=bytearray(self.u.mem_read(GAME,0x20000))
         for reg,value in [(UC_ARM_REG_R8,GAME),(UC_ARM_REG_SP,0x1000f00),(UC_ARM_REG_LR,0x1200001)]:self.u.reg_write(reg,value)
-        try:self.u.emu_start(START|1,0x1200000,timeout=2000000,count=100000)
+        try:self.u.emu_start(START|1,0x1200000,timeout=0,count=100000)
         finally:self.in_health=False
         assert self.u.reg_read(UC_ARM_REG_PC)==END
         allowed=[PHASE,ENEMY9,HEALTH,UI_HEALTH,POISON]+[TILES+STRIDE*i+o for i in range(36) for o in (0xac,0xb0)]

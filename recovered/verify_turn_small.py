@@ -58,7 +58,7 @@ class Original(AllOriginal):
         self.turn_events=[];self.match_events=[];self.token_events=[];self.path_events=[];self.current=key
         u=self.u;u.reg_write(self.regs[0],self.GAME);u.reg_write(self.regs[1],self.tile(tile));u.reg_write(self.SP,0x140ff00);u.reg_write(self.LR,self.STOP|1)
         try:
-            u.emu_start(FUNCTIONS[key][0]|1,self.STOP,timeout=3000000,count=3000000);assert u.reg_read(self.PC)==self.STOP
+            u.emu_start(FUNCTIONS[key][0]|1,self.STOP,timeout=0,count=3000000);assert u.reg_read(self.PC)==self.STOP
         finally:self.current=None
         return dict(path=self.path_status(),enc=self.enc_status(),turn=self.turn_events[:])
 

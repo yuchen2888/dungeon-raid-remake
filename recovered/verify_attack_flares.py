@@ -74,7 +74,7 @@ class Original(ShieldOriginal):
         self.events=[];self.u.mem_write(GAME+DT,struct.pack('<f',dt));before=bytearray(self.u.mem_read(GAME,0x20000))
         start,self.stop_at=(FLARES,STOP) if key=='flares' else (START,END)
         for reg,value in [(UC_ARM_REG_R0,GAME),(UC_ARM_REG_SP,TILE+0xf00),(UC_ARM_REG_LR,STOP|1)]:self.u.reg_write(reg,value)
-        self.u.emu_start(start|1,STOP,timeout=2000000,count=100000)
+        self.u.emu_start(start|1,STOP,timeout=0,count=100000)
         assert self.u.reg_read(UC_ARM_REG_PC)==self.stop_at
         for e in self.events:
             if e[0]==3:assert all(self.u.mem_read(GAME+OVERLAY+v,1)[0]==e[3] for v in VERTEX_ALPHA)

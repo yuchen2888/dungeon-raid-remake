@@ -67,7 +67,7 @@ class Original(AbsorbOriginal):
     def health(self):
         self.events=[];self.in_health=True;before=bytearray(self.u.mem_read(GAME,0x20000))
         for reg,value in [(UC_ARM_REG_R8,GAME),(UC_ARM_REG_SP,0x1000f00),(UC_ARM_REG_LR,0x1200001)]:self.u.reg_write(reg,value)
-        try:self.u.emu_start(START|1,0x1200000,timeout=1000000,count=10000)
+        try:self.u.emu_start(START|1,0x1200000,timeout=0,count=10000)
         finally:self.in_health=False
         assert self.u.reg_read(UC_ARM_REG_PC)==END
         for offset in (PHASE,ENEMY9,HEALTH,UI_HEALTH,POISON):before[offset:offset+4]=self.u.mem_read(GAME+offset,4)

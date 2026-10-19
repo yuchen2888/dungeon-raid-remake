@@ -46,7 +46,7 @@ class Original(ShieldOriginal):
     def run(self,dt):
         self.events=[];self.u.mem_write(GAME+DT,struct.pack('<f',dt));before=bytearray(self.u.mem_read(GAME,0x20000))
         for reg,value in [(UC_ARM_REG_R8,GAME),(UC_ARM_REG_SP,TILE+0xf00),(UC_ARM_REG_LR,STOP|1)]:self.u.reg_write(reg,value)
-        self.u.emu_start(START|1,STOP,timeout=1000000,count=1000)
+        self.u.emu_start(START|1,STOP,timeout=0,count=1000)
         assert self.u.reg_read(UC_ARM_REG_PC)==EXIT
         for _,quad,value in self.events:
             assert all(self.u.mem_read(GAME+QUADS[quad]+v,1)[0]==value for v in VERTEX_ALPHA)

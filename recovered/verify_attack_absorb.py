@@ -63,7 +63,7 @@ class Original(ShieldOriginal):
         for reg,value in [(UC_ARM_REG_R8,GAME),(UC_ARM_REG_R4,GAME+DAMAGE),(UC_ARM_REG_R5,GAME+ARMOUR),
                           (UC_ARM_REG_R6,0x3f000000),(UC_ARM_REG_R10,0xdeadbeef),
                           (UC_ARM_REG_SP,sp),(UC_ARM_REG_LR,STOP|1)]:self.u.reg_write(reg,value)
-        self.u.emu_start(START|1,STOP,timeout=1000000,count=100000)
+        self.u.emu_start(START|1,STOP,timeout=0,count=100000)
         assert self.u.reg_read(UC_ARM_REG_PC)==stop and self.pending is None
         result=dict(absorbed=C.c_int32(self.u.reg_read(UC_ARM_REG_R10)).value,
                     **{k:self.read(o) for k,o in (('phase',PHASE),('damage',DAMAGE),('enemy9',ENEMY9),('armour',ARMOUR),('ui',UI))},
