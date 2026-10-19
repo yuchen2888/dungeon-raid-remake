@@ -506,7 +506,7 @@
         "target": "__ZN4Game10ThrowSkullEP4Tile",
         "target_address": "0xc774",
         "size": 620,
-        "category": "unrecovered"
+        "category": "T030:dr_throw_skull (token via dr_token_queue_push)"
       },
       {
         "site": "0x3f206",
@@ -570,10 +570,6 @@
     {
       "symbol": "__ZN4Game14DestroyUpgradeEP4Tile",
       "size": 308
-    },
-    {
-      "symbol": "__ZN4Game10ThrowSkullEP4Tile",
-      "size": 620
     },
     {
       "symbol": "__ZN4Game14SerialiseStateEv",

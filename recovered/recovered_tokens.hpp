@@ -28,4 +28,8 @@ bool dr_token_queue_request(const dungeonraid::TokenQueue*,std::uint32_t,dungeon
 // token motion/target semantics. This function does not grant resources.
 void dr_enqueue_token(dungeonraid::TokenQueue*,std::uint32_t tile,std::int32_t reward,
                       bool bonus,std::int32_t position_override,const dungeonraid::TokenHooks*);
+// Direct token creation without AddToken's reward bookkeeping or help (Game::ThrowSkull):
+// grows the queue as AddToken does (Allocate event when every slot is pending), stores the
+// request at slot `pending` (Initialise event incl. token_type), then pending++. Returns the slot.
+std::uint32_t dr_token_queue_push(dungeonraid::TokenQueue*,const dungeonraid::TokenRequest*,const dungeonraid::TokenHooks*);
 }

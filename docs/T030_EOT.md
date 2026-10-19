@@ -283,3 +283,18 @@ verify_abilities 现为 11 个函数共 880 次比较；activate / 能力段 / �
 测试框架：引入 HELPERS 表，把重载函数的地址范围归入所属能力（其内部调用按该能力记录）；中心闪光消歧增加"紧邻的标签所在格"。用例中一半的 HealOrBless 局面把所有敌人设为满血以覆盖祝福分支（治疗 72、祝福 88）。verify_abilities 共 16 个函数 1280 次比较；activate / 能力段 / 整函数测试通过。错误副本：治疗条件 `>=` 改 `>`、不排除自身、只处理一格，均 exit 1。
 
 仍未恢复：13 StealGold（含 set 重载，需代币目标格与金币条）、26 ThrowSkull（需代币数值 Token+0x98）、28 DestroyUpgrade（需物品模型），以及 SerialiseState。
+
+## T030-N3b：ThrowSkull 与代币直接入队（Claude，2026-10-19）
+
+| 类型 | 函数 | 地址 | 原生 | 行为要点 |
+| --- | --- | --- | --- | --- |
+| 26 | ThrowSkull | 0xc774 | dr_throw_skull | 候选＝未匹配、enemy_type 0、无 attack_flag 的敌人，按列优先放入 std::vector；为空则什么都不做。否则 RandI(0, n−1, 流 5) 选一格：MatchTile(7)、黄色中心闪光；直接创建代币（不经 AddToken）：InitialiseFromTile(该格, 奖励类型 1, 无位置覆盖, 代币类型 3)，Token+0x98 = 该格生命；标签 31（颜色 39）、音效 26、计时器复位 |
+
+- 代币模块新增 `dr_token_queue_push`：与 AddToken 相同的槽位增长（全部占用时 Allocate 事件），写入请求（Initialise 事件含代币类型），pending+1；不做奖励计数和帮助。
+- TurnHooks 末尾追加 `push_token(tile, reward, token_type, value)`：嵌入方接 dr_token_queue_push，并把新槽的 `TokenMotion.target_or_amount`（即 Token+0x98）设为 value。测试即如此接线，原有的代币动作状态比较覆盖了该数值。
+- 测试框架：模拟 std::vector<Tile*>（push_back/empty/size/析构）。
+- **测试框架修正**：Game::RandomiseTile（ConvertRandomTiles 使用）可能触发 JumpDown（遭遇、交换），原先只开生成钩子，JumpDown 在原版侧被跳过；现改为同时启用补位/生成/遭遇钩子。N2 已提交的测试碰巧没覆盖到该情况，加入 ThrowSkull 后用例序列变化才暴露。
+
+verify_abilities 共 17 个函数 1360 次比较（ThrowSkull 生成代币 70 个）；activate / 能力段 / 整函数测试通过。错误副本：不检查 attack_flag、行优先、代币数值改用攻击力，均 exit 1。
+
+仍未恢复：13 StealGold（含 set 重载、代币目标格 Token::SetTargetTile、金币条、宿敌 13 时扣生命）、28 DestroyUpgrade（物品向量、Item::ReduceStat、UpdateStats），以及 SerialiseState。

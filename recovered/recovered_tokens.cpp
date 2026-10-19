@@ -69,3 +69,15 @@ extern "C" void dr_enqueue_token(TokenQueue* q,std::uint32_t index,std::int32_t 
         c.bonus_total_165d4=integer((bonus_xp+bonus_shield)+bonus_gold);
     }
 }
+extern "C" std::uint32_t dr_token_queue_push(TokenQueue* q,const TokenRequest* r,const TokenHooks* h) {
+    auto& c=q->counters;
+    if(c.pending==c.allocated) {
+        emit(h,TokenEventKind::Allocate,-1,static_cast<int>(c.allocated));
+        q->requests.push_back(TokenRequest{-1,-1,-1,-1});++c.allocated;
+    }
+    const auto slot=c.pending;
+    q->requests[slot]=*r;
+    emit(h,TokenEventKind::Initialise,static_cast<int>(slot),r->source_tile,r->reward_type,r->position_override,r->token_type);
+    ++c.pending;
+    return slot;
+}

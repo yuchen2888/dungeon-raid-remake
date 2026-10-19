@@ -20,7 +20,7 @@ import struct
 from verify_turn_finish import Original as FinishOriginal, Native as FinishNative, TurnFinishFlags
 from verify_turn_begin import (Original as BeginOriginal, Native as BeginNative, SkillSlots, TurnFlags, FLAG_BYTES)
 from verify_activate_ability import ABILITIES, ABILITY, TurnHooks, EVENT, MATCH
-from verify_abilities import AbilityMixin, SWAP_FN, canonical, follow_swaps
+from verify_abilities import AbilityMixin, SWAP_FN, canonical, follow_swaps, push_token_hook
 from verify_turn_burn import FLAME, FLAME_END, FREEZE, FREEZE_END, QUAD_SYMBOLS, TILES, STRIDE, RESTING
 from verify_turn_regen import TARGET, INTERFACE, HEALTH_QUAD
 from verify_turn_small import FUNCTIONS as SMALL
@@ -159,7 +159,8 @@ class Native(FinishNative):
         def ability(_,kind,tile):self.end_events.append(['ability',kind,tile])
         def swap(_,x1,y1,x2,y2):self.refill_lib.dr_swap_tiles(C.byref(self.refill),x1,y1,x2,y2,C.byref(self.refill_hooks))
         self.eot_cb=(EVENT(event),MATCH(match),CHECK(check),MOVE_FN(move),ABILITY(ability),SWAP_FN(swap))
-        self.eot_hooks=TurnHooks(None,self.eot_cb[0],self.eot_cb[1],self.cb[1],self.eot_cb[2],self.eot_cb[3],self.eot_cb[4],self.eot_cb[5])
+        self.push_cb=push_token_hook(self)
+        self.eot_hooks=TurnHooks(None,self.eot_cb[0],self.eot_cb[1],self.cb[1],self.eot_cb[2],self.eot_cb[3],self.eot_cb[4],self.eot_cb[5],self.push_cb)
         types=list(self.over_fn.argtypes);types[3]=C.POINTER(SkillSlots);self.over_fn.argtypes=types
     def load(self,c):
         super().load(c)

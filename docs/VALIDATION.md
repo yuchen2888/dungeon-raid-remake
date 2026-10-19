@@ -268,3 +268,10 @@
 - verify_abilities：16 个函数共 1280 次比较（治疗 72、祝福 88）；activate / 能力段 / 整函数测试通过。
 - 错误副本（隔离开发副本）：治疗条件 `>=` 改 `>`、不排除自身、只处理一格，均 exit 1。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 4：3 个能力 + SerialiseState）。
+
+## 2026-10-19 T030-N3b：ThrowSkull 与代币直接入队（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、47 个 verify 脚本共 50 步通过。运行目录 `.relay/runs/20261019T225529.249948Z`（UTC），输入指纹 `1d7e5df4…48d64d42`，与当前源码一致（此前一次运行 20261019T224444.101086Z 也通过；提交前删去 verify_activate_ability.py 的一处行尾空格后重跑）。
+- verify_abilities：17 个函数共 1360 次比较（ThrowSkull 生成代币 70 个，数值经代币动作状态 amount 比较）；activate / 能力段 / 整函数测试通过。含测试框架修正：RandomiseTile 同时启用补位/生成/遭遇钩子（JumpDown）。
+- 错误副本（隔离开发副本）：不检查 attack_flag、行优先、代币数值改用攻击力，均 exit 1。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 3：StealGold、DestroyUpgrade、SerialiseState）。

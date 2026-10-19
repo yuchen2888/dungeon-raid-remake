@@ -466,6 +466,23 @@ extern "C" void dr_heal_or_bless(GenerationState* g,std::uint32_t tile,const Tur
     }
     reset_attack_timers(m);
 }
+extern "C" void dr_throw_skull(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    auto& m=*p->match;const auto& board=m.stroke->selection;
+    int candidates[36];int n=0;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+        if(rule.matched || rule.type!=1 || rule.enemy_type!=0 || p->combat[i].attack_flag)continue;
+        candidates[n++]=i;
+    }
+    if(!n)return;
+    const int i=candidates[dr_random_int(&m.random,0,n-1,5)];
+    h->match_tile(h->context,i,7);
+    emit(h,TurnEventKind::Flare,i,1,static_cast<std::int32_t>(0xff00ffffu));   // RGBA 255,255,0,255
+    h->push_token(h->context,i,1,3,p->combat[i].health);
+    emit(h,TurnEventKind::Label,static_cast<int>(tile),31,0,39,0x3f800000);
+    emit(h,TurnEventKind::Sound,-1,26);
+    reset_attack_timers(m);
+}
 extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t* activated,std::uint32_t tile,
     const TurnHooks* h,const GenerationHooks* gh) {
     if(activated[tile])return;
@@ -504,7 +521,8 @@ extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t
     case 24: dr_attract_skulls(p,tile,h);break;
     case 25: dr_attract_shields_swords(p,tile,h);break;
     case 4: dr_heal_or_bless(g,tile,h);break;
-    case 13: case 26:
+    case 26: dr_throw_skull(p,tile,h);break;
+    case 13:
         h->ability(h->context,type,index);   // not yet recovered
         break;
     case 17:

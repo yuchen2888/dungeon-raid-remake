@@ -30,12 +30,14 @@ struct TurnHooks {
     bool (*check_end_game)(void*);
     // Game::MoveMatchedTiles: wire to dr_move_matched_tiles.
     void (*move_matched_tiles)(void*);
-    // An enemy ability not yet recovered (Game::HealOrBless, MakeAcidPotion, FreezeTiles,
-    // StealGold, JumpEnemy, ConvertRandomTiles, BreakRandomShieldSword, AttractSkulls,
-    // AttractShieldsSwords, ThrowSkull, DestroyUpgrade), keyed by enemy_type.
+    // An enemy ability not yet recovered (Game::StealGold, Game::DestroyUpgrade), keyed by enemy_type.
     void (*ability)(void*,std::int32_t enemy_type,std::int32_t tile);
     // Game::SwapTiles(x1,y1,x2,y2): wire to dr_swap_tiles.
     void (*swap_tiles)(void*,std::int32_t x1,std::int32_t y1,std::int32_t x2,std::int32_t y2);
+    // Direct token (Token::InitialiseFromTile without AddToken): wire to dr_token_queue_push
+    // (position_override -1), then set the new slot's TokenMotion.target_or_amount (Token+0x98)
+    // to value once the token is initialised.
+    void (*push_token)(void*,std::int32_t tile,std::int32_t reward,std::int32_t token_type,std::int32_t value);
 };
 }
 namespace dungeonraid {
@@ -219,6 +221,11 @@ void dr_attract_shields_swords(dungeonraid::PathState*,std::uint32_t tile,const 
 // 0,0,1; label 12, colour 21), bless adds 1 attack (UpdateText 1,0,0; label 11, colour 20);
 // flare RGBA 100,100,255,255 at its centre; removed. Timers reset only with a candidate.
 void dr_heal_or_bless(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::ThrowSkull 0xc774: candidates are unmatched plain enemies (enemy_type 0) without the
+// attack flag, collected column-major in a vector; none: nothing happens. Otherwise RandI(0,
+// n-1, stream 5) picks one: MatchTile(7), yellow centre flare, a token of type 3 (reward 1)
+// from that tile carrying its health (Token+0x98); label 31 (colour 39), sound 26, timers reset.
+void dr_throw_skull(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
 // Original Tile::ActivateAbility 0x3f09c. Once per turn per tile (activated[] is
 // Tile+0x254, cleared by EndOfTurn). Dispatches on enemy_type: countdown abilities
 // (3 RunAwayEnemy, 10 ExplodeEnemy, 19 TeleportEnemy: enemy_state-1, Countdown event,
