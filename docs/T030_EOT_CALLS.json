@@ -12,7 +12,7 @@
       "target": "__ZN4Game12CheckEndGameEv",
       "target_address": "0x10b18",
       "size": 780,
-      "category": "unrecovered"
+      "category": "T030:dr_check_end_game+dr_game_over"
     },
     {
       "site": "0x135a0",
@@ -220,7 +220,7 @@
       "target": "__ZN4Game12CheckEndGameEv",
       "target_address": "0x10b18",
       "size": 780,
-      "category": "unrecovered"
+      "category": "T030:dr_check_end_game+dr_game_over"
     },
     {
       "site": "0x13a52",
@@ -292,7 +292,7 @@
       "target": "__ZN4Game12CheckEndGameEv",
       "target_address": "0x10b18",
       "size": 780,
-      "category": "unrecovered"
+      "category": "T030:dr_check_end_game+dr_game_over"
     },
     {
       "site": "0x13b6a",
@@ -324,7 +324,7 @@
       "target": "__ZN4Game12CheckEndGameEv",
       "target_address": "0x10b18",
       "size": 780,
-      "category": "unrecovered"
+      "category": "T030:dr_check_end_game+dr_game_over"
     },
     {
       "site": "0x13cd4",
@@ -640,10 +640,6 @@
       "size": 684
     },
     {
-      "symbol": "__ZN4Game12CheckEndGameEv",
-      "size": 780
-    },
-    {
       "symbol": "__ZN4Game14SerialiseStateEv",
       "size": 896
     },
@@ -688,9 +684,9 @@
       "extra": [],
       "native_function": "dr_check_end_game",
       "verify": "recovered/verify_check_end_game.py",
-      "status": "Game::CheckEndGame decision/revive part only",
+      "status": "decision/revive part; with T030-F dr_game_over (verify_game_over.py) the whole function",
       "callbacks": [
-        "end-of-game bookkeeping from 0x10c04 (game_over callback, not recovered)"
+        "game_over(win) -> dr_game_over [0x10c04,0x10dd6)"
       ],
       "original_bytes_sha256": "a698234cc65e320b47dfee436c88dbfca0f18b012a695728a48ffda3b0002358"
     }

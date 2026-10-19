@@ -21,7 +21,9 @@ T020={'__ZN4Game15ProcessVampiresEv':'dr_process_vampires','__ZN4Tile9AddHealthE
       '__ZN4Game13ProcessAttackEv':'dr_process_attack'}
 # Whole functions recovered during T030.
 T030={'__ZN4Game12MimicDefenceEP4Tile':'dr_mimic_defence','__ZN4Game9ResurrectEP4Tile':'dr_resurrect',
-      '__ZN4Game15ProcessCripplesEv':'dr_process_cripples','__ZN4Tile18SetFlameVisibilityEbib':'dr_set_flame_visibility'}
+      '__ZN4Game15ProcessCripplesEv':'dr_process_cripples','__ZN4Tile18SetFlameVisibilityEbib':'dr_set_flame_visibility',
+      '__ZN4Game12CheckEndGameEv':'dr_check_end_game+dr_game_over','__ZN4Game8GetScoreEv':'dr_get_score',
+      '__ZN4Game12GetTotalGoldEv':'dr_total_gold','__ZN4Game10GetTotalUPEv':'dr_total_up'}
 PRESENTATION=('Quad','SimpleLabel','Interface','HelpMenu','Arrow','ScoreScreen','GameOverScreen')
 PRESENTATION_GAME={'__ZN4Game10QueueSoundE5Sound','__ZN4Game16QueueAchievementE11Achievementf',
     '__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif','__ZN4Game12AddParticlesEP4Tile12ParticleType',
@@ -78,8 +80,8 @@ def build():
                     verify='recovered/verify_turn_regen.py',callbacks=['Game::CheckEndGame (not recovered; ordered callback)'],
                     original_bytes_sha256=hashlib.sha256(read(0x13910,0x13a1c-0x13910)).hexdigest()),
                     dict(start='0x10b18',end_exclusive='0x10c04',extra=[],native_function='dr_check_end_game',
-                    verify='recovered/verify_check_end_game.py',status='Game::CheckEndGame decision/revive part only',
-                    callbacks=['end-of-game bookkeeping from 0x10c04 (game_over callback, not recovered)'],
+                    verify='recovered/verify_check_end_game.py',status='decision/revive part; with T030-F dr_game_over (verify_game_over.py) the whole function',
+                    callbacks=['game_over(win) -> dr_game_over [0x10c04,0x10dd6)'],
                     original_bytes_sha256=hashlib.sha256(read(0x10b18,0x10c04-0x10b18)).hexdigest())],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph','ActivateAbility expanded one level only',
                         'presentation-boundary is a naming heuristic (Quad/SimpleLabel/Interface/HelpMenu/Arrow/score screens and known Game presentation calls)'])

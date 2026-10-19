@@ -30,13 +30,30 @@ struct EndGameState {
     std::uint8_t game_over_screen; // Game+0xcac4 (GameOverScreen at +0xcac0 is showing)
     std::uint8_t victory;          // Game+0x16611 (record-mode win)
     std::uint8_t revive_second;    // Game+0x164a5 (cleared with ResourceState.guard_164a4)
+    // Written when the game ends (meaning not yet confirmed).
+    std::int32_t flag_146d0;       // Game+0x146d0 = 0
+    std::uint8_t flag_146d4;       // Game+0x146d4 = 1
+    std::uint8_t flag_15546;       // Game+0x15546 = 1
 };
+// Skill objects (pointers at Game+0xbf90): +0x84 id, +0x88 level.
+struct SkillSlots { std::int32_t id[4], level[4]; };
+// ScoreScreen::AddScore: variant 0 = (name, turn, xp, gold, up, score, Difficulty),
+// variant 1 = (name, turn, a, b, c, score, GameMode); name is Game+0xbe38.
+struct ScoreEntry { std::int32_t variant, turn, a, b, c, score, mode; };
 // game_over is the end-of-game bookkeeping [0x10c04,...) (scores, class stats,
 // screens), still a boundary: called with win=true for a record-mode victory.
 struct EndGameHooks {
     void* context;
     void (*event)(void*,const TurnEvent*);
     void (*game_over)(void*,bool win);
+};
+// SetSkills: ScoreScreen::SetSkills(a,b,c,d). SerialiseClasses: Game::SerialiseClasses
+// (class roster persistence, boundary). GameOverScreen: Initialise(a=win).
+enum class EndGameEventKind : std::int32_t { SetSkills=100, SerialiseClasses, GameOverScreen };
+struct GameOverHooks {
+    void* context;
+    void (*event)(void*,const TurnEvent*);   // Achievement and EndGameEventKind values
+    void (*add_score)(void*,const ScoreEntry*);
 };
 }
 extern "C" {
@@ -70,4 +87,21 @@ bool dr_end_turn_regen_poison(dungeonraid::ResourceState*,std::int32_t regen,con
 // the board, then either the one-time revive (guard_164a4: full health, sound 19,
 // label 28, achievement 61, false) or game_over(false).
 bool dr_check_end_game(dungeonraid::ResourceState*,dungeonraid::EndGameState*,const dungeonraid::EndGameHooks*);
+// Original Game::GetTotalGold 0x18a2c / GetTotalUP 0x18a5c: current + total,
+// divided by 4 (toward zero) in record mode 0. (GetTotalXP 0x189fc is the same
+// formula, recovered earlier as dr_generation_total_xp; dr_total_xp is its
+// ResourceState form.)
+std::int32_t dr_total_gold(const dungeonraid::ResourceState*);
+std::int32_t dr_total_up(const dungeonraid::ResourceState*);
+std::int32_t dr_total_xp(const dungeonraid::ResourceState*);
+// Original Game::GetScore 0x8c18. record mode 1: PathState.total; record mode 0:
+// gold+xp+up, doubled on victory (Game+0x16611); otherwise gold+xp+up+turn+
+// 100*level of every active skill slot.
+std::int32_t dr_get_score(const dungeonraid::ResourceState*,const dungeonraid::PathState*,
+    const dungeonraid::SkillSlots*,bool victory);
+// CheckEndGame end-of-game bookkeeping [0x10c04,0x10dd6): class games/kills,
+// score entry and per-difficulty best score (unsigned), skills, class
+// persistence, game-over screen, end flags, achievement 67.
+void dr_game_over(dungeonraid::ResourceState*,dungeonraid::PathState*,dungeonraid::ClassProfile*,
+    const dungeonraid::SkillSlots*,dungeonraid::EndGameState*,bool win,const dungeonraid::GameOverHooks*);
 }

@@ -28,6 +28,7 @@
 | T030-C | 完成 / Claude，待复核 | 完整原函数 SetFlameVisibility 0x3d89c + EndOfTurn 冰冻/燃烧结算循环 [0x13710,0x13910)＋循环头；400 次比较、108 次烧死 | dr_set_flame_visibility、dr_end_turn_burn_freeze、verify_turn_burn.py；三个错误副本被拒 |
 | T030-D | 完成 / Claude，待复核 | EndOfTurn 生命回复与毒伤玩家段 [0x13910,0x13a1c)；CheckEndGame 暂为有序回调（未恢复）；900 次比较 | dr_end_turn_regen_poison、verify_turn_regen.py；三个错误副本被拒 |
 | T030-E | 完成 / Claude，待复核 | CheckEndGame 判断与免死段 [0x10b18,0x10c04)；结束结算暂为 game_over 回调；588 次比较 | dr_check_end_game、verify_check_end_game.py；三个错误副本被拒 |
+| T030-F | 完成 / Claude，待复核 | CheckEndGame 结束结算段 + 整函数 GetScore/GetTotalGold/GetTotalUP；CheckEndGame 成为完整恢复；600 次比较 | dr_game_over 等、verify_game_over.py；三个错误副本被拒 |
 | T040 | 待 T030 | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序 |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -72,5 +73,7 @@
 认领记录：`T030-D / claude / 起始 1825640（与 T030-C 同轮）/ 继承差异：无 / 目标：回复与毒伤段 + 测试去墙钟超时 / 文件：recovered/recovered_turn.*、recovered/verify_turn_regen.py、recovered/verify_attack_*.py、verify_turn_*.py（timeout=0）、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：CheckEndGame`
 
 认领记录：`T030-E / claude / 起始 f576964 / 继承差异：无 / 目标：CheckEndGame 判断段 / 文件：recovered/recovered_turn.*、recovered/build.sh、recovered/verify_check_end_game.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：GetScore/GetTotalGold/GetTotalUP 与结束结算段`
+
+认领记录：`T030-F / claude / 起始 7b9c85a / 继承差异：无 / 目标：结束结算与计分函数 / 文件：recovered/recovered_turn.*、recovered/verify_game_over.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：EndOfTurn 开头段与循环 B`
 
 认领记录模板：`Txxx / 工具 / 起始 HEAD / 继承差异 / 目标 / 文件 / 验收命令 / 结果路径 / 下一步`。详细活动现场存于 `.relay/active/owner.json`，持久事实随原子提交更新这里和 PROJECT_STATE.md。

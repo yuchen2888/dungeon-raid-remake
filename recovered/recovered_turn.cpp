@@ -134,3 +134,58 @@ extern "C" bool dr_check_end_game(ResourceState* r,EndGameState* e,const EndGame
     }
     h->game_over(h->context,false);return true;
 }
+namespace {
+std::int32_t record_quarter(const ResourceState* r,std::int32_t total) {
+    const auto& stroke=*r->match->stroke;
+    return stroke.record_14aed && stroke.mode_14ae8==0?total/4:total;
+}
+std::int32_t sum(std::int32_t a,std::int32_t b) {
+    return static_cast<std::int32_t>(static_cast<std::uint32_t>(a)+static_cast<std::uint32_t>(b));
+}
+}
+extern "C" std::int32_t dr_total_gold(const ResourceState* r) {return record_quarter(r,sum(r->gold,r->total_gold));}
+extern "C" std::int32_t dr_total_up(const ResourceState* r) {return record_quarter(r,sum(r->up,r->total_up));}
+extern "C" std::int32_t dr_total_xp(const ResourceState* r) {return record_quarter(r,sum(r->xp,r->total_xp));}
+extern "C" std::int32_t dr_get_score(const ResourceState* r,const PathState* p,const SkillSlots* skills,bool victory) {
+    const auto& stroke=*r->match->stroke;
+    if(stroke.record_14aed) {
+        if(stroke.mode_14ae8==1)return p->total;
+        if(stroke.mode_14ae8==0) {
+            const auto total=sum(sum(dr_total_gold(r),dr_total_xp(r)),dr_total_up(r));
+            return victory?static_cast<std::int32_t>(static_cast<std::uint32_t>(total)<<1):total;
+        }
+    }
+    auto total=sum(sum(sum(dr_total_gold(r),dr_total_xp(r)),dr_total_up(r)),p->turn);
+    for(int i=0;i<r->skill_count;++i)total=sum(total,static_cast<std::int32_t>(static_cast<std::uint32_t>(skills->level[i])*100u));
+    return total;
+}
+extern "C" void dr_game_over(ResourceState* r,PathState* p,ClassProfile* cls,const SkillSlots* skills,EndGameState* e,bool win,const GameOverHooks* h) {
+    auto emit=[h](std::int32_t kind,int a=0,int b=0,int c=0,int d=0) {
+        if(h && h->event) { const TurnEvent ev{static_cast<TurnEventKind>(kind),-1,a,b,c,d};h->event(h->context,&ev); }
+    };
+    cls->games_played+=1;
+    cls->enemies_killed+=static_cast<std::uint32_t>(p->battle.kill_count_165b4);
+    const auto& stroke=*r->match->stroke;const bool victory=e->victory;
+    if(!stroke.record_14aed) {
+        const ScoreEntry entry{0,p->turn,dr_total_xp(r),dr_total_gold(r),dr_total_up(r),dr_get_score(r,p,skills,victory),r->match->spawn_enabled_14ae0};
+        h->add_score(h->context,&entry);
+        std::uint32_t* best=entry.mode==1?&cls->normal_score:entry.mode==2?&cls->hard_score:entry.mode==3?&cls->harder_score:nullptr;
+        if(best) {
+            const auto score=static_cast<std::uint32_t>(dr_get_score(r,p,skills,victory));
+            if(score>*best)*best=score;
+        }
+    } else if(stroke.mode_14ae8==1) {
+        const ScoreEntry entry{1,p->turn,p->crossing_average,p->crossing_best,p->crossing_samples,dr_get_score(r,p,skills,victory),1};
+        h->add_score(h->context,&entry);
+    } else if(stroke.mode_14ae8==0) {
+        const ScoreEntry entry{1,p->turn,dr_total_xp(r),dr_total_gold(r),dr_total_up(r),dr_get_score(r,p,skills,victory),0};
+        h->add_score(h->context,&entry);
+    }
+    std::int32_t ids[4]={-1,-1,-1,-1};
+    for(int i=0;i<4 && i<r->skill_count;++i)ids[i]=skills->id[i];
+    emit(static_cast<std::int32_t>(EndGameEventKind::SetSkills),ids[0],ids[1],ids[2],ids[3]);
+    emit(static_cast<std::int32_t>(EndGameEventKind::SerialiseClasses));
+    emit(static_cast<std::int32_t>(EndGameEventKind::GameOverScreen),win);
+    e->flag_146d0=0;e->flag_146d4=1;e->flag_15546=1;
+    emit(static_cast<std::int32_t>(TurnEventKind::Achievement),67,0x42c80000);
+}

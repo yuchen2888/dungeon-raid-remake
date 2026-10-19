@@ -108,3 +108,21 @@ TurnHooks 末尾追加 `check_end_game` 回调。**CheckEndGame 尚未恢复**�
 - 288 组边界（界面标志 × 胜利标志 × record × mode × 生命 −5/0/1 × 免死 × 种族 0/3/7 × 宿敌有无）+ 300 组随机，共 588 次比较。
 - 结果分布：继续 266、已结束 175、负 111、胜 36；免死路径已覆盖。
 - 错误副本：胜利条件改 mode==1、`>0` 改 `>=0`、免死不清 0x164a5，均 exit 1。
+
+## T030-F：CheckEndGame 结束结算与计分函数（Claude，2026-10-19）
+
+起始提交 7b9c85a。turn 模块新增：
+
+| 原函数 / 段 | 原生函数 | 行为 |
+| --- | --- | --- |
+| Game::GetTotalGold 0x18a2c、GetTotalUP 0x18a5c（整函数） | dr_total_gold / dr_total_up | 当前值 + 累计值；record 模式且 mode 0 时除以 4（向零截断） |
+| Game::GetTotalXP 0x189fc | dr_total_xp | 与 T010 的 dr_generation_total_xp 是同一原函数，这里提供 ResourceState 形式（同一公式，两处实现） |
+| Game::GetScore 0x8c18（整函数） | dr_get_score | record mode 1：PathState.total；record mode 0：金币+XP+UP，胜利（Game+0x16611）时翻倍；其他：金币+XP+UP+回合数+Σ 技能等级（技能对象 +0x88）×100 |
+| CheckEndGame 结算段 [0x10c04,0x10dd6) | dr_game_over | 职业档案 games_played+1、enemies_killed += 本局击杀；非 record：计分表条目（回合、XP、金币、UP、分数、难度），难度 1/2/3 时以无符号比较更新 normal/hard/harder 最高分；record mode 1：计分表条目用 crossing 平均/最佳/样本数；record mode 0：用 XP/金币/UP；其他 mode 不记；SetSkills（技能对象 +0x84，不足 4 个补 −1）；SerialiseClasses；GameOverScreen(win)；Game+0x146d0=0、+0x146d4=1、+0x15546=1；成就 67 |
+
+**CheckEndGame 至此作为完整函数恢复**：`dr_check_end_game` 的 game_over 回调接 `dr_game_over`。EndGameState 末尾追加三个结束标志，新增 SkillSlots（技能对象 +0x84 编号、+0x88 等级）和 ScoreEntry。计分表（ScoreScreen::AddScore）、SetSkills、职业档案序列化（SerialiseClasses，存档边界）与结束界面以事件输出。
+
+验证 `recovered/verify_game_over.py`：原版 CheckEndGame 从入口完整执行到返回，其中 GetTotalXP/Gold/UP、GetScore、GetMortalEnemyType、GetEnemyCount 为原函数；原生侧 dr_check_end_game → dr_game_over。
+- 300 组边界（record × mode 0/1/2 × 胜利 × 难度 0..4 × 技能数 0..4）+ 300 组随机，共 600 次比较。路径：按难度记分 260、按模式记分 186、record mode 2 不记分 86、未结束 68。
+- 测试域说明：技能数只取 0..4。原版只有 4 个技能槽，技能数为 5 会读到越界的野指针，测试第一次就因此报出未映射内存读取。
+- 错误副本：最高分改有符号比较、胜利不翻倍、技能等级系数改 10，均 exit 1。

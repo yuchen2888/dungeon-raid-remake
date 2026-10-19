@@ -206,3 +206,10 @@
 - 新 verify_check_end_game：588 次比较（结果：继续 266、已结束 175、负 111、胜 36）；判断段字节 SHA-256 `a698234c…b0002358`。
 - 错误副本（隔离开发副本）：mode==1、`>=0`、不清 0x164a5，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；T030 登记 --check matches true。
+
+## 2026-10-19 T030-F：CheckEndGame 结束结算与计分函数（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、40 个 verify 脚本共 43 步通过。运行目录 `.relay/runs/20261019T173621.851181Z`（UTC），输入指纹 `fbbf488b…379c6e`，与提交时源码一致。
+- 新 verify_game_over：600 次比较（按难度记分 260、按模式 186、不记分 86、未结束 68）；CheckEndGame 整函数字节 SHA-256 `b5d44ded…52cec490`，GetScore `f4f76f0c…0d65a9ae`。
+- 错误副本（隔离开发副本）：有符号最高分比较、胜利不翻倍、等级系数 10，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；T030 登记 --check matches true（未恢复数 22）。
