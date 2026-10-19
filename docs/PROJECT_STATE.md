@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-M）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-N1）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
@@ -38,6 +38,7 @@
 - T030-G 修正：开头段把 Game+0xbe74..77、0x16491 写回其所属状态（SelectionState、预览、RuneState），由整函数差分发现。
 - T030-J/K/L：Tile::ActivateAbility 分派、EndOfTurn 能力段恢复；Game::EndOfTurn 整函数组合 dr_end_of_turn 与原版整函数差分通过（未恢复的能力函数与 SerialiseState 为边界）。
 - T030-M：第一批 8 个敌人能力恢复并接入（RunAway/Explode/Teleport/LowerSkulls/FleeUp/IgniteTiles/StabAttack/ConvertSwordToSkull），在整函数差分中以原代码执行。
+- T030-N1：MakeAcidPotion、FreezeTiles、BreakRandomShieldSword 恢复并接入（测试中模拟 std::set<Tile*>）。
 
 ## 验证
 
@@ -91,4 +92,4 @@
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界为 11 个能力函数（经 TurnHooks.ability）和 SerialiseState。下一步 T030-N：恢复剩余 11 个能力（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..M。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界为 8 个能力函数（经 TurnHooks.ability）和 SerialiseState。下一步 T030-N2：恢复剩余 8 个能力（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N1。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

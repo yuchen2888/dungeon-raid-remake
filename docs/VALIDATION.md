@@ -247,3 +247,10 @@
 - 新 verify_abilities：8 个函数各 80 组，共 640 次比较；verify_activate_ability 995、verify_turn_abilities 200、verify_end_of_turn 230（这 8 个能力在其中以原代码执行）。
 - 错误副本（隔离开发副本）：ExplodeEnemy 不设下限 1、LowerSkulls 不排除自身、ConvertSwordToSkull 行优先、StabAttack 忽略宿敌分支、FleeUp 顶行判断（原生越界崩溃 exit 139）、LowerSkulls 不接线，均被拒。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 12：11 个能力 + SerialiseState）。
+
+## 2026-10-19 T030-N1：MakeAcidPotion、FreezeTiles、BreakRandomShieldSword（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、47 个 verify 脚本共 50 步通过。运行目录 `.relay/runs/20261019T190406.888724Z`（UTC），输入指纹 `0f8babdb…8ef01341`，与当前源码一致。
+- verify_abilities：11 个函数共 880 次比较；activate / 能力段 / 整函数测试均通过（这 3 个能力以原代码执行）。
+- 错误副本（隔离开发副本）：冰冻候选不排除已冰冻、普通药水漏 0x234、破损候选含魔剑、破损候选不排除已破损、FreezeTiles 不接线，均被拒。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 9：8 个能力 + SerialiseState）。

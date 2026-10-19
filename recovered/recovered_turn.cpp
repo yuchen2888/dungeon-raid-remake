@@ -1,4 +1,5 @@
 #include "recovered_turn.hpp"
+#include <cstring>
 using namespace dungeonraid;
 namespace {
 void emit(const TurnHooks* h,TurnEventKind kind,int tile,int a=0,int b=0,int c=0,int d=0) {
@@ -257,6 +258,82 @@ extern "C" void dr_convert_sword_to_skull(GenerationState* g,std::uint32_t tile,
     }
     reset_attack_timers(m);
 }
+namespace {
+bool normal_potion(const PotionFlags& f) {return !f.flag_234 && !f.flag_232 && !f.flag_233;}
+std::int32_t float_bits(float f) {std::int32_t i;std::memcpy(&i,&f,4);return i;}
+}
+extern "C" void dr_make_acid_potion(GenerationState* g,std::uint32_t tile,const TurnHooks* h,const GenerationHooks* gh) {
+    PathState* p=g->refill->path;auto& m=*p->match;const auto& board=m.stroke->selection;
+    auto normal=[&](int i) {return board.tiles[i].rule.type==0 && normal_potion(m.preview->potions[i]);};
+    auto potions=[&] {int n=0;for(int i=0;i<36;++i)if(normal(i))++n;return n;};
+    int pick=dr_random_int(&m.random,0,potions()-1,5);
+    if(potions()>0) {
+        emit(h,TurnEventKind::Label,static_cast<int>(tile),14,0,23,0x3f800000);
+        emit(h,TurnEventKind::Sound,-1,24);
+    }
+    for(int x=0;x<6 && pick>=0;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;
+        if(!normal(i))continue;
+        if(pick) {--pick;continue;}
+        // Tile::MakeAcidPotion 0x3d7b8
+        constexpr float cell=.0517578125f;
+        const float u=static_cast<float>(g->tiles[i].variant)*cell;
+        const float v=static_cast<float>(board.tiles[i].rule.type)*cell+.552734375f;
+        if(gh && gh->event) {
+            const GenerationEvent e{GenerationEventKind::UV,i,float_bits(u),float_bits(v),float_bits(cell),float_bits(cell)};
+            gh->event(gh->context,&e);
+        }
+        m.preview->potions[i].flag_233=1;
+        emit(h,TurnEventKind::FlareRest,i,1,static_cast<std::int32_t>(0xff00ff00u));   // RGBA 0,255,0,255
+        pick=-1;break;
+    }
+    reset_attack_timers(m);
+}
+extern "C" void dr_freeze_tiles(PathState* p,std::uint32_t tile,const TurnHooks* h) {
+    auto& m=*p->match;const auto& board=m.stroke->selection;
+    bool candidate[36]={};
+    for(int i=0;i<36;++i) {
+        const auto& rule=board.tiles[i].rule;
+        candidate[i]=!rule.matched && !(rule.type==1 && rule.enemy_type!=0) && !rule.flag_255;
+    }
+    for(int round=0;round<2;++round) {
+        int n=0;for(bool b:candidate)n+=b;
+        if(!n)break;
+        int pick=dr_random_int(&m.random,0,n-1,5);
+        for(int i=0;i<36;++i) {
+            if(!candidate[i])continue;
+            if(pick) {--pick;continue;}
+            set_freeze(p,i,true,h);
+            emit(h,TurnEventKind::Flare,i,1,static_cast<std::int32_t>(0xffffe664u));   // RGBA 100,230,255,255
+            candidate[i]=false;break;
+        }
+    }
+    emit(h,TurnEventKind::Label,static_cast<int>(tile),17,0,25,0x3f800000);
+    emit(h,TurnEventKind::Sound,-1,20);
+    reset_attack_timers(m);
+}
+extern "C" void dr_break_random_shield_sword(GenerationState* g,std::uint32_t tile,const TurnHooks* h,const GenerationHooks* gh) {
+    PathState* p=g->refill->path;auto& m=*p->match;const auto& board=m.stroke->selection;
+    bool candidate[36]={};int n=0;
+    for(int i=0;i<36;++i) {
+        const auto& t=board.tiles[i];
+        if(t.rule.matched || t.broken)continue;
+        candidate[i]=(t.rule.type==4 && !t.rule.flag_231) || t.rule.type==3;
+        n+=candidate[i];
+    }
+    if(!n)return;
+    int pick=dr_random_int(&m.random,0,n-1,5);
+    for(int i=0;i<36;++i) {
+        if(!candidate[i])continue;
+        if(pick) {--pick;continue;}
+        dr_make_broken(g,static_cast<std::uint32_t>(i),gh);
+        emit(h,TurnEventKind::Flare,i,1,-1);   // white
+        break;
+    }
+    emit(h,TurnEventKind::Label,static_cast<int>(tile),22,0,30,0x3f800000);
+    emit(h,TurnEventKind::Sound,-1,16);
+    reset_attack_timers(m);
+}
 extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t* activated,std::uint32_t tile,
     const TurnHooks* h,const GenerationHooks* gh) {
     if(activated[tile])return;
@@ -287,7 +364,10 @@ extern "C" void dr_activate_ability(PathState* p,GenerationState* g,std::uint8_t
     case 16: dr_stab_attack(g->resources,p,tile,h);break;
     case 23: dr_lower_skulls(p,tile,h);break;
     case 31: dr_flee_up(p,tile,h);break;
-    case 4: case 6: case 8: case 13: case 14: case 18: case 22: case 24: case 25: case 26:
+    case 6: dr_make_acid_potion(g,tile,h,gh);break;
+    case 8: dr_freeze_tiles(p,tile,h);break;
+    case 22: dr_break_random_shield_sword(g,tile,h,gh);break;
+    case 4: case 13: case 14: case 18: case 24: case 25: case 26:
         h->ability(h->context,type,index);   // not yet recovered
         break;
     case 17:

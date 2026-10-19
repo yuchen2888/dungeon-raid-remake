@@ -247,3 +247,16 @@ TurnHooks 末尾追加 `swap_tiles`（接 dr_swap_tiles）；TurnEventKind 追�
 测试细节：闪光传的是坐标值，在落定的棋盘上格子中心与静止位置相同，因此按函数固定取点方式记录；标签传的是指针，可直接区分。
 
 仍未恢复的能力（经 TurnHooks.ability）：4 HealOrBless、6 MakeAcidPotion、8 FreezeTiles、13 StealGold、14 JumpEnemy、18 ConvertRandomTiles、22 BreakRandomShieldSword、24 AttractSkulls、25 AttractShieldsSwords、26 ThrowSkull、28 DestroyUpgrade（物品向量、Item::ReduceStat、UpdateStats）。
+
+## T030-N1：MakeAcidPotion、FreezeTiles、BreakRandomShieldSword（Claude，2026-10-19）
+
+| 类型 | 函数 | 地址 | 原生 | 行为要点 |
+| --- | --- | --- | --- | --- |
+| 6 | MakeAcidPotion | 0xafdc | dr_make_acid_potion | GetNormalPotionCount（type 0 且 Tile+0x232..0x234 均为 0）→ RandI(0, n−1, 流 5)；有药水时标签 14、音效 24；列优先选中者执行 Tile::MakeAcidPotion（UV：x=variant×0.0517578125，y=type×0.0517578125+0.552734375；Tile+0x233=1）并绿色静止闪光；计时器复位 |
+| 8 | FreezeTiles | 0x103d8 | dr_freeze_tiles | 候选＝未匹配、未冰冻、且不是带能力的敌人（std::set<Tile*>，即按序号）；最多两轮：RandI(0, n−1, 流 5) 选一格 SetFreezeVisibility(true)、中心闪光（RGBA 100,230,255,255）、移出集合；集合空则提前结束；之后标签 17、音效 20、计时器复位 |
+| 22 | BreakRandomShieldSword | 0x181d8 | dr_break_random_shield_sword | 候选＝未匹配、未破损的盾和非魔剑（Tile+0x231）；没有候选时什么都不做（无标签、音效，也不复位计时器）；否则 RandI 选一格 Tile::MakeBroken（dr_make_broken）、白色中心闪光；标签 22、音效 16、计时器复位 |
+
+测试框架：std::set<Tile*> 按 verify_refill.py 的做法在 Python 中模拟（节点按序号串联于 0x1518000；_Rb_tree_increment 与 __Unwind_SjLj_* 桩也在此应答）；Tile::MakeAcidPotion / Tile::MakeBroken 以生成钩子运行原代码；SetFreezeVisibility 记录后运行原代码。格子中心坐标在移动中可能重合，中心闪光按"刚冰冻/刚破损的格子→能力格本身"消歧。
+verify_abilities 现为 11 个函数共 880 次比较；activate / 能力段 / 整函数测试改为让这 3 个函数以原代码执行，均通过。错误副本：冰冻候选不排除已冰冻、普通药水判断漏 0x234、破损候选包含魔剑、破损候选不排除已破损、FreezeTiles 不接线，均被拒（"包含魔剑"一项起初存活，用例补入随机魔剑与破损标志后被拒）。
+
+仍未恢复：4 HealOrBless、13 StealGold、14 JumpEnemy、18 ConvertRandomTiles、24 AttractSkulls、25 AttractShieldsSwords、26 ThrowSkull、28 DestroyUpgrade。

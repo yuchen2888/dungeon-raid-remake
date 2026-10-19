@@ -174,6 +174,23 @@ void dr_stab_attack(dungeonraid::ResourceState*,dungeonraid::PathState*,std::uin
 // GenerationState.one_health), resting flare RGBA 240,150,10,255 and label 18; timers reset.
 void dr_convert_sword_to_skull(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*,
     const dungeonraid::GenerationHooks*);
+// Game::MakeAcidPotion 0xafdc: as ConvertSwordToSkull for normal potions (type 0 without
+// potion flags; GetNormalPotionCount, RandI stream 5, column-major pick): label 14 (colour 23)
+// and sound 24 when there are any; the pick becomes an acid potion (Tile::MakeAcidPotion: UV
+// row type*0.0517578125+0.552734375, Tile+0x233 set) with a green resting flare; timers reset.
+void dr_make_acid_potion(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*,
+    const dungeonraid::GenerationHooks*);
+// Game::FreezeTiles 0x103d8: candidates are tiles that are not matched, not frozen and not an
+// enemy with an ability (a std::set<Tile*>, i.e. index order); twice (while any remain) RandI(0,
+// n-1, stream 5) picks one: SetFreezeVisibility(true), flare RGBA 100,230,255,255 at its centre,
+// removed from the set. Then label 17 (colour 25), sound 20, timers reset.
+void dr_freeze_tiles(dungeonraid::PathState*,std::uint32_t tile,const dungeonraid::TurnHooks*);
+// Game::BreakRandomShieldSword 0x181d8: candidates are unmatched, unbroken shields and
+// non-magic swords (std::set<Tile*>, index order); none: nothing happens at all. Otherwise
+// RandI(0, n-1, stream 5) picks one: Tile::MakeBroken, white flare at its centre; label 22
+// (colour 30), sound 16, timers reset.
+void dr_break_random_shield_sword(dungeonraid::GenerationState*,std::uint32_t tile,const dungeonraid::TurnHooks*,
+    const dungeonraid::GenerationHooks*);
 // Original Tile::ActivateAbility 0x3f09c. Once per turn per tile (activated[] is
 // Tile+0x254, cleared by EndOfTurn). Dispatches on enemy_type: countdown abilities
 // (3 RunAwayEnemy, 10 ExplodeEnemy, 19 TeleportEnemy: enemy_state-1, Countdown event,

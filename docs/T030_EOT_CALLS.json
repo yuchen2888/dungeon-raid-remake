@@ -370,7 +370,7 @@
         "target": "__ZN4Game14MakeAcidPotionEP4Tile",
         "target_address": "0xafdc",
         "size": 340,
-        "category": "unrecovered"
+        "category": "T030:dr_make_acid_potion"
       },
       {
         "site": "0x3f13a",
@@ -386,7 +386,7 @@
         "target": "__ZN4Game11FreezeTilesEP4Tile",
         "target_address": "0x103d8",
         "size": 536,
-        "category": "unrecovered"
+        "category": "T030:dr_freeze_tiles"
       },
       {
         "site": "0x3f154",
@@ -474,7 +474,7 @@
         "target": "__ZN4Game22BreakRandomShieldSwordEP4Tile",
         "target_address": "0x181d8",
         "size": 524,
-        "category": "unrecovered"
+        "category": "T030:dr_break_random_shield_sword"
       },
       {
         "site": "0x3f1d2",
@@ -572,20 +572,8 @@
       "size": 308
     },
     {
-      "symbol": "__ZN4Game14MakeAcidPotionEP4Tile",
-      "size": 340
-    },
-    {
       "symbol": "__ZN4Game18ConvertRandomTilesEP4Tile",
       "size": 520
-    },
-    {
-      "symbol": "__ZN4Game22BreakRandomShieldSwordEP4Tile",
-      "size": 524
-    },
-    {
-      "symbol": "__ZN4Game11FreezeTilesEP4Tile",
-      "size": 536
     },
     {
       "symbol": "__ZN4Game10ThrowSkullEP4Tile",
