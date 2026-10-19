@@ -36,7 +36,7 @@
       "target": "__ZN5Skill10DeactivateEv",
       "target_address": "0x2ab60",
       "size": 8,
-      "category": "unrecovered"
+      "category": "T030:inline in dr_end_turn_begin (SkillSlots.active)"
     },
     {
       "site": "0x135fa",
@@ -568,10 +568,6 @@
   },
   "unrecovered_by_size": [
     {
-      "symbol": "__ZN5Skill10DeactivateEv",
-      "size": 8
-    },
-    {
       "symbol": "__ZN4Game12RunAwayEnemyEP4Tile",
       "size": 164
     },
@@ -689,6 +685,17 @@
         "game_over(win) -> dr_game_over [0x10c04,0x10dd6)"
       ],
       "original_bytes_sha256": "a698234cc65e320b47dfee436c88dbfca0f18b012a695728a48ffda3b0002358"
+    },
+    {
+      "start": "0x13574",
+      "end_exclusive": "0x13710",
+      "extra": [],
+      "native_function": "dr_end_turn_begin",
+      "verify": "recovered/verify_turn_begin.py",
+      "callbacks": [
+        "check_end_game -> dr_check_end_game (whole function)"
+      ],
+      "original_bytes_sha256": "81d983d3244554e124959983a3b69538b7147f07b113d829dd94e8b9d2cd6cd5"
     }
   ],
   "limits": [

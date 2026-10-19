@@ -189,3 +189,34 @@ extern "C" void dr_game_over(ResourceState* r,PathState* p,ClassProfile* cls,con
     e->flag_146d0=0;e->flag_146d4=1;e->flag_15546=1;
     emit(static_cast<std::int32_t>(TurnEventKind::Achievement),67,0x42c80000);
 }
+extern "C" bool dr_end_turn_begin(ResourceState* r,PathState* p,SkillSlots* skills,TurnFlags* f,
+    std::uint8_t* counterattack,const TurnHooks* h) {
+    p->turn=static_cast<std::int32_t>(static_cast<std::uint32_t>(p->turn)+1u);
+    if(h->check_end_game(h->context))return true;
+    auto& m=*r->match;const auto& board=m.stroke->selection;
+    for(int i=0;i<r->skill_count;++i) {
+        RuleTile tiles[36];for(int j=0;j<36;++j)tiles[j]=board.tiles[j].rule;
+        const RuleGame view{0,board.character,tiles};
+        if(dr_enemy_count(&view,15)==0) {
+            if(r->skill_current[i]==static_cast<std::int32_t>(static_cast<std::uint32_t>(r->skill_max[i])-1u))emit(h,TurnEventKind::Sound,-1,10);
+            const auto next=static_cast<std::int32_t>(static_cast<std::uint32_t>(r->skill_current[i])+1u);
+            r->skill_current[i]=next<=r->skill_max[i]?next:r->skill_max[i];
+        }
+        skills->active[i]=0;   // Skill::Deactivate
+    }
+    emit(h,TurnEventKind::UpdateSkills,-1);
+    f->b15561=0;f->b15562=0;
+    for(auto& b:f->b165b8)b=0;
+    if(f->arrow_pending_16491 && !f->arrow_hold_16492) {
+        emit(h,TurnEventKind::ArrowColour,-1,50,255,50);
+        f->arrow_pending_16491=f->arrow_hold_16492;
+    }
+    f->arrow_hold_16492=0;
+    f->prev_164a7=f->next_164a8;f->next_164a8=0;
+    for(int i=0;i<4;++i) {f->prev_be74[i]=f->next_be78[i];f->next_be78[i]=0;}
+    *counterattack=0;
+    p->battle.grant_coin_on_attack=f->next_coin_bfbc;f->next_coin_bfbc=0;
+    for(int i=0;i<5;++i)m.matched_counts[i]=0;
+    m.shake_progress_bd90=0;m.shake_scale_bd94=0x3f800000;
+    return false;
+}

@@ -54,7 +54,7 @@ def run(full=False):
                 ('stroke_demo', ['sh', 'recovered/run_stroke_demo.sh']),
                 ('rewards_demo', ['sh', 'recovered/run_rewards_demo.sh'])]
         names = [p.stem for p in sorted((work / 'recovered').glob('verify_*.py'))] if full else [
-            'verify_refill', 'verify_generation', 'verify_encounters', 'verify_refill_integration', 'verify_attack_shield', 'verify_attack_absorb', 'verify_attack_health', 'verify_vampires', 'verify_attack_vampires', 'verify_attack_weaken', 'verify_attack_fade', 'verify_attack_flares', 'verify_attack_all', 'verify_counterattack', 'verify_attack_flare_phases', 'verify_attack_phase4', 'verify_attack_label_motion', 'verify_attack_phase5_done', 'verify_process_attack', 'verify_turn_small', 'verify_turn_burn', 'verify_turn_regen', 'verify_check_end_game', 'verify_game_over']
+            'verify_refill', 'verify_generation', 'verify_encounters', 'verify_refill_integration', 'verify_attack_shield', 'verify_attack_absorb', 'verify_attack_health', 'verify_vampires', 'verify_attack_vampires', 'verify_attack_weaken', 'verify_attack_fade', 'verify_attack_flares', 'verify_attack_all', 'verify_counterattack', 'verify_attack_flare_phases', 'verify_attack_phase4', 'verify_attack_label_motion', 'verify_attack_phase5_done', 'verify_process_attack', 'verify_turn_small', 'verify_turn_burn', 'verify_turn_regen', 'verify_check_end_game', 'verify_game_over', 'verify_turn_begin']
         jobs += [(name, [sys.executable, 'recovered/' + name + '.py']) for name in names]
         for name, command in jobs:
             start = time.monotonic()

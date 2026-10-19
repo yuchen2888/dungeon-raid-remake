@@ -126,3 +126,23 @@ TurnHooks 末尾追加 `check_end_game` 回调。**CheckEndGame 尚未恢复**�
 - 300 组边界（record × mode 0/1/2 × 胜利 × 难度 0..4 × 技能数 0..4）+ 300 组随机，共 600 次比较。路径：按难度记分 260、按模式记分 186、record mode 2 不记分 86、未结束 68。
 - 测试域说明：技能数只取 0..4。原版只有 4 个技能槽，技能数为 5 会读到越界的野指针，测试第一次就因此报出未映射内存读取。
 - 错误副本：最高分改有符号比较、胜利不翻倍、技能等级系数改 10，均 exit 1。
+
+## T030-G：EndOfTurn 开头段（Claude，2026-10-19）
+
+起始提交 178a77e。恢复 `[0x13574,0x13710)` 为 `dr_end_turn_begin(ResourceState*, PathState*, SkillSlots*, TurnFlags*, counterattack*, TurnHooks*)`，返回 true 表示 CheckEndGame 已结束游戏（原版直接返回）。
+
+| 步骤 | 行为 |
+| --- | --- |
+| 回合 | PathState.turn（Game+0xc）+1 |
+| 结束判断 | CheckEndGame；真则返回（check_end_game 回调接已完整恢复的 dr_check_end_game） |
+| 技能 | 对每个技能（数量 Game+0xbfa0）：棋盘上没有 15 号敌人时，若当前值（+0x90）== 上限（+0x8c）−1 则音效 10，当前值 = min(当前+1, 上限)；无论如何 Skill::Deactivate（+0x80 清 0，原生为 SkillSlots.active）。随后 Interface::UpdateSkills |
+| 清零 | Game+0x15561/2、Game+0x165b8..0x165bc |
+| 箭头 | Game+0x16491 非 0 且 Game+0x16492 为 0 时 Arrow::SetColour(50,255,50) 并清 0x16491；之后清 0x16492 |
+| 轮换 | 0x164a8 → 0x164a7；Game+0xbe78..7b → 0xbe74..77；0xbfbc → 0xbfbb（PathBattle.grant_coin_on_attack）；"下一回合"位均清 0 |
+| 其他 | 反击标志 Game+0xbfba 清 0；matched_counts[0..4] 清 0；攻击计时器 bd90=0、bd94=1.0 |
+
+新增 `TurnFlags` 保存这些按偏移命名的回合标志（含义待确认）；SkillSlots 末尾追加 active[4]。
+
+验证 `recovered/verify_turn_begin.py`（建立在 CheckEndGame 全链测试类上）：原版从 EndOfTurn 入口执行到 0x13710，或因结束而提前返回；其中的 CheckEndGame 是完整原函数（含 GetScore 与结束结算），原生侧调用 dr_check_end_game → dr_game_over。
+- 120 组边界（生命 5/0 × 15 号敌人有无 × 技能数 0..4 × 6）+ 200 组随机 + 8 局 × 10 回合携带状态。共 400 次比较；160 次由 CheckEndGame 结束，39 次技能就绪音效。
+- 错误副本：冷却忽略 15 号敌人、不轮换金币标志、箭头条件忽略 0x16492，均 exit 1。

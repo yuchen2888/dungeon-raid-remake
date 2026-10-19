@@ -11,7 +11,8 @@ namespace dungeonraid {
 // HealthBar: a=health. LabelTarget: AddSimpleLabel at Interface::GetTarget(0), a=type,
 // b=number, c=colour, d=scale. LabelPoison: the same at Interface::GetPoisonPosition().
 enum class TurnEventKind : std::int32_t { Sound=1, Text, Label, Flare, Achievement,
-    LabelRest, FlareRest, Freeze, FlameOverlay, Particles, HealthBar, LabelTarget, LabelPoison };
+    LabelRest, FlareRest, Freeze, FlameOverlay, Particles, HealthBar, LabelTarget, LabelPoison,
+    UpdateSkills, ArrowColour };   // ArrowColour: Arrow::SetColour(a,b,c) on Game+0x3658
 struct TurnEvent { TurnEventKind kind; std::int32_t tile,a,b,c,d; };
 // match_tile is a synchronous gameplay dependency: wire it to dr_match_tile.
 struct TurnHooks {
@@ -36,7 +37,16 @@ struct EndGameState {
     std::uint8_t flag_15546;       // Game+0x15546 = 1
 };
 // Skill objects (pointers at Game+0xbf90): +0x84 id, +0x88 level.
-struct SkillSlots { std::int32_t id[4], level[4]; };
+struct SkillSlots { std::int32_t id[4], level[4]; std::uint8_t active[4]; };   // +0x80 active
+// EndOfTurn per-turn flags (meanings not yet confirmed; named by Game offset).
+struct TurnFlags {
+    std::uint8_t b15561,b15562;     // cleared
+    std::uint8_t b165b8[5];         // Game+0x165b8..0x165bc cleared
+    std::uint8_t arrow_pending_16491,arrow_hold_16492;
+    std::uint8_t prev_164a7,next_164a8;
+    std::uint8_t prev_be74[4],next_be78[4];
+    std::uint8_t next_coin_bfbc;    // becomes PathBattle.grant_coin_on_attack (Game+0xbfbb)
+};
 // ScoreScreen::AddScore: variant 0 = (name, turn, xp, gold, up, score, Difficulty),
 // variant 1 = (name, turn, a, b, c, score, GameMode); name is Game+0xbe38.
 struct ScoreEntry { std::int32_t variant, turn, a, b, c, score, mode; };
@@ -81,6 +91,12 @@ void dr_end_turn_burn_freeze(dungeonraid::PathState*,const dungeonraid::TurnHook
 // health_bonus, then poison (ResourceState.poison) damage to the player and
 // CheckEndGame. Returns true when CheckEndGame ends the turn (original 0x13e04).
 bool dr_end_turn_regen_poison(dungeonraid::ResourceState*,std::int32_t regen,const dungeonraid::TurnHooks*);
+// EndOfTurn [0x13574,0x13710): turn++, CheckEndGame (true: return), skill cooldowns
+// (+1 up to max unless enemy 15 is on the board; sound 10 when reaching max-1 -> max;
+// every skill deactivated), interface update, per-turn flag reset and rotation,
+// counterattack flag, matched_counts and attack timers reset.
+bool dr_end_turn_begin(dungeonraid::ResourceState*,dungeonraid::PathState*,dungeonraid::SkillSlots*,
+    dungeonraid::TurnFlags*,std::uint8_t* counterattack,const dungeonraid::TurnHooks*);
 // Original Game::CheckEndGame 0x10b18, decision part [0x10b18,0x10c04): true when
 // the game is (already) over. Record-mode victory -> achievement 76 and game over;
 // health > 0 -> false; otherwise achievement 40 when the class's mortal enemy is on

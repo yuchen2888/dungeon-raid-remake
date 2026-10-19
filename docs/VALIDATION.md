@@ -213,3 +213,10 @@
 - 新 verify_game_over：600 次比较（按难度记分 260、按模式 186、不记分 86、未结束 68）；CheckEndGame 整函数字节 SHA-256 `b5d44ded…52cec490`，GetScore `f4f76f0c…0d65a9ae`。
 - 错误副本（隔离开发副本）：有符号最高分比较、胜利不翻倍、等级系数 10，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；T030 登记 --check matches true（未恢复数 22）。
+
+## 2026-10-19 T030-G：EndOfTurn 开头段（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、41 个 verify 脚本共 44 步通过。运行目录 `.relay/runs/20261019T174750.679489Z`（UTC），输入指纹 `eae69423…87fa96`，`relay.sh check` 显示与当前源码一致。
+- 新 verify_turn_begin：400 次比较（边界 120、随机 200、连续回合 80）；160 次由 CheckEndGame 结束，39 次技能就绪音效。段字节 SHA-256 `81d983d3…d2cd6cd5`。
+- 错误副本（隔离开发副本）：冷却忽略 15 号敌人、不轮换金币标志、箭头条件忽略 0x16492，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 21）。
