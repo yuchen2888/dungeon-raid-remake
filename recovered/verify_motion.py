@@ -47,7 +47,10 @@ class Native(ResourceNative):
         if slot not in self.motions:
             self.motions[slot]=Motion();self.motions[slot].amount=-1;self.motions[slot].linked=-1
         t=self.motions[slot];t.scale=Point(1,1)
-        override=Point(*self.case['board'][position]['center']) if position>=0 else None
+        # The original passes &tile->center (Tile+0x54): use the CURRENT center,
+        # not the case's initial one, so tiles moved by refill stay correct.
+        current=self.state.selection.tiles[position].geometry.center if position>=0 else None
+        override=Point(current.x,current.y) if position>=0 else None
         self.init_token(C.byref(t),C.byref(self.m),tile,reward,C.byref(override) if override else None,incoming,C.byref(self.motion_hooks))
     def motion_status(self):
         return dict(tokens=[dict(position=[bits(t.position.x),bits(t.position.y)],scale=[bits(t.scale.x),bits(t.scale.y)],active=t.active,

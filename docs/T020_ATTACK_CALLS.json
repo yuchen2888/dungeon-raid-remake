@@ -533,6 +533,42 @@
         "Quad::SetAlpha(overlay) and four Interface shadows -1"
       ],
       "boundary": "Partial instructions only; phases 2..4 not recovered"
+    },
+    {
+      "start": "0x14938",
+      "end_exclusive": "0x14a14",
+      "size": 220,
+      "original_bytes_sha256": "9c72ba0061fbd74923ab4fdff69598e5bc2e9dcb3e87338291366cc35e1e9e1c",
+      "extra_blocks": [
+        {
+          "start": "0x14b5e",
+          "end_exclusive": "0x14b9c",
+          "original_bytes_sha256": "b19a73417f28ea3926752eab8c6b686c7a6cc9053c98756024d6119e2b25dd00"
+        },
+        {
+          "start": "0x14bbe",
+          "end_exclusive": "0x14be0",
+          "original_bytes_sha256": "128fe08bde06043f49f98f185525517fe9663d03fd74249bbbb18934f1aa8c33"
+        }
+      ],
+      "native_function": "dr_process_attack_damage_all",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_all.py",
+      "inputs": [
+        "R8=Game pointer; reached at 0x14938 after the weakening segment",
+        "Game+0xbe68 damage-all amount (producer not recovered)",
+        "tile type +0x9c, attack_flag +0x86, enemy type +0x24c"
+      ],
+      "outputs": [
+        "matched_counts[0..4] cleared",
+        "AttackSkull(amount,false) per unattacked enemy, column-major",
+        "MoveMatchedTiles, then every attack_flag cleared; continues at 0x14ae4"
+      ],
+      "callbacks": [
+        "Game::AttackSkull via recovered dr_path_attack_skull (integration adapter in recovered_path.cpp)",
+        "Game::MoveMatchedTiles via recovered dr_move_matched_tiles"
+      ],
+      "boundary": "Partial instructions only; full chain verified on shared state"
     }
   ],
   "limits": [

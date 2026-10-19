@@ -133,3 +133,11 @@
 - 新 verify_attack_flares：2428 次比较，572 次进入阶段 2，35990 个光效事件；InitialiseFlares 字节 SHA-256 `14ee6460…86c5d7`，阶段 1 片段 `cf758d93…1214cd`。
 - 错误副本（隔离开发副本）：列优先、去掉冻结判断、`>=200`，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；两份登记 --check 均 matches true。
+
+## 2026-10-19 T020-I：全体伤害与共享状态全链（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、29 个 verify 脚本共 32 步通过。运行目录 `.relay/runs/20261019T074616.568344Z`，输入指纹 `37c3e345…0d5c79`，与提交时源码一致。
+- 新 verify_attack_all：430 次比较（边界 40、随机 120、连续攻击 24、下落帧 246），原版与原生各 2367 次 AttackSkull、699 次击杀；合并字节 SHA-256 `d7d4cfb8…168399`。
+- verify_motion.py 修正（代币位置覆盖取当前格子中心）后，既有测试数字不变：motion 923 初始化 / 20627 帧、path 517 场景 / 973 步、refill_integration 20 手势 / 1550 步 / 280 奖励。
+- 错误副本（隔离开发副本）：行优先、不清 attack_flag、跳过 MoveMatchedTiles，均 exit 1；真实源码对比一致。
+- 接力单测 4 项通过；两份登记 --check 均 matches true。

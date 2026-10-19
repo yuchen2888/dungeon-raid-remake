@@ -40,6 +40,18 @@ struct AttackFadeHooks { void* context; void (*event)(void*,const AttackFadeEven
 enum class AttackFlareEventKind : std::int32_t { Sound=1, Flare, SetAlpha, Shadow };
 struct AttackFlareEvent { AttackFlareEventKind kind; std::int32_t tile,a,b,c; };
 struct AttackFlareHooks { void* context; void (*event)(void*,const AttackFlareEvent*); };
+// Sound: a=sound 3. Label: tile, a=type 5, b=amount, c=colour 16, d=scale bits.
+// Achievement: a=43, b=float bits 100.
+enum class AttackAllEventKind : std::int32_t { Sound=1, Label, Achievement };
+struct AttackAllEvent { AttackAllEventKind kind; std::int32_t tile,a,b,c,d; };
+// attack_skull and move_matched_tiles are synchronous gameplay dependencies:
+// wire them to dr_path_attack_skull and dr_move_matched_tiles (both recovered).
+struct AttackAllHooks {
+    void* context;
+    void (*event)(void*,const AttackAllEvent*);
+    bool (*attack_skull)(void*,std::int32_t tile,std::int32_t amount,bool effects);
+    void (*move_matched_tiles)(void*);
+};
 }
 extern "C" {
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
@@ -60,6 +72,13 @@ void dr_initialise_flares(dungeonraid::AttackDamageState*,dungeonraid::PathState
 // Valid domain: finite 0 <= dt <= 10.
 void dr_process_attack_fade_in(dungeonraid::AttackDamageState*,dungeonraid::PathState*,
     std::int32_t* flare_count,std::uint8_t* overlay_alpha,float dt,const dungeonraid::AttackFlareHooks*);
+// ProcessAttack [0x14938,0x14a14) plus blocks [0x14b5e,0x14b9c) and
+// [0x14bbe,0x14be0): when amount (Game+0xbe68) > 0, clear matched_counts[0..4],
+// AttackSkull(amount, no effects) every type-1 tile without attack_flag in
+// column-major order (sound 3 before the first, label 5 each, achievement 43 when
+// an enemy 2 dies), then MoveMatchedTiles and clear every attack_flag.
+void dr_process_attack_damage_all(dungeonraid::PathState*,std::int32_t amount,
+    const dungeonraid::AttackAllHooks*);
 // ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
 // overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
 // alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.

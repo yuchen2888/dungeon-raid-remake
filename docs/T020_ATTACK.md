@@ -182,3 +182,28 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 - 阶段 1：180 组边界（阶段 0/1/2 × alpha × 10 个 dt）+ 800 组随机 + 30 局逐帧从 0 淡入到阶段 2（408 帧）。
 - 共 2428 次比较，572 次进入阶段 2，35990 个光效事件；比较来袭伤害、9 号伤害、计数、阶段、抖动字段、alpha 与有序事件，并要求棋盘与 combat 不变。
 - 错误副本：列优先遍历、去掉冻结判断、`>200` 改 `>=200`，均 exit 1。
+
+## T020-I：全体伤害片段与共享状态全链测试（Claude，2026-10-19）
+
+起始提交 536b68a。恢复 `[0x14938,0x14a14)` 加两段块 `[0x14b5e,0x14b9c)`、`[0x14bbe,0x14be0)`（合并 SHA-256 `d7d4cfb8c23a69b86061118978b789f6e416a9ea3f9cbcba7705bffaec168399`）为 `dr_process_attack_damage_all(PathState*, amount, AttackAllHooks*)`：
+
+| 步骤 | 原位置 | 行为 |
+| --- | --- | --- |
+| 进入 | Game+0xbe68 | ≤0 时直接到 0x14ae4；写入者未定位（与 +0xbe6c 相邻，疑为装备/升级属性），由调用者传入 |
+| 清计数 | Game+0xbfa4..0xbfb7 | MatchState.matched_counts[0..4] 清零 |
+| 逐个攻击 | 列优先 | 类型 1、attack_flag=0 的格子：第一个之前音效 3；标签 5（数值、颜色 16、1.0 倍，位置为格子中心）；先记下敌人类型，再 AttackSkull(amount, effects=false)；返回击杀且原类型为 2 时成就 43（100.0） |
+| 收尾 | 0x14a0c、0x14b66 | MoveMatchedTiles；然后清全部 36 格 attack_flag，回到 0x14ae4 |
+
+AttackSkull 与 MoveMatchedTiles 是同步玩法依赖，通过回调接入：
+- 新增集成适配器 `dr_path_attack_skull`（recovered_path.cpp）：复用 dr_commit_path 的 RoundState 视图，对单格执行已恢复的 dr_attack_skull。**它不是新恢复的原函数**，只是让单次攻击能独立调用。
+- MoveMatchedTiles 接 `dr_move_matched_tiles`，其中的 Randomise / Stab / JumpDown 照旧接到生成与特殊敌人模块。
+
+验证 `recovered/verify_attack_all.py`，建立在 refill_integration 的全量测试类上：
+- 原版侧执行该片段时，其中的 AttackSkull 与 MoveMatchedTiles 都是原函数：前者含 MatchTile、代币、奖励；后者含 RandomiseTile、生成、Stab、JumpDown。测试只在进出每个被调函数时切换已有子系统钩子的开关。
+- 原生侧在同一共享状态上调用恢复源码。比较 path 状态（战斗、combat、计数、代币、动画）、整盘补位/生成/特殊敌人状态、随机流和全部有序事件。
+- 40 组边界（数值 −1/0/1/3/100）+ 120 组随机棋盘 + 6 局 × 4 次连续攻击；每次攻击后逐帧下落直到落定（246 帧，原版 Game::Process 下落片段对原生）。共 430 次比较，2367 次 AttackSkull，699 次击杀。
+- 错误副本：行优先、不清 attack_flag、跳过 MoveMatchedTiles（空回调），均 exit 1。
+
+**顺带修正的测试框架近似**：`verify_motion.py` 原生侧在代币位置覆盖时，取的是用例初始配置里的格子中心。原版传的是 `&tile->center`，即当前中心。格子被补位移动后两者会差一行。本单元在不下落、连续攻击时暴露了这一点。已改为读当前状态的格子中心，全部既有测试仍通过（见 VALIDATION.md）。
+
+仍未恢复：阶段 2..4（光效动画、DoCounterattack 0x11214 的调用点 0x143a4）、阶段 5/6 标签动画、Game+0xbe68 / +0xbe6c 的来源。DoCounterattack 同样调用 AttackSkull、MoveMatchedTiles、GetAttack，可直接复用本单元的回调接线与测试类。

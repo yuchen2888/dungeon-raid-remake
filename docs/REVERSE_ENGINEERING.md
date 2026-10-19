@@ -82,3 +82,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-H：InitialiseFlares 0xd9b0 与阶段 1（Claude，2026-10-19）
 
 完整原函数 InitialiseFlares → `dr_initialise_flares`：行优先累加可出手敌人的攻击，得到来袭伤害与 9 号敌人伤害，并为它们加眼睛光效。阶段 1 `[0x14126,0x141c6)` → `dr_process_attack_fade_in`：alpha 每帧 +dt×800，>200 时进入阶段 2 并调用 InitialiseFlares。原调用登记把 InitialiseFlares 误归为表现边界，已更正。AddFlare 维护的光效列表/计数仍是调用方边界。细节见 T020_ATTACK.md。
+
+## T020-I：全体伤害（Claude，2026-10-19）
+
+`[0x14938,0x14a14)`＋块 `[0x14b5e,0x14b9c)`、`[0x14bbe,0x14be0)` → `dr_process_attack_damage_all`。AttackSkull 经新增集成适配器 `dr_path_attack_skull`（不计入恢复函数），MoveMatchedTiles 经 `dr_move_matched_tiles`，在共享状态上与原版全链差分。测试框架 `verify_motion.py` 的代币位置覆盖原取用例初始中心，已改为当前中心，以对应原版的 `&tile->center`。细节见 T020_ATTACK.md。

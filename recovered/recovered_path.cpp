@@ -77,3 +77,27 @@ extern "C" void dr_commit_path(PathState* p,const std::uint8_t* path,std::size_t
     const RoundHooks hooks{&adapter,Adapter::random,Adapter::event};
     dr_match_path(&adapter.view,path,length,excluded,excluded_length,&hooks);adapter.export_state();
 }
+namespace {
+struct SingleAttack {
+    Adapter* adapter;std::int32_t tile;
+    static std::int32_t random(void* context,std::int32_t low,std::int32_t high,std::int32_t stream) {
+        auto* s=static_cast<SingleAttack*>(context);return Adapter::random(s->adapter,s->tile,low,high,stream);
+    }
+    static void forward(void* context,BattleEvent kind,std::int32_t a,std::int32_t b,std::int32_t c,std::int32_t d) {
+        auto* s=static_cast<SingleAttack*>(context);
+        const RoundEvent e{kind==BattleEvent::Achievement?-1:s->tile,kind,a,b,c,d};
+        Adapter::event(s->adapter,&e);
+    }
+};
+}
+extern "C" bool dr_path_attack_skull(PathState* p,std::uint32_t index,std::int32_t amount,
+    bool effects,const PathHooks* h) {
+    Adapter adapter{p,{},h};adapter.import_state();
+    CharacterClassState active_class{adapter.view.character.race};
+    adapter.view.battle.context.active_class=&active_class;
+    auto& tile=adapter.view.tiles[index].battle;tile.combat.game=&adapter.view.battle.context;
+    SingleAttack single{&adapter,static_cast<std::int32_t>(index)};
+    const BattleHooks hooks{&single,SingleAttack::random,SingleAttack::forward};
+    const bool result=dr_attack_skull(&adapter.view.battle,&tile,amount,effects,&hooks);
+    adapter.export_state();return result;
+}

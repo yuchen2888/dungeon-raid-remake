@@ -37,4 +37,9 @@ extern "C" {
 // MoveMatchedTiles remains an observed boundary. Valid path indices required.
 void dr_commit_path(dungeonraid::PathState*,const std::uint8_t*,std::size_t,
     const std::uint8_t* excluded,std::size_t,const dungeonraid::PathHooks*);
+// Integration adapter, NOT an additional recovered original function: one
+// original Game::AttackSkull (dr_attack_skull) on tile index through the same
+// synchronized RoundState view and hooks as dr_commit_path. Returns its result.
+bool dr_path_attack_skull(dungeonraid::PathState*,std::uint32_t index,std::int32_t amount,
+    bool effects,const dungeonraid::PathHooks*);
 }

@@ -152,3 +152,23 @@ extern "C" void dr_process_attack_fade_in(AttackDamageState* s,PathState* p,std:
     flare_event(h,AttackFlareEventKind::SetAlpha,-1,0,byte);
     for(int i=0;i<4;++i)flare_event(h,AttackFlareEventKind::Shadow,-1,i,-1);
 }
+extern "C" void dr_process_attack_damage_all(PathState* p,std::int32_t amount,const AttackAllHooks* h) {
+    auto emit=[h](AttackAllEventKind kind,int tile,int a=0,int b=0,int c=0,int d=0) {
+        if(h && h->event) { const AttackAllEvent e{kind,tile,a,b,c,d};h->event(h->context,&e); }
+    };
+    if(amount<=0)return;
+    auto& m=*p->match;
+    for(int i=0;i<5;++i)m.matched_counts[i]=0;
+    bool first=true;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;const auto& rule=m.stroke->selection.tiles[i].rule;
+        if(rule.type!=1 || p->combat[i].attack_flag)continue;
+        if(first)emit(AttackAllEventKind::Sound,-1,3);
+        const int enemy=rule.enemy_type;
+        emit(AttackAllEventKind::Label,i,5,amount,16,0x3f800000);
+        if(h->attack_skull(h->context,i,amount,false) && enemy==2)emit(AttackAllEventKind::Achievement,-1,43,0x42c80000);
+        first=false;
+    }
+    h->move_matched_tiles(h->context);
+    for(auto& c:p->combat)c.attack_flag=0;
+}
