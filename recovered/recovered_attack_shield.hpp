@@ -28,6 +28,11 @@ struct AttackHealthHooks { void* context; void (*event)(void*,const AttackHealth
 enum class AttackWeakenEventKind : std::int32_t { Sound=1, Text, Label, Particles };
 struct AttackWeakenEvent { AttackWeakenEventKind kind; std::int32_t tile,a,b,c,d; };
 struct AttackWeakenHooks { void* context; void (*event)(void*,const AttackWeakenEvent*); };
+// SetAlpha: a=quad (0 overlay Game+0xb91c, 1 Game+0xb8ac, 2 Game+0xb98c), b=alpha.
+// The original Quad::SetAlpha writes that byte to all four vertices.
+enum class AttackFadeEventKind : std::int32_t { SetAlpha=1 };
+struct AttackFadeEvent { AttackFadeEventKind kind; std::int32_t a,b; };
+struct AttackFadeHooks { void* context; void (*event)(void*,const AttackFadeEvent*); };
 }
 extern "C" {
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
@@ -36,6 +41,12 @@ extern "C" {
 // nothing gets through, sets phase 7 and flushes a positive enemy9_damage label.
 std::int32_t dr_process_attack_armour_absorb(dungeonraid::AttackDamageState*,
     const dungeonraid::AttackAbsorbHooks*);
+// ProcessAttack [0x14ae4,0x14b56): phase-7 overlay fade. *overlay_alpha is the
+// overlay Quad's vertex-0 alpha (Game+0xb92b), which doubles as the phase timer:
+// alpha += dt*-900 (truncated); below 0 it becomes 0 and phase becomes 8.
+// alternate_quad is Game+0xbfba. Valid domain: finite 0 <= dt <= 10.
+void dr_process_attack_fade(dungeonraid::AttackDamageState*,std::uint8_t* overlay_alpha,
+    float dt,bool alternate_quad,const dungeonraid::AttackFadeHooks*);
 // ProcessAttack [0x1487e,0x14938) plus loop blocks 0x14b56..0x14b5d and
 // 0x14b9c..0x14bbd: when weaken (Game+0xbe6c) > 0, every enemy tile that has
 // not attacked and has attack > 1 loses weaken attack (floor 1), column-major.

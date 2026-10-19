@@ -93,3 +93,18 @@ extern "C" void dr_process_attack_weaken(PathState* p,std::int32_t weaken,const 
         first=false;
     }
 }
+extern "C" void dr_process_attack_fade(AttackDamageState* s,std::uint8_t* overlay_alpha,
+    float dt,bool alternate_quad,const AttackFadeHooks* h) {
+    if(s->phase!=7)return;
+    // Literal 0xc4610000 (-900); VMUL then VADD, each rounded to float (no fusion).
+    const float step=dt*-900.0f;
+    const float value=static_cast<float>(*overlay_alpha)+step;
+    int alpha=static_cast<int>(value);
+    if(alpha<0) {alpha=0;s->phase=8;}
+    const auto byte=static_cast<std::uint8_t>(alpha);
+    *overlay_alpha=byte;
+    auto emit=[h](int quad,int value) {
+        if(h && h->event) { const AttackFadeEvent e{AttackFadeEventKind::SetAlpha,quad,value};h->event(h->context,&e); }
+    };
+    emit(0,byte);emit(alternate_quad?2:1,byte);
+}

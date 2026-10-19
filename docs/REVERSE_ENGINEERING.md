@@ -74,3 +74,7 @@
 ## T020-E / T020-F（Claude，2026-10-18）
 
 T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版侧真实执行，原生侧事件调用 dr_process_vampires，共享同一状态，无源码改动。T020-F：`[0x1487e,0x14938)`＋循环块 `[0x14b56,0x14b5e)`、`[0x14b9c,0x14bbe)` → `dr_process_attack_weaken`，按 Game+0xbe6c 削弱未出手敌人攻击（最低 1）。细节见 T020_ATTACK.md。均为局部片段，不计入完整函数数。
+
+## T020-G：阶段 7 遮罩淡出（Claude，2026-10-19）
+
+`[0x14ae4,0x14b56)` → `dr_process_attack_fade`。遮罩 Quad 顶点 0 的 alpha（Game+0xb92b）兼作计时器，每帧加 dt×(−900) 并向零截断，<0 时置阶段 8。常量为 0xc4610000（−900）；初版误读为 −160，被差分测试发现。原版 Quad::SetAlpha 在测试中真实执行。细节见 T020_ATTACK.md。

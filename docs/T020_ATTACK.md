@@ -141,3 +141,23 @@ python3 scripts/t020_attack_audit.py --check --out docs/T020_ATTACK_CALLS.json
 验证 `recovered/verify_attack_weaken.py`：336 组边界（削弱 −1/0/1/2/4/100 × 攻击 −3..101 × 类型 × attack_flag）+ 600 组随机 + 5 局 × 15 次携带状态重复削弱，共 1011 次比较；8307 次削弱、3230 次结果为 1。原版 Game 区除各格攻击外无写入。错误副本：攻击门槛 `<=1` 改 `<1`、每格都播音效，均 exit 1。
 
 仍未恢复：0x14938 起的 Game+0xbe68 全体伤害（清 Game+0xbfa4..0xbfb7 五个计数；对未出手敌人逐个 AttackSkull，击杀 2 号敌人时成就 43；随后 MoveMatchedTiles 并清全部 attack_flag，回到 0x14ae4）。它要接战斗、补位和生成整条链，适合作为单独单元，复用 dr_attack_skull、dr_move_matched_tiles 及 refill_integration 的接线方式。
+
+## T020-G：阶段 7 遮罩淡出（Claude，2026-10-19）
+
+起始提交 43a2c7f。恢复 `[0x14ae4,0x14b56)`（110 字节，SHA-256 `89b6df8a811bdbeb830eb1cf950583ad6f02f2a47d6fe8de282f902ac2d723e2`）为 `dr_process_attack_fade(AttackDamageState*, uint8_t* overlay_alpha, float dt, bool alternate_quad, hooks)`。
+
+| 项 | 原位置 | 行为 |
+| --- | --- | --- |
+| 进入条件 | Game+0xb8a8 | 阶段 ≠7 直接到 0x14be0 返回 |
+| 计时 | Game+0xb92b | 遮罩 Quad（Game+0xb91c）顶点 0 的 alpha 字节，兼作阶段计时器 |
+| 公式 | Game+4 帧时间、字面量 0xc4610000 | alpha = 向零截断(float(alpha) + dt × −900)，VMUL/VADD 分别舍入 |
+| 切换 | Game+0xb8a8 | 结果 <0 时 alpha 记 0、阶段置 8（阶段 8 在 ProcessAttack 外处理） |
+| 表现 | Quad::SetAlpha | 遮罩及（Game+0xbfba ? Game+0xb98c : Game+0xb8ac）两个 Quad 设同一 alpha；原函数只把字节写到四个顶点 |
+
+原生侧把新 alpha 写回 `*overlay_alpha` 并发 SetAlpha 事件（quad 0/1/2）。
+
+验证 `recovered/verify_attack_fade.py`：原版 Quad::SetAlpha **真实执行**，测试核对四个顶点字节都被写成同一值。720 组边界（阶段 6/7/8 × 交替标志 × 10 个 alpha × 12 个 dt，含次正规数、1/900、255/900、256/900）+ 1500 组随机 + 30 局逐帧从 255 淡到阶段 8（357 帧），共 2577 次比较、947 次进入阶段 8。
+
+过程记录：初版源码把常量误读为 −160（把 0xc4610000 看错），测试在 alpha=0、dt=1/240 处即失败，查字面量后改为 −900 才通过——这本身证明了测试对常量敏感。另一个错误副本 `alpha<0` 改 `<=0` 也 exit 1。
+
+有效域：有限且 0≤dt≤10；超出范围时 VCVT 的饱和行为未建模。

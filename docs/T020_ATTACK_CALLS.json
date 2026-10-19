@@ -490,6 +490,28 @@
         "attack=max(1,attack-weaken) for unattacked enemies with attack>1, column-major"
       ],
       "boundary": "Partial instructions only; continues at 0x14938 (Game+0xbe68 damage-all, not recovered)"
+    },
+    {
+      "start": "0x14ae4",
+      "end_exclusive": "0x14b56",
+      "size": 114,
+      "original_bytes_sha256": "89b6df8a811bdbeb830eb1cf950583ad6f02f2a47d6fe8de282f902ac2d723e2",
+      "native_function": "dr_process_attack_fade",
+      "source": "recovered/recovered_attack_shield.cpp",
+      "verify": "recovered/verify_attack_fade.py",
+      "inputs": [
+        "R8=Game pointer",
+        "Game+0xb8a8 phase",
+        "Game+0xb92b overlay quad vertex-0 alpha (phase timer)",
+        "Game+4 frame time",
+        "Game+0xbfba alternate quad flag",
+        "literal 0xc4610000 = -900.0"
+      ],
+      "outputs": [
+        "alpha=trunc(alpha+dt*-900); below 0 -> 0 and phase 8",
+        "Quad::SetAlpha on overlay and Game+0xb8ac or +0xb98c"
+      ],
+      "boundary": "Partial instructions only; phase 8 is handled outside ProcessAttack"
     }
   ],
   "limits": [
