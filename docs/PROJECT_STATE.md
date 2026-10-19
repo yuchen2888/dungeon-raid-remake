@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-N3c）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-N4a）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 21 个 `recovered_*.cpp` 模块、16 个头文件、47 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 22 个 `recovered_*.cpp` 模块、17 个头文件、48 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -43,6 +43,7 @@
 - T030-N3a：HealOrBless（含 std::set 重载）恢复并接入。
 - T030-N3b：ThrowSkull 恢复并接入（代币模块新增 dr_token_queue_push；TurnHooks.push_token）。
 - T030-N3c：StealGold 恢复并接入（动作模块新增 dr_token_set_target_tile；TurnHooks.token_target/token_start）。
+- T030-N4a：新模块 stats 恢复 Game::UpdateStats，补上 ProcessAttack 输入（攻击几率/削弱/全体伤害）与回复量的生产者。
 
 ## 验证
 
@@ -96,4 +97,4 @@
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界只有 DestroyUpgrade（经 TurnHooks.ability，需物品模型）和 SerialiseState（存档格式）。下一步 T030-N4：物品模型与 DestroyUpgrade，或转入 T040 回合调度（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N3c。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界只有 DestroyUpgrade（经 TurnHooks.ability，需物品模型）和 SerialiseState（存档格式）。下一步 T030-N4：Item::MakeStats、GetStatDowngrade 与 DestroyUpgrade，或转入 T040 回合调度（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4a。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

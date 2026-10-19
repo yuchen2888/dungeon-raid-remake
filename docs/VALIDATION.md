@@ -282,3 +282,10 @@
 - verify_abilities：18 个函数共 1440 次比较（StealGold 生成代币 176 个、金币条更新 32 次）；activate / 能力段 / 整函数测试通过。
 - 错误副本（隔离开发副本）：不标记金币已匹配、改位置后不重算距离、宿敌判断改 14、金币条件 `>=0`，均 exit 1。
 - 接力单测 4 项通过；T010 / T020 / T030 登记 --check matches true（T030 未恢复数 2：DestroyUpgrade、SerialiseState）。
+
+## 2026-10-19 T030-N4a：Game::UpdateStats（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建（22 个模块）、2 个示例、48 个 verify 脚本共 51 步通过。运行目录 `.relay/runs/20261019T232625.381198Z`（UTC），输入指纹 `e1d21e75…b28ea5fb`，与当前源码一致。
+- 新 verify_stats：400 次比较（血条 735、剑值 355、骷髅值 386、护盾 699、技能刷新 208 次）；加成增/减/不变、冷却 ±1、record 模式跳过与各限幅分支均到达。
+- 错误副本（隔离开发副本）：忽略缺陷 5、护甲流失阈值 `<4`、跳过条件 mode==0、GetStat(2)=1、技能当前值不截断，均 exit 1。
+- 接力单测 4 项通过；T010 / T020 / T030 登记 --check matches true。

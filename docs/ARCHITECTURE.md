@@ -10,7 +10,9 @@
 | 输入 | input、selection、stroke、preview、rune | 坐标命中、延伸/回退、输入子分支、资源预览、围合 |
 | 消除奖励 | battle、round、match、tokens、resources、motion、path | 单体攻击、路径调度、实际消除、奖励排队/移动/入账和接入适配 |
 | 补位生成 | refill、generation、encounters | 下落补位、生成/晋升数值、SwapTiles/JumpDown/Stab；非完整敌人阶段 |
-| 敌人阶段局部 | attack_shield | ProcessAttack 的护甲损耗片段，复用 ResourceState / MatchState / 规则及随机模块；上游吸收伤害数值由调用者提供，尚未接完整阶段调度 |
+| 敌人阶段 | attack_shield | ProcessAttack 每帧逻辑（dr_process_attack，T020），复用 ResourceState / MatchState / 规则及随机模块 |
+| 回合结束 | turn | Game::EndOfTurn 整函数（dr_end_of_turn）、CheckEndGame 与结束结算、Tile::ActivateAbility 及 19 个敌人能力；DestroyUpgrade 与 SerialiseState 仍为边界（T030） |
+| 玩家属性 | stats | Game::UpdateStats（dr_update_stats）：由装备物品与技能重算属性，产生 ProcessAttack 的攻击几率/削弱/全体伤害与回复量（T030-N4a） |
 | 职业档案 | progression | 职业进度、编解码、升级/成就；非完整局面存档 |
 
 stroke / selection 持有棋盘；MatchState、PathState、ResourceState、RefillState、GenerationState 通过指针共享状态并用回调承接跨层调用。参考 recovered/rewards_demo.cpp 中的接线；尤其要一起交换生成附加状态，不能只交换格子显示。
@@ -19,7 +21,7 @@ stroke / selection 持有棋盘；MatchState、PathState、ResourceState、Refil
 
 ## 两条构建路线
 
-- 恢复源码：`recovered/build.sh` 构建 20 个 macOS arm64+x86_64 动态库、iPhone arm64 对象和静态库（包含 attack_shield 局部模块）；两个 run_*_demo.sh 现场编译并运行无界面示例。静态库不能安装为 App。
+- 恢复源码：`recovered/build.sh` 构建 22 个 macOS arm64+x86_64 动态库、iPhone arm64 对象和静态库（含 attack_shield、turn、stats）；两个 run_*_demo.sh 现场编译并运行无界面示例。静态库不能安装为 App。
 - 兼容运行层：adapter/、unicorn-tci/、dynarmic-api/、liveexec32-source/、mini-gdbstub/、runtime/；旧 ARM32 游戏通过现代宿主/TCI 执行。rebuild.py / build-framework.py / package-app.py 属此路线，本轮不签名、不打包、不将其作为重制验收。
 
 ## 验证依赖与隔离

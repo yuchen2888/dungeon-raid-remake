@@ -312,3 +312,26 @@ verify_abilities 共 17 个函数 1360 次比较（ThrowSkull 生成代币 70 �
 verify_abilities 共 18 个函数 1440 次比较（StealGold：金币分支 29、偷玩家金币 41（其中宿敌 13 额外代币 28）、什么都不做 10）；activate / 能力段 / 整函数测试通过。错误副本：不标记金币已匹配、改位置后不重算距离、宿敌判断改 14、金币条件 `>=0`，均 exit 1。
 
 至此 EndOfTurn 能触发的能力只剩 28 DestroyUpgrade（需物品模型：物品向量 Game+0xbe9c、Item::ReduceStat / GetStatDowngrade / MakeStats、Game::UpdateStats），以及 SerialiseState（存档格式）。
+
+## T030-N4a：Game::UpdateStats（Claude，2026-10-19）
+
+新模块 `recovered_stats`：`dr_update_stats(StatsTargets*, const ItemStats* const* items, count, StatsHooks*)` 恢复原版 Game::UpdateStats 0x14c04（DestroyUpgrade 的前置依赖）。它也是此前测试中"生产者未恢复"的 ProcessAttack 输入（护甲流失几率 0xbdc8、削弱 0xbe6c、全体伤害 0xbe68）和回复量 0xbe70 的来源。
+
+物品：Item+0x94 起 20 个 int，按 UpgradeType 0..19 索引（ItemStats.upgrade）；装备列表是 Game+0xbe9c 的 Item** 向量。
+
+| 步骤 | 行为 |
+| --- | --- |
+| 清零/初值 | 武器伤害、护甲上限、毒量、吸血、全体伤害、削弱、回复、生命加成、额外基础伤害、护盾加成、XP/金币/升级加成清 0；破甲几率 = 有缺陷 5 时 30，否则 50；护甲流失几率 = 50；冷却标志 0xbe64 记下旧值后清 0 |
+| 累加每件物品 | 0 武器伤害、11 护甲上限、4 破甲几率、14 护甲流失几率（减）、3 毒量、2 吸血、12 全体伤害、15 削弱、17 回复、5>0 置冷却标志、8/18/19/9 累加到 PlayerStats 的四个基础值、10 生命加成（record 且 mode==1 时跳过）、1 额外基础伤害、16 护盾加成、6/7/13 × 0.25 加到 XP/金币/升级加成 |
+| 限幅 | 三个浮点加成上限 2.0；破甲几率上限 95；护甲流失几率 ≤4 时设为 5 |
+| 技能系数 | Skill::GetStat：0、1、3 为 1，2 为 5；GetStatChance = 5。生命加成 += bdfc×5（同样受 record/mode 限制）；额外基础伤害 += bdec；治疗加成 = be04；护盾加成 += bdf4；四个几率 = 对应基础值 ×5 |
+| 生命 | 生命加成变化时：增加则生命 += 新旧差；减少则生命上限截断；上限（加成+生命上限）变化时刷新血条（传界面生命）；生命 ≠ 界面生命时刷新血条 |
+| 护甲 | 护甲当前值 = 新上限 −（旧上限 − 旧当前值），下限 0 |
+| 界面 | 武器伤害、骷髅值（额外基础伤害 + 基础伤害）、护甲当前与上限变化时分别刷新 Sword/Skull/Shield 显示 |
+| 技能冷却 | 冷却标志新置位：每个技能上限 −1；新清除：+1；当前值截到上限，并调用 UpdateSkills；不变则不刷新 |
+
+无归属字段放入新的 `PlayerStats`（按偏移命名：0xbdec/0xbdf4/0xbdfc/0xbe04 基础值，0xbe1c/24/2c/34 几率，0xbe64 冷却标志，界面缓存 0x5998/0x59bc/0x59c4/0x59c8）；其余写回所属状态（ResourceState、预览、SelectionState、PathBattle、AttackProcessInputs、EndOfTurnState.regen）。
+
+验证 `recovered/verify_stats.py`：原版整函数从入口执行，HaveFlaw、Skill::GetStat/GetStatChance、ItemUpgrade::GetFloatValue、vector::size 为原代码；物品与 Item** 向量由测试布置。400 次比较，覆盖加成增/减/不变、冷却 −1/+1、record 模式跳过、各限幅。错误副本：忽略缺陷 5、护甲流失阈值 `<4`、跳过条件改 mode==0、GetStat(2) 改 1、技能当前值不截断，均 exit 1（阈值一项起初存活，补入恰好落在边界的用例后被拒）。
+
+下一步：DestroyUpgrade 还需 ItemUpgrade::GetStatDowngrade（180 字节）、Item::ReduceStat、Item::MakeStats（3KB）以及物品向量随机选取。

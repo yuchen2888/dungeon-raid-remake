@@ -42,7 +42,8 @@
 | T030-N3a | 完成 / Claude，待复核 | HealOrBless（含 std::set 重载）恢复并接入；verify_abilities 共 1280 次 | 三个错误副本被拒 |
 | T030-N3b | 完成 / Claude，待复核 | ThrowSkull 恢复并接入；代币模块新增 dr_token_queue_push，TurnHooks 追加 push_token；测试框架修正 RandomiseTile 的 JumpDown；1360 次比较 | 三个错误副本被拒 |
 | T030-N3c | 完成 / Claude，待复核 | StealGold（含 set 重载）恢复并接入；动作模块新增 dr_token_set_target_tile，TurnHooks 新增 token_target/token_start；1440 次比较 | 四个错误副本被拒 |
-| T030-N4 | 待做 | DestroyUpgrade（需物品模型：物品向量、Item::ReduceStat、GetStatDowngrade、MakeStats、Game::UpdateStats）；SerialiseState（存档格式） | 先建物品模块并差分验证 |
+| T030-N4a | 完成 / Claude，待复核 | 新模块 stats：Game::UpdateStats 0x14c04（dr_update_stats），ProcessAttack 输入与回复量的生产者；400 次比较 | verify_stats.py；五个错误副本被拒 |
+| T030-N4 | 待做 | DestroyUpgrade（还需 GetStatDowngrade、Item::ReduceStat、Item::MakeStats 3KB）；SerialiseState（存档格式） | 物品模型差分验证后接线 |
 | T040 | 待 T030 | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序 |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -107,5 +108,7 @@
 认领记录：`T030-N3b / claude / 起始 0ad60e6 / 继承差异：无 / 目标：ThrowSkull 与代币直接入队 / 文件：recovered/recovered_tokens.*、recovered/recovered_turn.*、recovered/verify_abilities.py、recovered/verify_activate_ability.py、recovered/verify_end_of_turn.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：StealGold、DestroyUpgrade`
 
 认领记录：`T030-N3c / claude / 起始 5755260 / 继承差异：无 / 目标：StealGold / 文件：recovered/recovered_motion.*、recovered/recovered_turn.*、recovered/verify_abilities.py、recovered/verify_activate_ability.py、recovered/verify_end_of_turn.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：物品模型与 DestroyUpgrade`
+
+认领记录：`T030-N4a / claude / 起始 ded977a / 继承差异：无 / 目标：Game::UpdateStats / 文件：recovered/recovered_stats.*、recovered/verify_stats.py、recovered/build.sh、scripts/verify.py、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：Item::MakeStats 与 DestroyUpgrade`
 
 认领记录模板：`Txxx / 工具 / 起始 HEAD / 继承差异 / 目标 / 文件 / 验收命令 / 结果路径 / 下一步`。详细活动现场存于 `.relay/active/owner.json`，持久事实随原子提交更新这里和 PROJECT_STATE.md。

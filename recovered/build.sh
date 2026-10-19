@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")"
-for module in combat rules input battle round progression selection random stroke preview rune match tokens resources motion path refill generation encounters attack_shield turn; do
+for module in combat rules input battle round progression selection random stroke preview rune match tokens resources motion path refill generation encounters attack_shield turn stats; do
     set -- "recovered_${module}.cpp"
     case "$module" in
         battle) set -- "$@" recovered_combat.cpp ;;
@@ -17,6 +17,7 @@ for module in combat rules input battle round progression selection random strok
         encounters) set -- "$@" recovered_refill.cpp recovered_combat.cpp recovered_rules.cpp ;;
         attack_shield) set -- "$@" recovered_rules.cpp recovered_random.cpp recovered_combat.cpp ;;
         turn) set -- "$@" recovered_battle.cpp recovered_combat.cpp recovered_rules.cpp recovered_generation.cpp recovered_random.cpp ;;
+        stats) set -- "$@" recovered_rules.cpp ;;
     esac
     xcrun --sdk macosx clang++ -std=c++17 -Wall -Wextra -Werror -O2 \
         -ffp-contract=off -arch arm64 -arch x86_64 -dynamiclib \
@@ -31,5 +32,5 @@ xcrun --sdk iphoneos libtool -static -o libDungeonRaidRecovered-ios-arm64.a \
     recovered_selection_ios_arm64.o recovered_random_ios_arm64.o \
     recovered_stroke_ios_arm64.o recovered_preview_ios_arm64.o recovered_rune_ios_arm64.o \
     recovered_match_ios_arm64.o recovered_tokens_ios_arm64.o recovered_resources_ios_arm64.o \
-    recovered_motion_ios_arm64.o recovered_path_ios_arm64.o recovered_refill_ios_arm64.o recovered_generation_ios_arm64.o recovered_encounters_ios_arm64.o recovered_attack_shield_ios_arm64.o recovered_turn_ios_arm64.o
+    recovered_motion_ios_arm64.o recovered_path_ios_arm64.o recovered_refill_ios_arm64.o recovered_generation_ios_arm64.o recovered_encounters_ios_arm64.o recovered_attack_shield_ios_arm64.o recovered_turn_ios_arm64.o recovered_stats_ios_arm64.o
 printf '%s\n' 'Built native macOS libraries and iPhone ARM64 static library.'
