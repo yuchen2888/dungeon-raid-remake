@@ -1,6 +1,7 @@
 #pragma once
 #include "recovered_path.hpp"
 #include "recovered_resources.hpp"
+#include "recovered_generation.hpp"
 namespace dungeonraid {
 // Sound: a=sound. Text: Tile::UpdateText(a,b,c). Label: Game::AddSimpleLabel at the tile
 // center, a=type, b=number, c=colour, d=scale bits. Flare: Game::AddFlare at the tile
@@ -12,7 +13,9 @@ namespace dungeonraid {
 // b=number, c=colour, d=scale. LabelPoison: the same at Interface::GetPoisonPosition().
 enum class TurnEventKind : std::int32_t { Sound=1, Text, Label, Flare, Achievement,
     LabelRest, FlareRest, Freeze, FlameOverlay, Particles, HealthBar, LabelTarget, LabelPoison,
-    UpdateSkills, ArrowColour };   // ArrowColour: Arrow::SetColour(a,b,c) on Game+0x3658
+    UpdateSkills, ArrowColour,     // ArrowColour: Arrow::SetColour(a,b,c) on Game+0x3658
+    Help, SerialiseState };        // Help: HelpMenu::Initialise (Game+0x10298) at the tile center,
+                                   // a=HelpType, b=c=size float bits. SerialiseState: Game::SerialiseState
 struct TurnEvent { TurnEventKind kind; std::int32_t tile,a,b,c,d; };
 // match_tile is a synchronous gameplay dependency: wire it to dr_match_tile.
 struct TurnHooks {
@@ -23,6 +26,8 @@ struct TurnHooks {
     bool (*attack_skull)(void*,std::int32_t tile,std::int32_t amount,bool effects);
     // Game::CheckEndGame (not yet recovered): true ends EndOfTurn early.
     bool (*check_end_game)(void*);
+    // Game::MoveMatchedTiles: wire to dr_move_matched_tiles.
+    void (*move_matched_tiles)(void*);
 };
 }
 namespace dungeonraid {
@@ -46,6 +51,13 @@ struct TurnFlags {
     std::uint8_t prev_164a7,next_164a8;
     std::uint8_t prev_be74[4],next_be78[4];
     std::uint8_t next_coin_bfbc;    // becomes PathBattle.grant_coin_on_attack (Game+0xbfbb)
+};
+// EndOfTurn closing flags (meanings not yet confirmed; named by Game offset).
+struct TurnFinishFlags {
+    std::uint8_t next_one_health_14af7;   // becomes GenerationState.one_health (+0x14af5)
+    std::uint8_t next_force_coins_14af8;  // becomes GenerationState.force_coins (+0x14af6)
+    std::uint8_t flag_1554c;              // cleared
+    std::uint32_t help_flags_102d0;       // bit 0x8000: help 15, bit 0x200000: help 21
 };
 // ScoreScreen::AddScore: variant 0 = (name, turn, xp, gold, up, score, Difficulty),
 // variant 1 = (name, turn, a, b, c, score, GameMode); name is Game+0xbe38.
@@ -91,6 +103,19 @@ void dr_end_turn_burn_freeze(dungeonraid::PathState*,const dungeonraid::TurnHook
 // health_bonus, then poison (ResourceState.poison) damage to the player and
 // CheckEndGame. Returns true when CheckEndGame ends the turn (original 0x13e04).
 bool dr_end_turn_regen_poison(dungeonraid::ResourceState*,std::int32_t regen,const dungeonraid::TurnHooks*);
+// EndOfTurn loop B [0x13a1c,0x13af0) + head [0x13d88,0x13daa): column-major over
+// enemies (type 1); Tile::GetPoison ticks the poison queue; poisoned enemies get
+// label 7 and lose that much health; survivors get UpdateText and particles 2,
+// others are matched (MatchTile reward 5, achievement 47 for race 1).
+void dr_end_turn_poison_enemies(dungeonraid::PathState*,const dungeonraid::TurnHooks*);
+// EndOfTurn tail [0x13b3c,0x13cda) + [0x13d12,0x13d64) + [0x13dc8,0x13e04): revive
+// guard rotation (164a6<-164a4<-revive_second<-0), CheckEndGame (true: return),
+// MoveMatchedTiles, attack_flag cleared, pending generation flags applied, the
+// generation filter cleared, time_to_promotion-1 (floored at 0), per-column help
+// popups, record-mode victory at turn 100, CheckEndGame, then SerialiseState.
+// Returns true when a CheckEndGame ended the turn (SerialiseState not reached).
+bool dr_end_turn_finish(dungeonraid::ResourceState*,dungeonraid::PathState*,dungeonraid::GenerationState*,
+    dungeonraid::EndGameState*,dungeonraid::TurnFinishFlags*,const dungeonraid::TurnHooks*);
 // EndOfTurn [0x13574,0x13710): turn++, CheckEndGame (true: return), skill cooldowns
 // (+1 up to max unless enemy 15 is on the board; sound 10 when reaching max-1 -> max;
 // every skill deactivated), interface update, per-turn flag reset and rotation,

@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-G）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-H/I）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 21 个 `recovered_*.cpp` 模块、16 个头文件、41 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 21 个 `recovered_*.cpp` 模块、16 个头文件、43 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -33,6 +33,8 @@
 - T030-E：CheckEndGame 判断与免死段恢复为 dr_check_end_game；结束结算（计分、职业统计、最高分、界面、SerialiseClasses）暂为 game_over 回调。
 - T030-F：CheckEndGame 结束结算与 GetScore/GetTotalGold/GetTotalUP 恢复，CheckEndGame 成为完整恢复（dr_check_end_game + dr_game_over），整函数差分通过；计分表/界面/职业档案序列化为事件边界。
 - T030-G：EndOfTurn 开头段恢复（dr_end_turn_begin：回合数、CheckEndGame、技能冷却、回合标志轮换），测试中 CheckEndGame 为完整原函数全链。
+- T030-H：EndOfTurn 中毒敌人循环恢复（dr_end_turn_poison_enemies），GetPoison/MatchTile 为原代码全链。
+- T030-I：EndOfTurn 尾段恢复（dr_end_turn_finish：免死轮换、两次 CheckEndGame、MoveMatchedTiles、生成标志、帮助弹窗、第 100 回合胜利）；SerialiseState 为存档边界事件。
 
 ## 验证
 
@@ -86,4 +88,4 @@
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..G（CheckEndGame 已完整恢复）。下一步：EndOfTurn 逐格循环 B（中毒敌人 0x13a22 起）、ProcessCripples 之后的能力触发与补位、SerialiseState 边界，以及 ActivateAbility 各能力。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..D。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..I（CheckEndGame 已完整恢复；EndOfTurn 除能力循环外各段均已恢复）。下一步 T030-J：0x13cda 清 Tile+0x254、ProcessCripples 之后的能力循环（Tile::ActivateAbility 及各能力函数），然后用各段组合做 EndOfTurn 整函数差分；SerialiseState 存档格式仍为边界。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..I。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

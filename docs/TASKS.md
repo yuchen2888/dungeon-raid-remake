@@ -30,6 +30,9 @@
 | T030-E | 完成 / Claude，待复核 | CheckEndGame 判断与免死段 [0x10b18,0x10c04)；结束结算暂为 game_over 回调；588 次比较 | dr_check_end_game、verify_check_end_game.py；三个错误副本被拒 |
 | T030-F | 完成 / Claude，待复核 | CheckEndGame 结束结算段 + 整函数 GetScore/GetTotalGold/GetTotalUP；CheckEndGame 成为完整恢复；600 次比较 | dr_game_over 等、verify_game_over.py；三个错误副本被拒 |
 | T030-G | 完成 / Claude，待复核 | EndOfTurn 开头段 [0x13574,0x13710)：回合数、CheckEndGame（完整原函数全链）、技能冷却与 Deactivate、回合标志轮换；400 次比较 | dr_end_turn_begin、TurnFlags、verify_turn_begin.py；三个错误副本被拒 |
+| T030-H | 完成 / Claude，待复核 | EndOfTurn 循环 B 中毒敌人 [0x13a1c,0x13af2)+[0x13d88,0x13daa)，GetPoison/MatchTile 为原代码；240 次比较 | dr_end_turn_poison_enemies、verify_turn_poison.py；三个错误副本被拒 |
+| T030-I | 完成 / Claude，待复核 | EndOfTurn 尾段 [0x13b3c,0x13cda)+[0x13d12,0x13d64)+[0x13dc8,0x13e04)：免死轮换、两次 CheckEndGame、MoveMatchedTiles、生成标志、帮助、第 100 回合胜利、SerialiseState 边界；262 次比较 | dr_end_turn_finish、TurnFinishFlags、verify_turn_finish.py；三个错误副本被拒 |
+| T030-J | 待做 | 清 Tile+0x254 + ProcessCripples + 能力循环：先恢复 Tile::ActivateAbility 0x3f09c（452 字节）分派，能力函数暂为有序回调；再逐个恢复 19 个未恢复能力函数（RunAwayEnemy … StealGold），最后 EndOfTurn 整函数差分 | T030_EOT_CALLS.json activate_ability / unrecovered_by_size |
 | T040 | 待 T030 | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序 |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -78,5 +81,7 @@
 认领记录：`T030-F / claude / 起始 7b9c85a / 继承差异：无 / 目标：结束结算与计分函数 / 文件：recovered/recovered_turn.*、recovered/verify_game_over.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：EndOfTurn 开头段与循环 B`
 
 认领记录：`T030-G / claude / 起始 178a77e / 继承差异：无 / 目标：EndOfTurn 开头段 / 文件：recovered/recovered_turn.*、recovered/verify_turn_begin.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：循环 B（中毒敌人）`
+
+认领记录：`T030-H/I / claude / 起始 a4371b9 / 继承差异：无 / 目标：EndOfTurn 循环 B 与尾段 / 文件：recovered/recovered_turn.*、recovered/verify_turn_poison.py、recovered/verify_turn_finish.py、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本 exit 1 / 下一步：T030-J 能力循环`
 
 认领记录模板：`Txxx / 工具 / 起始 HEAD / 继承差异 / 目标 / 文件 / 验收命令 / 结果路径 / 下一步`。详细活动现场存于 `.relay/active/owner.json`，持久事实随原子提交更新这里和 PROJECT_STATE.md。

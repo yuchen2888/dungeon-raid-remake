@@ -85,6 +85,54 @@ extern "C" void dr_end_turn_burn_freeze(PathState* p,const TurnHooks* h) {
         }
     }
 }
+extern "C" void dr_end_turn_poison_enemies(PathState* p,const TurnHooks* h) {
+    auto& board=p->match->stroke->selection;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=y*6+x;const int type=board.tiles[i].rule.type;
+        if(type!=1)continue;
+        auto& c=p->combat[i];
+        TileState view{c.attack,c.poison,nullptr};
+        const std::int32_t poison=dr_get_poison(&view);c.poison=view.poison;
+        if(!poison)continue;
+        emit(h,TurnEventKind::LabelRest,i,7,poison,15,0x3f800000);
+        const auto rest=static_cast<std::int32_t>(static_cast<std::uint32_t>(c.health)-static_cast<std::uint32_t>(poison));
+        if(rest>0) {c.health=rest;emit(h,TurnEventKind::Text,i,0,0,type);emit(h,TurnEventKind::Particles,i,2);}
+        else {
+            h->match_tile(h->context,i,5);
+            if(board.character.race==1)emit(h,TurnEventKind::Achievement,-1,47,0x40000000);
+        }
+    }
+}
+extern "C" bool dr_end_turn_finish(ResourceState* r,PathState* p,GenerationState* g,EndGameState* e,
+    TurnFinishFlags* f,const TurnHooks* h) {
+    r->guard_164a6=r->guard_164a4;r->guard_164a4=e->revive_second;e->revive_second=0;
+    if(h->check_end_game(h->context))return true;
+    h->move_matched_tiles(h->context);
+    for(auto& c:p->combat)c.attack_flag=0;
+    g->one_health=f->next_one_health_14af7;f->next_one_health_14af7=0;
+    g->force_coins=f->next_force_coins_14af8;f->next_force_coins_14af8=0;
+    g->filter_enabled=0;g->filter_swords=0;
+    const auto left=static_cast<std::int32_t>(static_cast<std::uint32_t>(g->time_to_promotion)-1u);
+    g->time_to_promotion=left<0?0:left;
+    const auto& stroke=*p->match->stroke;const auto& board=stroke.selection;
+    constexpr std::int32_t help_size=0x3da9999a;
+    // Each column shows the help for its first (topmost) matching enemy.
+    if(f->help_flags_102d0&0x8000u)
+        for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+            const int i=y*6+x;
+            if(board.tiles[i].rule.type==1) {emit(h,TurnEventKind::Help,i,15,help_size,help_size);break;}
+        }
+    if(f->help_flags_102d0&0x200000u)
+        for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+            const int i=y*6+x;const auto& rule=board.tiles[i].rule;
+            if(rule.type==1 && rule.enemy_type!=0) {emit(h,TurnEventKind::Help,i,21,help_size,help_size);break;}
+        }
+    f->flag_1554c=0;
+    e->victory=stroke.record_14aed && stroke.mode_14ae8==0 && p->turn==100;
+    if(h->check_end_game(h->context))return true;
+    emit(h,TurnEventKind::SerialiseState,-1);
+    return false;
+}
 extern "C" bool dr_end_turn_regen_poison(ResourceState* r,std::int32_t regen,const TurnHooks* h) {
     if(regen>0) {
         const auto ceiling=static_cast<std::int32_t>(static_cast<std::uint32_t>(r->health_max)+static_cast<std::uint32_t>(r->health_bonus));

@@ -220,3 +220,10 @@
 - 新 verify_turn_begin：400 次比较（边界 120、随机 200、连续回合 80）；160 次由 CheckEndGame 结束，39 次技能就绪音效。段字节 SHA-256 `81d983d3…d2cd6cd5`。
 - 错误副本（隔离开发副本）：冷却忽略 15 号敌人、不轮换金币标志、箭头条件忽略 0x16492，均 exit 1；真实源码对比一致。
 - 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 21）。
+
+## 2026-10-19 T030-H / T030-I：EndOfTurn 中毒敌人循环与尾段（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、43 个 verify 脚本共 46 步通过。运行目录 `.relay/runs/20261019T180432.798177Z`（UTC），输入指纹 `9a0aae1d…7dfe96e3`，`relay.sh check` 显示与当前源码一致。
+- 新 verify_turn_poison：240 次比较（存活粒子 1337、种族 1 成就 449）；新 verify_turn_finish：262 次比较（164 次有生成事件；保存 / 第一次结束 / 第二次结束 / 第 100 回合胜利均出现）。段字节 SHA-256 05915cf3…7b3d4a4e / dd46c0a1…0e49363f。
+- 错误副本（隔离开发副本）：H——行优先遍历、不写回毒队列、`>=0` 判存活；I——帮助循环不 break、计时器按旧值判断下限、胜利条件漏 mode；均 exit 1。真实源码对比一致。
+- 接力单测 4 项通过；T020 / T030 登记 --check matches true（T030 未恢复数 21）。

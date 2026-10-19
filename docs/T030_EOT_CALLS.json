@@ -696,6 +696,35 @@
         "check_end_game -> dr_check_end_game (whole function)"
       ],
       "original_bytes_sha256": "81d983d3244554e124959983a3b69538b7147f07b113d829dd94e8b9d2cd6cd5"
+    },
+    {
+      "start": "0x13a1c",
+      "end_exclusive": "0x13af2",
+      "extra": [
+        "0x13d88..0x13daa loop head"
+      ],
+      "native_function": "dr_end_turn_poison_enemies",
+      "verify": "recovered/verify_turn_poison.py",
+      "callbacks": [
+        "match_tile -> dr_match_tile"
+      ],
+      "original_bytes_sha256": "05915cf368c50454cd4cd42b6443ee498f4b829e6964a0e5327d20d07b3d4a4e"
+    },
+    {
+      "start": "0x13b3c",
+      "end_exclusive": "0x13cda",
+      "extra": [
+        "0x13d12..0x13d64 attack_flag clear and help loop tail",
+        "0x13dc8..0x13e04 help loop heads"
+      ],
+      "native_function": "dr_end_turn_finish",
+      "verify": "recovered/verify_turn_finish.py",
+      "callbacks": [
+        "check_end_game -> dr_check_end_game (whole function, twice)",
+        "move_matched_tiles -> dr_move_matched_tiles",
+        "HelpMenu::Initialise and Game::SerialiseState are events (boundaries)"
+      ],
+      "original_bytes_sha256": "dd46c0a1bc8674021bb816a6ed9af9d446ef96918f88e7a51bae63bf0e49363f"
     }
   ],
   "limits": [

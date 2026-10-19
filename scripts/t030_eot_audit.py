@@ -86,7 +86,15 @@ def build():
                     original_bytes_sha256=hashlib.sha256(read(0x10b18,0x10c04-0x10b18)).hexdigest()),
                     dict(start='0x13574',end_exclusive='0x13710',extra=[],native_function='dr_end_turn_begin',
                     verify='recovered/verify_turn_begin.py',callbacks=['check_end_game -> dr_check_end_game (whole function)'],
-                    original_bytes_sha256=hashlib.sha256(read(0x13574,0x13710-0x13574)).hexdigest())],
+                    original_bytes_sha256=hashlib.sha256(read(0x13574,0x13710-0x13574)).hexdigest()),
+                    dict(start='0x13a1c',end_exclusive='0x13af2',extra=['0x13d88..0x13daa loop head'],native_function='dr_end_turn_poison_enemies',
+                    verify='recovered/verify_turn_poison.py',callbacks=['match_tile -> dr_match_tile'],
+                    original_bytes_sha256=hashlib.sha256(read(0x13a1c,0x13af2-0x13a1c)+read(0x13d88,0x13daa-0x13d88)).hexdigest()),
+                    dict(start='0x13b3c',end_exclusive='0x13cda',extra=['0x13d12..0x13d64 attack_flag clear and help loop tail','0x13dc8..0x13e04 help loop heads'],
+                    native_function='dr_end_turn_finish',verify='recovered/verify_turn_finish.py',
+                    callbacks=['check_end_game -> dr_check_end_game (whole function, twice)','move_matched_tiles -> dr_move_matched_tiles',
+                               'HelpMenu::Initialise and Game::SerialiseState are events (boundaries)'],
+                    original_bytes_sha256=hashlib.sha256(read(0x13b3c,0x13cda-0x13b3c)+read(0x13d12,0x13d64-0x13d12)+read(0x13dc8,0x13e04-0x13dc8)).hexdigest())],
                 limits=['Direct bl/blx plus external b.w only; no indirect call graph','ActivateAbility expanded one level only',
                         'presentation-boundary is a naming heuristic (Quad/SimpleLabel/Interface/HelpMenu/Arrow/score screens and known Game presentation calls)'])
 

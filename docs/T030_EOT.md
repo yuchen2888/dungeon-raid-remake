@@ -146,3 +146,37 @@ TurnHooks 末尾追加 `check_end_game` 回调。**CheckEndGame 尚未恢复**�
 验证 `recovered/verify_turn_begin.py`（建立在 CheckEndGame 全链测试类上）：原版从 EndOfTurn 入口执行到 0x13710，或因结束而提前返回；其中的 CheckEndGame 是完整原函数（含 GetScore 与结束结算），原生侧调用 dr_check_end_game → dr_game_over。
 - 120 组边界（生命 5/0 × 15 号敌人有无 × 技能数 0..4 × 6）+ 200 组随机 + 8 局 × 10 回合携带状态。共 400 次比较；160 次由 CheckEndGame 结束，39 次技能就绪音效。
 - 错误副本：冷却忽略 15 号敌人、不轮换金币标志、箭头条件忽略 0x16492，均 exit 1。
+
+## T030-H：EndOfTurn 循环 B——中毒敌人（Claude，2026-10-19）
+
+起始提交 a4371b9。恢复 `[0x13a1c,0x13af2)` + 循环头 `[0x13d88,0x13daa)` 为 `dr_end_turn_poison_enemies(PathState*, TurnHooks*)`。
+
+- 列优先遍历（外层 x=[sp,#0x24]，内层 y；格子 = y*6+x）。只处理 type==1（敌人）。
+- Tile::GetPoison 推进毒队列（current←next←following←0，归零时清效果），返回值为本回合毒伤；0 则跳过。
+- 毒伤 >0：在静止位置（Game+0xb400）加标签 7（数值=毒伤，颜色 15，缩放 1.0）。剩余生命 = 生命−毒伤（32 位回绕）：>0 时写回生命、UpdateText(0,0,type)、粒子 2；否则 MatchTile(奖励 5)，种族（Game+0x1556C）为 1 时成就 47（2.0）。死亡分支不写回生命（MatchTile 自行处理）。
+- 原版结束后跳 0x13cda（清 Tile+0x254，属下一单元）。
+
+验证 `recovered/verify_turn_poison.py`：原版从 0x13a1c 执行到 0x13cda（循环自己清列计数器），GetPoison 与 MatchTile（含令牌/奖励）为原代码。240 组随机局面（60% 格子带随机毒队列与生命，含负毒、2^31−1 生命）：存活粒子 1337 次，种族 1 成就 449 次。
+错误副本：行优先遍历、不写回毒队列、`>=0` 判存活，均 exit 1。
+
+## T030-I：EndOfTurn 尾段（Claude，2026-10-19）
+
+恢复 `[0x13b3c,0x13cda)` + `[0x13d12,0x13d64)` + `[0x13dc8,0x13e04)` 为 `dr_end_turn_finish(ResourceState*, PathState*, GenerationState*, EndGameState*, TurnFinishFlags*, TurnHooks*)`，返回 true 表示某次 CheckEndGame 结束了游戏（未到 SerialiseState）。TurnHooks 末尾追加 `move_matched_tiles`。
+
+| 步骤 | 行为 |
+| --- | --- |
+| 免死轮换 | Game+0x164a6 ← 0x164a4 ← 0x164a5（revive_second）← 0 |
+| 结束判断 | CheckEndGame；真则返回 |
+| 补位 | MoveMatchedTiles（原生 dr_move_matched_tiles） |
+| 清零 | 每格 Tile+0x86（attack_flag） |
+| 生成标志 | 0x14af7 → one_health(0x14af5)、0x14af8 → force_coins(0x14af6)，来源清 0；filter_enabled/filter_swords（0xbfb8/9）清 0；time_to_promotion(0x14af0) −1，结果为负时取 0（INT_MIN−1 回绕为 INT_MAX，保留） |
+| 帮助 | Game+0x102d0 的 0x8000 位：每列第一个敌人（自上而下）调用 HelpMenu::Initialise(格子中心, 0x3da9999a, 0x3da9999a, 15)；0x200000 位：每列第一个 enemy_type≠0 的敌人，类型 21。注意是每列一次，不是全盘一次（编译后的 break 只跳出内层循环） |
+| 胜利 | Game+0x1554c 清 0；victory(0x16611) = record(0x14aed) && mode(0x14ae8)==0 && turn==100 |
+| 收尾 | CheckEndGame；为假则 Game::SerialiseState（存档，边界事件） |
+
+新增 `TurnFinishFlags`（按偏移命名，含义待确认）；TurnEventKind 追加 Help、SerialiseState。
+
+验证 `recovered/verify_turn_finish.py`（建立在 CheckEndGame 全链测试类上）：原版从 0x13b3c 执行到尾声 0x13e04，两次 CheckEndGame 都是完整原函数，MoveMatchedTiles 为原函数（RandomiseTile/生成/遭遇）。64 组边界（帮助位 × record × mode × 回合 99/100 × 生命）+ 150 组随机 + 6 局 × 8 回合，共 262 次比较；164 次有生成事件；结局：保存 / 第一次结束 / 第二次结束（补位中遭遇扣血）/ 第 100 回合胜利均出现。
+错误副本：帮助循环不 break、计时器按旧值判断下限、胜利条件漏 mode，均 exit 1。
+
+剩余：0x13cda 清 Tile+0x254 与 ProcessCripples 之后的能力循环（Tile::ActivateAbility 及 21 个能力函数），然后 EndOfTurn 整函数差分。SerialiseState（存档格式）仍为边界。
