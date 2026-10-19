@@ -96,6 +96,6 @@
 
 ## 尚未完成及下一步
 
-完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
+ProcessAttack（T020）与 EndOfTurn（T030，含 CheckEndGame、全部敌人能力、UpdateStats）已有原生恢复并经原版整函数差分；输入阶段门槛、新局初始化、存档（SerialiseState）及整个 Game::Process 尚未恢复，仍未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界只有 SerialiseState（存档格式，896 字节）。下一步：T030-N5 SerialiseState，或转入 T040（ProcessInput 门槛、InitNewGame、Game::Process 调度）（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..N4b：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过；ActivateAbility 的 20 个能力全部恢复（DestroyUpgrade 经 TurnHooks.ability(28) 接 dr_destroy_upgrade）；新 stats 模块恢复 UpdateStats。剩余边界只有 SerialiseState（存档格式，0x91c4，896 字节，另需 Tile/Item/Skill/HelpMenu/CharacterClass 的 Serialise 与更完整的物品模型）。下一步：T030-N5 SerialiseState，或转入 T040（ProcessInput 门槛、InitNewGame、Game::Process 调度）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
