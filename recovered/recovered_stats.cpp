@@ -4,7 +4,9 @@ namespace {
 std::int32_t add(std::int32_t a,std::int32_t b) {return static_cast<std::int32_t>(static_cast<std::uint32_t>(a)+static_cast<std::uint32_t>(b));}
 std::int32_t sub(std::int32_t a,std::int32_t b) {return static_cast<std::int32_t>(static_cast<std::uint32_t>(a)-static_cast<std::uint32_t>(b));}
 std::int32_t mul(std::int32_t a,std::int32_t b) {return static_cast<std::int32_t>(static_cast<std::uint32_t>(a)*static_cast<std::uint32_t>(b));}
-void emit(const StatsHooks* h,StatsEventKind kind,std::int32_t value=0) {if(h && h->event)h->event(h->context,kind,value);}
+void emit(const StatsHooks* h,StatsEventKind kind,std::int32_t a=0,std::int32_t tile=-1,std::int32_t b=0,std::int32_t c=0,std::int32_t d=0) {
+    if(h && h->event) {const StatsEvent e{kind,tile,a,b,c,d};h->event(h->context,&e);}
+}
 // Skill::GetStat 0x2ab40 / Skill::GetStatChance 0x2ab5c / ItemUpgrade::GetFloatValue 0x2d090.
 std::int32_t skill_stat(int type) {return type==2?5:(type>=0 && type<=3?1:0);}
 constexpr std::int32_t stat_chance=5;
@@ -88,4 +90,63 @@ extern "C" void dr_update_stats(StatsTargets* t,const ItemStats* const* items,st
         if(r.skill_current[i]>r.skill_max[i])r.skill_current[i]=r.skill_max[i];
     }
     emit(h,StatsEventKind::UpdateSkills);
+}
+namespace {
+bool have_perk(const MatchState& m,std::int32_t perk) {
+    // CharacterClass::HavePerk 0x1115c0
+    if(perk==255)return false;
+    for(auto p:m.perks)if(p==perk)return true;
+    return false;
+}
+std::int32_t graded_leech(std::int32_t v,bool upgrade) {
+    if(v>22)return 2;
+    if(v>20)return upgrade?2:3;
+    if(v>17)return 3;
+    if(upgrade && v>14)return 3;
+    return 5;
+}
+std::int32_t graded_loss(std::int32_t chance,bool upgrade) {
+    const std::int32_t d=100-(chance>100?100:chance);
+    if(d>87)return 2;
+    if(d>85)return upgrade?2:3;
+    if(d>82)return 3;
+    if(d>79)return upgrade?3:5;
+    if(d>74)return 5;
+    if(upgrade && d>69)return 5;
+    return 10;
+}
+}
+extern "C" std::int32_t dr_stat_upgrade(const StatsTargets* t,std::int32_t type) {
+    switch(type) {
+    case 2: return graded_leech(t->stroke->selection.leech,true);
+    case 3: return 2;
+    case 4: return 10;
+    case 10: return t->stroke->record_14aed && t->stroke->mode_14ae8==1?0:10;
+    case 14: return graded_loss(t->attack->armour_loss_chance,true);
+    case 17: return have_perk(*t->resources->match,5)?2:1;
+    default: return type>=0 && type<=19?1:0;
+    }
+}
+extern "C" std::int32_t dr_stat_downgrade(const StatsTargets* t,std::int32_t type) {
+    if(type==2)return graded_leech(t->stroke->selection.leech,false);
+    if(type==14)return graded_loss(t->attack->armour_loss_chance,false);
+    return dr_stat_upgrade(t,type);
+}
+extern "C" void dr_destroy_upgrade(StatsTargets* t,ItemStats* const* items,std::uint32_t count,std::uint32_t tile,const StatsHooks* h) {
+    auto& m=*t->resources->match;
+    const std::int32_t index=dr_random_int(&m.random,0,static_cast<std::int32_t>(count)-1,5);
+    ItemStats& item=*items[index];
+    std::int32_t positive[20];int n=0;
+    for(int k=0;k<20;++k)if(item.upgrade[k]>0)positive[n++]=k;
+    if(n) {
+        const std::int32_t type=positive[dr_random_int(&m.random,0,n-1,5)];
+        // Item::ReduceStat 0x29d9c
+        const std::int32_t reduced=sub(item.upgrade[type],dr_stat_downgrade(t,type));
+        item.upgrade[type]=reduced>0?reduced:0;
+        emit(h,StatsEventKind::ItemText,index);   // Item::MakeStats
+        emit(h,StatsEventKind::Achievement,39,-1,0x42c80000);
+    }
+    emit(h,StatsEventKind::Label,32,static_cast<std::int32_t>(tile),0,40,0x3f800000);
+    emit(h,StatsEventKind::Sound,22);
+    dr_update_stats(t,items,count,h);
 }

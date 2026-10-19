@@ -289,3 +289,10 @@
 - 新 verify_stats：400 次比较（血条 735、剑值 355、骷髅值 386、护盾 699、技能刷新 208 次）；加成增/减/不变、冷却 ±1、record 模式跳过与各限幅分支均到达。
 - 错误副本（隔离开发副本）：忽略缺陷 5、护甲流失阈值 `<4`、跳过条件 mode==0、GetStat(2)=1、技能当前值不截断，均 exit 1。
 - 接力单测 4 项通过；T010 / T020 / T030 登记 --check matches true。
+
+## 2026-10-19 T030-N4b：DestroyUpgrade 与升降级量（Claude）
+
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、48 个 verify 脚本共 51 步通过。运行目录 `.relay/runs/20261019T234233.587642Z`（UTC），输入指纹 `2a2d837e…98b39fd3`，与当前源码一致。
+- verify_stats：UpdateStats 400 + DestroyUpgrade 300，共 700 次比较（271 次实际削减属性）；降级/升级各档、特长两种结果与无正值属性分支均到达。
+- 错误副本（隔离开发副本）：降级按升级档、去掉下限 0、type 10 只看 record、特长结果对调，均 exit 1；"去掉 min(几率,100)"为等价变异。
+- 接力单测 4 项通过；T010 / T020 / T030 登记 --check matches true（T030 未恢复数 1：SerialiseState）。

@@ -36,7 +36,8 @@ T030={'__ZN4Game12MimicDefenceEP4Tile':'dr_mimic_defence','__ZN4Game9ResurrectEP
       '__ZN4Game13AttractSkullsEP4Tile':'dr_attract_skulls','__ZN4Game20AttractShieldsSwordsEP4Tile':'dr_attract_shields_swords',
       '__ZN4Game11HealOrBlessEP4Tile':'dr_heal_or_bless (incl. the std::set overload)',
       '__ZN4Game10ThrowSkullEP4Tile':'dr_throw_skull (token via dr_token_queue_push)',
-      '__ZN4Game9StealGoldEP4Tile':'dr_steal_gold (incl. the std::set overload; Token::SetTargetTile via dr_token_set_target_tile)'}
+      '__ZN4Game9StealGoldEP4Tile':'dr_steal_gold (incl. the std::set overload; Token::SetTargetTile via dr_token_set_target_tile)',
+      '__ZN4Game14DestroyUpgradeEP4Tile':'dr_destroy_upgrade (recovered_stats; wired via TurnHooks.ability(28))'}
 PRESENTATION=('Quad','SimpleLabel','Interface','HelpMenu','Arrow','ScoreScreen','GameOverScreen')
 PRESENTATION_GAME={'__ZN4Game10QueueSoundE5Sound','__ZN4Game16QueueAchievementE11Achievementf',
     '__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif','__ZN4Game12AddParticlesEP4Tile12ParticleType',

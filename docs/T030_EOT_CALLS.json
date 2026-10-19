@@ -514,7 +514,7 @@
         "target": "__ZN4Game14DestroyUpgradeEP4Tile",
         "target_address": "0x1515c",
         "size": 308,
-        "category": "unrecovered"
+        "category": "T030:dr_destroy_upgrade (recovered_stats; wired via TurnHooks.ability(28))"
       },
       {
         "site": "0x3f212",
@@ -567,10 +567,6 @@
     ]
   },
   "unrecovered_by_size": [
-    {
-      "symbol": "__ZN4Game14DestroyUpgradeEP4Tile",
-      "size": 308
-    },
     {
       "symbol": "__ZN4Game14SerialiseStateEv",
       "size": 896

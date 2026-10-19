@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-N4a）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-N4b）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
@@ -44,6 +44,7 @@
 - T030-N3b：ThrowSkull 恢复并接入（代币模块新增 dr_token_queue_push；TurnHooks.push_token）。
 - T030-N3c：StealGold 恢复并接入（动作模块新增 dr_token_set_target_tile；TurnHooks.token_target/token_start）。
 - T030-N4a：新模块 stats 恢复 Game::UpdateStats，补上 ProcessAttack 输入（攻击几率/削弱/全体伤害）与回复量的生产者。
+- T030-N4b：DestroyUpgrade 与 GetStatUpgrade/Downgrade 恢复（stats 模块，经 TurnHooks.ability(28) 接线）。EndOfTurn 可触发的逻辑全部恢复，只剩 SerialiseState。
 
 ## 验证
 
@@ -97,4 +98,4 @@
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界只有 DestroyUpgrade（经 TurnHooks.ability，需物品模型）和 SerialiseState（存档格式）。下一步 T030-N4：Item::MakeStats、GetStatDowngrade 与 DestroyUpgrade，或转入 T040 回合调度（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4a。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..L：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过，剩余边界只有 SerialiseState（存档格式，896 字节）。下一步：T030-N5 SerialiseState，或转入 T040（ProcessInput 门槛、InitNewGame、Game::Process 调度）（每接一个就加入 verify_abilities.FUNCTIONS、从 verify_activate_ability.ABILITIES 移除）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

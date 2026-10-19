@@ -31,7 +31,8 @@ struct TurnHooks {
     bool (*check_end_game)(void*);
     // Game::MoveMatchedTiles: wire to dr_move_matched_tiles.
     void (*move_matched_tiles)(void*);
-    // An enemy ability not yet recovered (Game::DestroyUpgrade, which needs the item model), keyed by enemy_type.
+    // Game::DestroyUpgrade (enemy_type 28, after its countdown): wire to dr_destroy_upgrade
+    // (recovered_stats) with the equipped items. Called as ability(28, tile).
     void (*ability)(void*,std::int32_t enemy_type,std::int32_t tile);
     // Game::SwapTiles(x1,y1,x2,y2): wire to dr_swap_tiles.
     void (*swap_tiles)(void*,std::int32_t x1,std::int32_t y1,std::int32_t x2,std::int32_t y2);

@@ -335,3 +335,16 @@ verify_abilities 共 18 个函数 1440 次比较（StealGold：金币分支 29�
 验证 `recovered/verify_stats.py`：原版整函数从入口执行，HaveFlaw、Skill::GetStat/GetStatChance、ItemUpgrade::GetFloatValue、vector::size 为原代码；物品与 Item** 向量由测试布置。400 次比较，覆盖加成增/减/不变、冷却 −1/+1、record 模式跳过、各限幅。错误副本：忽略缺陷 5、护甲流失阈值 `<4`、跳过条件改 mode==0、GetStat(2) 改 1、技能当前值不截断，均 exit 1（阈值一项起初存活，补入恰好落在边界的用例后被拒）。
 
 下一步：DestroyUpgrade 还需 ItemUpgrade::GetStatDowngrade（180 字节）、Item::ReduceStat、Item::MakeStats（3KB）以及物品向量随机选取。
+
+## T030-N4b：DestroyUpgrade 与升降级量（Claude，2026-10-19）
+
+stats 模块新增：
+- `dr_stat_upgrade` / `dr_stat_downgrade`：原版 ItemUpgrade::GetStatUpgrade 0x2d774（20 项跳转表）与 GetStatDowngrade 0x2d8a4。大多数类型为 1；3 为 2；4 为 10；10 在 record 且 mode==1 时为 0，否则 10；17 有特长 5 时为 2，否则 1；吸血（2）按当前吸血值、护甲流失几率（14）按 100−min(几率,100) 分档（升级与降级的档位略有不同，见源码）。
+- `dr_destroy_upgrade`：原版 Game::DestroyUpgrade 0x1515c。RandI(0, 装备数−1, 流 5) 选一件装备，再在其正值属性（按 UpgradeType 顺序放入 vector<int>）中 RandI 选一项；Item::ReduceStat 把它减去降级量（下限 0），随后 Item::MakeStats 重做说明文字（纯文字，记为 ItemText 事件），成就 39；无论是否有正值属性：标签 32（颜色 40）、音效 22、UpdateStats。原版在没有装备时会越界读取空向量，因此要求装备数 > 0。
+- StatsHooks 事件改为 StatsEvent 结构（新增 ItemText、Achievement、Label、Sound）。
+
+接线：ActivateAbility 对类型 28 在倒计时归零时仍调用 TurnHooks.ability(28, tile)，嵌入方把它接到 dr_destroy_upgrade（需要装备列表）。activate / 能力段 / 整函数测试的框架不建模物品，因此在那些测试里它仍记录为 ability 事件；它自身的差分在 verify_stats.py。
+
+验证 verify_stats.py 追加 300 组 DestroyUpgrade（原版整函数，RandI、ReduceStat、GetStatDowngrade/GetStatUpgrade、HavePerk、UpdateStats 为原代码；测试模拟 std::vector<int>，物品 +0x7c 写入 Game 指针），共 700 次比较，271 次实际削减属性；降级档 2/3/5/10、升级档 0/1/2/10、特长两种结果及"无正值属性"分支均到达。错误副本：降级按升级档、去掉下限 0、type 10 只看 record、特长结果对调，均 exit 1；"去掉 min(几率,100)"为等价变异（几率 >100 时两种写法都得 10），未计入。
+
+至此 EndOfTurn 能触发的全部逻辑都已恢复（DestroyUpgrade 经回调接线），只剩 SerialiseState（存档格式）为边界。

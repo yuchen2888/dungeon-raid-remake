@@ -23,8 +23,13 @@ struct StatsTargets {
     std::int32_t* regen;             // Game+0xbe70 (EndOfTurnState.regen)
     PlayerStats* player;
 };
-enum class StatsEventKind : std::int32_t { HealthBar=1, SwordValue, SkullValue, ShieldValue, UpdateSkills };
-struct StatsHooks { void* context; void (*event)(void*,StatsEventKind,std::int32_t value); };
+// HealthBar: a=value. ItemText: Item::MakeStats (item description text) for item a. Achievement:
+// a=id, b=float bits. Label: Game::AddSimpleLabel at the tile centre, a=type, b=number, c=colour,
+// d=scale bits. Sound: a=sound.
+enum class StatsEventKind : std::int32_t { HealthBar=1, SwordValue, SkullValue, ShieldValue, UpdateSkills,
+    ItemText, Achievement, Label, Sound };
+struct StatsEvent { StatsEventKind kind; std::int32_t tile,a,b,c,d; };
+struct StatsHooks { void* context; void (*event)(void*,const StatsEvent*); };
 }
 extern "C" {
 // Original Game::UpdateStats 0x14c04: recomputes the player's stats from the equipped items
@@ -33,4 +38,16 @@ extern "C" {
 // flag changes.
 void dr_update_stats(dungeonraid::StatsTargets*,const dungeonraid::ItemStats* const* items,std::uint32_t count,
     const dungeonraid::StatsHooks*);
+// Original ItemUpgrade::GetStatUpgrade 0x2d774 / GetStatDowngrade 0x2d8a4: how much one upgrade
+// adds to / removes from an item stat; leech (2) and armour loss chance (14) are graded by the
+// player's current value, 10 (health bonus) is 0 in record mode 1, 17 depends on perk 5.
+std::int32_t dr_stat_upgrade(const dungeonraid::StatsTargets*,std::int32_t type);
+std::int32_t dr_stat_downgrade(const dungeonraid::StatsTargets*,std::int32_t type);
+// Original Game::DestroyUpgrade 0x1515c (enemy ability 28): RandI picks an equipped item, then
+// one of its positive stats (UpgradeType order); Item::ReduceStat lowers it by the downgrade
+// (floor 0; the item text is redone, ItemText event) and achievement 39; then label 32 (colour
+// 40) at the tile, sound 22 and UpdateStats. count must be > 0 (the original indexes the
+// empty item vector otherwise).
+void dr_destroy_upgrade(dungeonraid::StatsTargets*,dungeonraid::ItemStats* const* items,std::uint32_t count,
+    std::uint32_t tile,const dungeonraid::StatsHooks*);
 }
