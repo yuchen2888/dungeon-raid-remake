@@ -1,0 +1,684 @@
+{
+  "task": "T030",
+  "executable_sha256": "5ab6e00407f865f126d4b0bd30a33296942d20cb2ecb4e813db5090caded9356",
+  "original_symbol": "__ZN4Game9EndOfTurnEv",
+  "address": "0x13574",
+  "size": 2292,
+  "original_bytes_sha256": "0a00b29d9a88ff50b41f985f56893faa811925de5bfcef3c9d7547b5bc2b06fd",
+  "call_sites": [
+    {
+      "site": "0x13586",
+      "instruction": "bl",
+      "target": "__ZN4Game12CheckEndGameEv",
+      "target_address": "0x10b18",
+      "size": 780,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x135a0",
+      "instruction": "bl",
+      "target": "__ZN4Game13GetEnemyCountE9EnemyType",
+      "target_address": "0x8cb8",
+      "size": 84,
+      "category": "inventory46:dr_enemy_count"
+    },
+    {
+      "site": "0x135ba",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "size": 88,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x135e0",
+      "instruction": "bl",
+      "target": "__ZN5Skill10DeactivateEv",
+      "target_address": "0x2ab60",
+      "size": 8,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x135fa",
+      "instruction": "bl",
+      "target": "__ZN9Interface12UpdateSkillsEv",
+      "target_address": "0x20820",
+      "size": 452,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x1364e",
+      "instruction": "bl",
+      "target": "__ZN5Arrow9SetColourEjjj",
+      "target_address": "0x1d790",
+      "size": 40,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13752",
+      "instruction": "bl",
+      "target": "__ZN4Game8AddFlareE9FlareType8GLfloat2RK9GLcolour4",
+      "target_address": "0x9f94",
+      "size": 444,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13778",
+      "instruction": "bl",
+      "target": "__ZN4Tile19SetFreezeVisibilityEb",
+      "target_address": "0x3d934",
+      "size": 112,
+      "category": "inventory46:dr_set_freeze"
+    },
+    {
+      "site": "0x13788",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "size": 88,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x137da",
+      "instruction": "bl",
+      "target": "__ZN4Game8AddFlareE9FlareType8GLfloat2RK9GLcolour4",
+      "target_address": "0x9f94",
+      "size": 444,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13806",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "size": 316,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x1384e",
+      "instruction": "bl",
+      "target": "__ZN4Tile10UpdateTextEbbb",
+      "target_address": "0x3da78",
+      "size": 292,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x1385a",
+      "instruction": "bl",
+      "target": "__ZN4Game11AttackSkullEP4Tileib",
+      "target_address": "0xd788",
+      "size": 552,
+      "category": "inventory46:dr_attack_skull"
+    },
+    {
+      "site": "0x13884",
+      "instruction": "bl",
+      "target": "__ZN4Game16QueueAchievementE11Achievementf",
+      "target_address": "0xbd68",
+      "size": 140,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x138be",
+      "instruction": "bl",
+      "target": "__ZN4Tile10UpdateTextEbbb",
+      "target_address": "0x3da78",
+      "size": 292,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x138c8",
+      "instruction": "bl",
+      "target": "__ZN4Game12AddParticlesEP4Tile12ParticleType",
+      "target_address": "0xa914",
+      "size": 272,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x138f4",
+      "instruction": "bl",
+      "target": "__ZN4Tile18SetFlameVisibilityEbib",
+      "target_address": "0x3d89c",
+      "size": 152,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x1393e",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "size": 88,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x1396e",
+      "instruction": "bl",
+      "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+      "target_address": "0x21130",
+      "size": 332,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13976",
+      "instruction": "bl",
+      "target": "__ZN9Interface9GetTargetE8TileType",
+      "target_address": "0x1ff40",
+      "size": 104,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x1398e",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "size": 316,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x139a6",
+      "instruction": "bl",
+      "target": "__ZN4Game10QueueSoundE5Sound",
+      "target_address": "0x903c",
+      "size": 88,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x139cc",
+      "instruction": "bl",
+      "target": "__ZN4Game16QueueAchievementE11Achievementf",
+      "target_address": "0xbd68",
+      "size": 140,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x139ec",
+      "instruction": "bl",
+      "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+      "target_address": "0x21130",
+      "size": 332,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x139f4",
+      "instruction": "bl",
+      "target": "__ZN9Interface17GetPoisonPositionEv",
+      "target_address": "0x20028",
+      "size": 20,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13a0c",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "size": 316,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13a12",
+      "instruction": "bl",
+      "target": "__ZN4Game12CheckEndGameEv",
+      "target_address": "0x10b18",
+      "size": 780,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x13a52",
+      "instruction": "bl",
+      "target": "__ZN4Tile9GetPoisonEv",
+      "target_address": "0x3d290",
+      "size": 52,
+      "category": "inventory46:dr_get_poison"
+    },
+    {
+      "site": "0x13a7e",
+      "instruction": "bl",
+      "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+      "target_address": "0xae2c",
+      "size": 316,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13a94",
+      "instruction": "bl",
+      "target": "__ZN4Game9MatchTileEP4Tile8TileType",
+      "target_address": "0xbe60",
+      "size": 2052,
+      "category": "inventory46:dr_match_tile"
+    },
+    {
+      "site": "0x13aba",
+      "instruction": "bl",
+      "target": "__ZN4Game16QueueAchievementE11Achievementf",
+      "target_address": "0xbd68",
+      "size": 140,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13acc",
+      "instruction": "bl",
+      "target": "__ZN4Tile10UpdateTextEbbb",
+      "target_address": "0x3da78",
+      "size": 292,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13ad6",
+      "instruction": "bl",
+      "target": "__ZN4Game12AddParticlesEP4Tile12ParticleType",
+      "target_address": "0xa914",
+      "size": 272,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13af4",
+      "instruction": "bl",
+      "target": "__ZN4Game15ProcessCripplesEv",
+      "target_address": "0xcae0",
+      "size": 228,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x13b26",
+      "instruction": "bl",
+      "target": "__ZN4Tile15ActivateAbilityEv",
+      "target_address": "0x3f09c",
+      "size": 452,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x13b5c",
+      "instruction": "bl",
+      "target": "__ZN4Game12CheckEndGameEv",
+      "target_address": "0x10b18",
+      "size": 780,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x13b6a",
+      "instruction": "bl",
+      "target": "__ZN4Game16MoveMatchedTilesEv",
+      "target_address": "0x10ed8",
+      "size": 664,
+      "category": "T010:dr_move_matched_tiles"
+    },
+    {
+      "site": "0x13c10",
+      "instruction": "bl",
+      "target": "__ZN8HelpMenu10InitialiseEffff8HelpType",
+      "target_address": "0x380b8",
+      "size": 112,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13c8a",
+      "instruction": "bl",
+      "target": "__ZN8HelpMenu10InitialiseEffff8HelpType",
+      "target_address": "0x380b8",
+      "size": 112,
+      "category": "presentation-boundary"
+    },
+    {
+      "site": "0x13cc8",
+      "instruction": "bl",
+      "target": "__ZN4Game12CheckEndGameEv",
+      "target_address": "0x10b18",
+      "size": 780,
+      "category": "unrecovered"
+    },
+    {
+      "site": "0x13cd4",
+      "instruction": "bl",
+      "target": "__ZN4Game14SerialiseStateEv",
+      "target_address": "0x91c4",
+      "size": 896,
+      "category": "unrecovered"
+    }
+  ],
+  "unique_targets": 24,
+  "activate_ability": {
+    "address": "0x3f09c",
+    "size": 452,
+    "call_sites": [
+      {
+        "site": "0x3f10a",
+        "instruction": "bl",
+        "target": "__ZN4Tile15UpdateCountdownEv",
+        "target_address": "0x3d9ec",
+        "size": 140,
+        "category": "presentation-boundary"
+      },
+      {
+        "site": "0x3f11c",
+        "instruction": "bl",
+        "target": "__ZN4Game12RunAwayEnemyEP4Tile",
+        "target_address": "0x11170",
+        "size": 164,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f126",
+        "instruction": "bl",
+        "target": "__ZN4Game11HealOrBlessEP4Tile",
+        "target_address": "0x105f0",
+        "size": 636,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f130",
+        "instruction": "bl",
+        "target": "__ZN4Game14MakeAcidPotionEP4Tile",
+        "target_address": "0xafdc",
+        "size": 340,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f13a",
+        "instruction": "bl",
+        "target": "__ZN4Game11IgniteTilesEP4Tile",
+        "target_address": "0xa150",
+        "size": 292,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f144",
+        "instruction": "bl",
+        "target": "__ZN4Game11FreezeTilesEP4Tile",
+        "target_address": "0x103d8",
+        "size": 536,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f154",
+        "instruction": "bl",
+        "target": "__ZN4Tile15UpdateCountdownEv",
+        "target_address": "0x3d9ec",
+        "size": 140,
+        "category": "presentation-boundary"
+      },
+      {
+        "site": "0x3f164",
+        "instruction": "bl",
+        "target": "__ZN4Game12ExplodeEnemyEP4Tile",
+        "target_address": "0x12da8",
+        "size": 192,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f16e",
+        "instruction": "bl",
+        "target": "__ZN4Game19ConvertSwordToSkullEP4Tile",
+        "target_address": "0xdc38",
+        "size": 356,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f178",
+        "instruction": "bl",
+        "target": "__ZN4Game9StealGoldEP4Tile",
+        "target_address": "0x128f4",
+        "size": 1204,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f182",
+        "instruction": "bl",
+        "target": "__ZN4Game9JumpEnemyEP4Tile",
+        "target_address": "0x1086c",
+        "size": 684,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f18c",
+        "instruction": "bl",
+        "target": "__ZN4Game10StabAttackEP4Tile",
+        "target_address": "0x127a8",
+        "size": 332,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f196",
+        "instruction": "bl",
+        "target": "__ZN4Game12MimicDefenceEP4Tile",
+        "target_address": "0xbd20",
+        "size": 72,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f1a0",
+        "instruction": "bl",
+        "target": "__ZN4Game18ConvertRandomTilesEP4Tile",
+        "target_address": "0x183e4",
+        "size": 520,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f1b0",
+        "instruction": "bl",
+        "target": "__ZN4Tile15UpdateCountdownEv",
+        "target_address": "0x3d9ec",
+        "size": 140,
+        "category": "presentation-boundary"
+      },
+      {
+        "site": "0x3f1be",
+        "instruction": "bl",
+        "target": "__ZN4Game13TeleportEnemyEv",
+        "target_address": "0xf4c8",
+        "size": 240,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f1c8",
+        "instruction": "bl",
+        "target": "__ZN4Game22BreakRandomShieldSwordEP4Tile",
+        "target_address": "0x181d8",
+        "size": 524,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f1d2",
+        "instruction": "bl",
+        "target": "__ZN4Game11LowerSkullsEP4Tile",
+        "target_address": "0xc9e0",
+        "size": 256,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f1dc",
+        "instruction": "bl",
+        "target": "__ZN4Game13AttractSkullsEP4Tile",
+        "target_address": "0x185ec",
+        "size": 1012,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f1e6",
+        "instruction": "bl",
+        "target": "__ZN4Game20AttractShieldsSwordsEP4Tile",
+        "target_address": "0x17ddc",
+        "size": 1020,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f1f0",
+        "instruction": "bl",
+        "target": "__ZN4Game10ThrowSkullEP4Tile",
+        "target_address": "0xc774",
+        "size": 620,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f206",
+        "instruction": "bl",
+        "target": "__ZN4Game14DestroyUpgradeEP4Tile",
+        "target_address": "0x1515c",
+        "size": 308,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f212",
+        "instruction": "bl",
+        "target": "__ZN4Tile15UpdateCountdownEv",
+        "target_address": "0x3d9ec",
+        "size": 140,
+        "category": "presentation-boundary"
+      },
+      {
+        "site": "0x3f21c",
+        "instruction": "bl",
+        "target": "__ZN4Game6FleeUpEP4Tile",
+        "target_address": "0xc664",
+        "size": 272,
+        "category": "unrecovered"
+      },
+      {
+        "site": "0x3f242",
+        "instruction": "bl",
+        "target": "__ZN4Tile13GenerateStatsEii",
+        "target_address": "0x3e740",
+        "size": 2084,
+        "category": "T010:dr_generate_stats"
+      },
+      {
+        "site": "0x3f248",
+        "instruction": "bl",
+        "target": "__ZN4Tile13UpdateEnemyUVEv",
+        "target_address": "0x3ef64",
+        "size": 312,
+        "category": "presentation-boundary"
+      },
+      {
+        "site": "0x3f24e",
+        "instruction": "bl",
+        "target": "__ZN4Tile12UpdateValuesEv",
+        "target_address": "0x3db9c",
+        "size": 96,
+        "category": "T010:dr_update_generated_values"
+      },
+      {
+        "site": "0x3f256",
+        "instruction": "bl",
+        "target": "__ZN4Game9ResurrectEP4Tile",
+        "target_address": "0xaf68",
+        "size": 116,
+        "category": "unrecovered"
+      }
+    ]
+  },
+  "unrecovered_by_size": [
+    {
+      "symbol": "__ZN5Skill10DeactivateEv",
+      "size": 8
+    },
+    {
+      "symbol": "__ZN4Game12MimicDefenceEP4Tile",
+      "size": 72
+    },
+    {
+      "symbol": "__ZN4Game9ResurrectEP4Tile",
+      "size": 116
+    },
+    {
+      "symbol": "__ZN4Tile18SetFlameVisibilityEbib",
+      "size": 152
+    },
+    {
+      "symbol": "__ZN4Game12RunAwayEnemyEP4Tile",
+      "size": 164
+    },
+    {
+      "symbol": "__ZN4Game12ExplodeEnemyEP4Tile",
+      "size": 192
+    },
+    {
+      "symbol": "__ZN4Game15ProcessCripplesEv",
+      "size": 228
+    },
+    {
+      "symbol": "__ZN4Game13TeleportEnemyEv",
+      "size": 240
+    },
+    {
+      "symbol": "__ZN4Game11LowerSkullsEP4Tile",
+      "size": 256
+    },
+    {
+      "symbol": "__ZN4Game6FleeUpEP4Tile",
+      "size": 272
+    },
+    {
+      "symbol": "__ZN4Game11IgniteTilesEP4Tile",
+      "size": 292
+    },
+    {
+      "symbol": "__ZN4Game14DestroyUpgradeEP4Tile",
+      "size": 308
+    },
+    {
+      "symbol": "__ZN4Game10StabAttackEP4Tile",
+      "size": 332
+    },
+    {
+      "symbol": "__ZN4Game14MakeAcidPotionEP4Tile",
+      "size": 340
+    },
+    {
+      "symbol": "__ZN4Game19ConvertSwordToSkullEP4Tile",
+      "size": 356
+    },
+    {
+      "symbol": "__ZN4Tile15ActivateAbilityEv",
+      "size": 452
+    },
+    {
+      "symbol": "__ZN4Game18ConvertRandomTilesEP4Tile",
+      "size": 520
+    },
+    {
+      "symbol": "__ZN4Game22BreakRandomShieldSwordEP4Tile",
+      "size": 524
+    },
+    {
+      "symbol": "__ZN4Game11FreezeTilesEP4Tile",
+      "size": 536
+    },
+    {
+      "symbol": "__ZN4Game10ThrowSkullEP4Tile",
+      "size": 620
+    },
+    {
+      "symbol": "__ZN4Game11HealOrBlessEP4Tile",
+      "size": 636
+    },
+    {
+      "symbol": "__ZN4Game9JumpEnemyEP4Tile",
+      "size": 684
+    },
+    {
+      "symbol": "__ZN4Game12CheckEndGameEv",
+      "size": 780
+    },
+    {
+      "symbol": "__ZN4Game14SerialiseStateEv",
+      "size": 896
+    },
+    {
+      "symbol": "__ZN4Game13AttractSkullsEP4Tile",
+      "size": 1012
+    },
+    {
+      "symbol": "__ZN4Game20AttractShieldsSwordsEP4Tile",
+      "size": 1020
+    },
+    {
+      "symbol": "__ZN4Game9StealGoldEP4Tile",
+      "size": 1204
+    }
+  ],
+  "limits": [
+    "Direct bl/blx plus external b.w only; no indirect call graph",
+    "ActivateAbility expanded one level only",
+    "presentation-boundary is a naming heuristic (Quad/SimpleLabel/Interface/HelpMenu/Arrow/score screens and known Game presentation calls)"
+  ]
+}

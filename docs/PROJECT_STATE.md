@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T020-O）。当前阶段：Codex → Claude → Codex → Claude 接力；敌人攻击 Game::ProcessAttack 的每帧逻辑已全部恢复为 dr_process_attack，并与原版整函数逐帧差分通过（待复核）；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T030-A）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
@@ -26,6 +26,7 @@
 - T020-M：阶段 5/6 标签运动 `[0x1457c,0x146ce)` 恢复为 `dr_process_attack_label_motion`（返回是否完成，对应原版两个出口）。
 - T020-N：阶段 5 完成准备块 `[0x146ce,0x14790)` 恢复为 `dr_process_attack_phase5_done`。ProcessAttack 的每一段指令都已有恢复实现，尚未串成完整函数。
 - T020-O：`dr_process_attack` 按原控制流组合全部片段；verify_process_attack.py 每帧从原版入口 0x14118 调整函数比较完整共享状态与事件：48 次完整攻击（阶段 1→8）、1985 帧通过。测试替身仅平台 powf 与 AddFlare 追加计数模型。
+- T030-A：EndOfTurn 0x13574 调用登记（docs/T030_EOT_CALLS.json、T030_EOT.md）：41 调用点 / 24 目标；未恢复玩法 CheckEndGame、Skill::Deactivate、SetFlameVisibility、ProcessCripples、ActivateAbility（下有 21 个能力函数）、SerialiseState。
 
 ## 验证
 
@@ -77,4 +78,4 @@
 
 完整 ProcessAttack、EndOfTurn、输入阶段门槛、新局初始化/存档及整个 Game::Process 尚未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 的 ProcessAttack 每帧逻辑已完成，等待复核。建议下一位工具先复核 T020-B..O（verify --full、两份登记 --check、抽查源码与反汇编，尤其浮点运算顺序、遍历方向、各段出口），再开始 T030 EndOfTurn 0x13574：可直接复用 verify_attack_all.py 的全链测试类与 verify_process_attack.py 的规范事件记录方式。剩余边界：Game+0xbdc8/+0xbe6c/+0xbe68 的写入者、AddFlare 表现实现、阶段 8 之后由 Game::Process 进行的调度。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：按 docs/T030_EOT.md 的建议顺序，先恢复小的整函数（Skill::Deactivate、MimicDefence、Resurrect、ProcessCripples、SetFlameVisibility），再 CheckEndGame、EndOfTurn 主体分段、ActivateAbility 各能力，最后整函数逐回合差分；沿用 T020 的段差分方法与全链测试类（verify_attack_all.py、verify_process_attack.py）。建议下一位工具先复核 T020-B..O。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
