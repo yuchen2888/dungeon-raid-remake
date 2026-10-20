@@ -102,6 +102,19 @@ SkillHooks 增加 match（MatchTile）与 path（AttackSkull）钩子指针；Sk
 
 至此 Skill::Activate 用到的 22 个棋盘技能函数全部恢复。
 
+## H5：技能按钮与 FireBreath（Claude，2026-10-20）
+
+原版 Interface::Process（每帧在攻击步骤之后，dr_process_frame 的 InterfaceProcess）：FoldoutMenu / GameMenu / StatsMenu 打开时只处理菜单；否则输入就绪时调用 Interface::ProcessInput 0x209e4（技能按钮，以及游戏菜单 / 属性菜单两个按钮）。
+
+原生 `dr_skill_input(SkillState*, SkillInput*, phase, button, hooks, gh)`：SkillInput = 按下的槽（Interface+0xbd0，−1 无）与上一次触摸阶段（Interface+0x1034）；button 是触摸下的已装备技能按钮（布局属于渲染层）。
+- 新触摸（阶段 1 且上一次为 0）落在已装备按钮上：显示提示（技能类型、冷却上限、当前冷却）；冷却已满（current == max）时音效 0、按钮变色（220,220,220,255）、记为按下。
+- 松开或取消（阶段 2 / 3）且有按下的槽：按钮颜色恢复；仍在该按钮上且 Skill::CanActivate 时 Skill::Activate，该技能对象的冷却重新开始（max ≥ 0 时为 0，否则为 max；一次性技能 33 已被 RemoveSkill 移到最后一槽，冷却设在它移到的位置），种族 8 时 Game::FireBreath，UpdateSkills；结束按下；提示隐藏。
+- 游戏菜单 / 属性菜单按钮（GameMenu::Show / StatsMenu::Show）属界面。
+
+`dr_fire_breath`（Game::FireBreath 0xa274）：RandI(0, 普通骷髅数−1, 流 5) 按列选一个普通骷髅：闪光（240,150,10,255）、Tile::SetFlameVisibility(true, 基础伤害 Game+0xbdc0, 自身火焰)（FlameVisibility 事件，会话接 dr_set_flame_visibility）；闪光计时重置。`dr_skill_action` 把 Skill::Activate 的动作分派给 22 个棋盘技能函数。
+
+验证 `recovered/verify_skill_input.py`：原 Interface::ProcessInput 从入口执行（CursorInButton 按用例的按钮回答，ContainsPoint 回答否），Skill::CanActivate / Activate（内部调用按 verify_skills 记录）与 FireBreath 为原代码；1500 组（141 次使用技能、44 次 FireBreath）一致。错误副本 12 个全部 exit 1。测试发现并改正：提示参数是（类型、冷却上限、当前冷却）；一次性技能移除自身后冷却要设在它移到的槽。
+
 ## 后续
 
-- H6：Interface::ProcessInput 的技能按钮（CanActivate、冷却、输入目标 Game+0x58ac）、Skill::Deactivate、Game::SetSkill，以及会话接线。
+- H6：会话接线（SkillState、技能事件与动作、在 InterfaceProcess 处调用 dr_skill_input），verify_session 中使用技能。Skill::Deactivate 已在 dr_end_of_turn 中；Game::SetSkill（装备技能）属 FoldoutMenu 任务。

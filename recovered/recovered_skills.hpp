@@ -33,10 +33,17 @@ enum class SkillAction : std::int32_t { FreezeSkulls=1, GrabTiles, ShatterDefenc
 // Game::AddSimpleLabel(type a, tile b's resting position, number c, colour d, scale 0.5). EnemyUV:
 // Tile::UpdateEnemyUV on tile b. MoveMatchedTiles: Game::MoveMatchedTiles (wire to dr_move_matched_tiles).
 // JumpDown: Game::JumpDown(tile b) (wire to dr_jump_down). SwapTiles: Game::SwapTiles(a, b, c, d) (wire to
-// dr_swap_tiles). SetSpecialType: Tile::SetSpecialType(tile b, a) (wire to dr_set_special_type). Tile appearance (Quad::SetUV / SetColour of
+// dr_swap_tiles). SetSpecialType: Tile::SetSpecialType(tile b, a) (wire to dr_set_special_type). FlameVisibility:
+// Tile::SetFlameVisibility(true, damage a, self flame true) on tile b (wire to dr_set_flame_visibility).
+// UpdateSkills: Interface::UpdateSkills. ButtonColour: the skill button a's colour (RGBA b). Tooltip: Tooltip::Show
+// (skill type a, cooldown max b, current c) at the button of slot d (on every press of an equipped button). TooltipHide: Tooltip::Hide. Tile appearance (Quad::SetUV / SetColour of
 // Tile::Make*) and RandI go to the GenerationHooks as UV / Colour / Random events.
 enum class SkillEventKind : std::int32_t { Sound=1, Achievement, ArrowColour, PositionSkill, Flare, Freeze, Menu,
-    Particles, Text, Label, EnemyUV, MoveMatchedTiles, JumpDown, SwapTiles, SetSpecialType };
+    Particles, Text, Label, EnemyUV, MoveMatchedTiles, JumpDown, SwapTiles, SetSpecialType, FlameVisibility, UpdateSkills,
+    ButtonColour, Tooltip, TooltipHide };
+// The skill buttons of Interface::ProcessInput 0x209e4 (Interface+0xbd0: the pressed slot, -1 none;
+// Interface+0x1034: the touch phase of the previous call).
+struct SkillInput { std::int32_t pressed, previous_phase; };
 struct SkillEvent { SkillEventKind kind; std::int32_t a,b,c,d; };
 struct SkillHooks {
     void* context;
@@ -137,6 +144,21 @@ void dr_kill_skulls_next_to_coins(dungeonraid::SkillState*,const dungeonraid::Sk
 // Original Game::CreateChain 0xa618: up to ten tries of (x, y) = (RandI(0,5,5), RandI(0,5,5)) until the tile is
 // not a special enemy; it becomes special 0 (Tile::SetSpecialType) with a flare (100,100,255,255); flare timers.
 void dr_create_chain(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// H5. Original Game::FireBreath 0xa274 (after any skill, for race 8): RandI(0, plain skulls - 1, 5) picks one plain
+// skull (column-major): flare (240,150,10,255) and Tile::SetFlameVisibility(true, base damage, self flame); flare timers.
+void dr_fire_breath(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// A SkillHooks action run by its recovered function (the dispatch of Skill::Activate's board calls).
+void dr_skill_action(dungeonraid::SkillState*,dungeonraid::SkillAction,std::int32_t a,std::int32_t b,const dungeonraid::SkillHooks*,
+    const dungeonraid::GenerationHooks*);
+// Original Interface::ProcessInput 0x209e4, the skill buttons (run by Interface::Process when input is ready and
+// no in-game menu is open). button: the equipped slot whose button is under the touch (-1 none; the layout is
+// the renderer's). A new touch (phase 1 after phase 0) on an equipped button shows its tooltip and, when its
+// cooldown is full (current == max), sound 0 and the button is pressed. A release or cancel (phase 2 / 3) of a
+// pressed button: still on it and Skill::CanActivate, then Skill::Activate, the cooldown restarts (0, or max when
+// max < 0), FireBreath for race 8 and UpdateSkills; the press ends and the tooltip hides. The game / stats menu
+// buttons are the renderer's.
+void dr_skill_input(dungeonraid::SkillState*,dungeonraid::SkillInput*,std::int32_t phase,std::int32_t button,
+    const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
 // Original Game::RemoveSkill 0x9114 for the skill in slot: the later skills move up one slot (each
 // PositionSkill), the removed one goes to the last slot and skill_count drops by one; an unequipped slot
 // (outside 0..skill_count-1) changes nothing.

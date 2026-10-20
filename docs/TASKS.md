@@ -70,6 +70,8 @@
 | T040-H2 | 完成 / Claude，待复核 | 棋盘技能第一批：Upgrade、FreezeSkulls、ConvertTiles、CreateManaPotions、CreateExplosivePotions、CreateArrows、CreateMagicSword | verify_skill_board.py；16 个错误副本被拒；T040_SKILLS.md |
 | T040-H3 | 完成 / Claude，待复核 | 棋盘技能第二批：DemoteSpecialEnemy、PromoteNormalEnemy、KillSpecialEnemy、GrabTiles、ShatterDefence、ExplodeArmour | verify_skill_board2.py；17 个错误副本被拒；T040_SKILLS.md |
 | T040-H4 | 完成 / Claude，待复核 | 棋盘技能第三批：CheckShockAwe、CollectBoard、CollectRandomRow / Block、CollectEdgeTiles、ConvertColumnToSwords、Teleport、Earthquake、KillSkullsNextToCoins、CreateChain；22 个技能函数全部恢复 | verify_skill_board3.py；20 个错误副本被拒、1 个等价 |
+| T040-H5 | 完成 / Claude，待复核 | 技能按钮规则（Interface::ProcessInput 技能部分：按下 / 松开、冷却重置）、FireBreath、动作分派 dr_skill_action | verify_skill_input.py；12 个错误副本被拒 |
+| T040-J | 待做（下一步） | 表现层代码里的流 0 随机抽取（同 T040-I 的 AddFlare）：AddParticles（类型 0 抽 33 次，类型 1–3 抽 81 次）、SimpleLabel::Initialise（除类型 1/3/8/9/10 外抽 1 次；经 AddSimpleLabel 两个重载）、UpdateCrossVisibility（路径每次变化时为路径格子重建十字标签，类型 30 / 35 各抽 1 次，需恢复 Tile::GetDamageType）、Game::Start。流 0 也决定职业卷轴出现的倒计数、代币飞行速度等，所以这些抽取改变后续游戏结果 | 计数已用原版实测（40 个随机棋盘不变）；见 REVERSE_ENGINEERING.md T040-J |
 | T040-H | 进行中 / Claude | 技能系统：Skill::Activate（40 种类型）/ CanActivate 与约 25 个 Game 技能函数、技能输入目标；符文玩法依赖它 | 新单元测试 + 会话接线 |
 | T040-G | 完成（G0..G2b） / Claude，待复核 | 原生会话库：把测试宿主中的共享对象与钩子接线固化为 C++ 会话（新局、每帧 dr_process_frame、触摸输入、状态查询），供 iOS 层调用；用 F4 方式与原版逐帧比较 | 新 recovered_session 模块 + 测试 |
 | T040-F | 完成（F1..F4） | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |

@@ -374,3 +374,66 @@ extern "C" void dr_create_chain(SkillState* s,const SkillHooks* h,const Generati
     }
     reset_flare_timers(s);
 }
+extern "C" void dr_fire_breath(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    std::int32_t n=0;for(const auto& t:board(s).tiles)n+=plain_skull(t.rule);
+    std::int32_t pick=pick_random(s,n,gh);
+    for(int k=0;k<36 && pick>=0;++k) {
+        const int i=column_major(k);if(!plain_skull(board(s).tiles[i].rule))continue;
+        if(pick) {--pick;continue;}
+        flare(h,i,1,rgba(240,150,10,255));emit(h,SkillEventKind::FlameVisibility,board(s).base_damage,i);pick=-1;
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_skill_action(SkillState* s,SkillAction action,std::int32_t a,std::int32_t b,const SkillHooks* h,const GenerationHooks* gh) {
+    switch(action) {
+    case SkillAction::FreezeSkulls:dr_freeze_skulls(s,h);break;
+    case SkillAction::GrabTiles:dr_grab_tiles(s,a,b,h);break;
+    case SkillAction::ShatterDefence:dr_shatter_defence(s,h);break;
+    case SkillAction::ConvertTiles:dr_convert_tiles(s,a,b,h,gh);break;
+    case SkillAction::Teleport:dr_teleport(s,h);break;
+    case SkillAction::CreateExplosivePotions:dr_create_explosive_potions(s,h,gh);break;
+    case SkillAction::Upgrade:dr_skill_upgrade(h);break;
+    case SkillAction::CollectRandomRow:dr_collect_random_row(s,h,gh);break;
+    case SkillAction::DemoteSpecialEnemy:dr_demote_special_enemy(s,h,gh);break;
+    case SkillAction::KillSpecialEnemy:dr_kill_special_enemy(s,h,gh);break;
+    case SkillAction::PromoteNormalEnemy:dr_promote_normal_enemy(s,h,gh);break;
+    case SkillAction::CreateMagicSword:dr_create_magic_sword(s,h,gh);break;
+    case SkillAction::Earthquake:dr_earthquake(s,h,gh);break;
+    case SkillAction::ExplodeArmour:dr_explode_armour(s,h);break;
+    case SkillAction::CollectRandomBlock:dr_collect_random_block(s,h,gh);break;
+    case SkillAction::CreateManaPotions:dr_create_mana_potions(s,h,gh);break;
+    case SkillAction::ConvertColumnToSwords:dr_convert_column_to_swords(s,h,gh);break;
+    case SkillAction::CreateArrows:dr_create_arrows(s,h,gh);break;
+    case SkillAction::KillSkullsNextToCoins:dr_kill_skulls_next_to_coins(s,h);break;
+    case SkillAction::CollectEdgeTiles:dr_collect_edge_tiles(s,h);break;
+    case SkillAction::CreateChain:dr_create_chain(s,h,gh);break;
+    case SkillAction::CollectBoard:dr_collect_board(s,h);break;
+    }
+}
+extern "C" void dr_skill_input(SkillState* s,SkillInput* in,std::int32_t phase,std::int32_t button,const SkillHooks* h,const GenerationHooks* gh) {
+    auto& slots=*s->slots;auto& r=*s->resources;
+    if(phase==1) {
+        if(in->previous_phase==0 && button>=0 && button<4 && button<r.skill_count) {
+            if(r.skill_current[button]==r.skill_max[button]) {
+                emit(h,SkillEventKind::Sound,0);in->pressed=button;emit(h,SkillEventKind::ButtonColour,button,rgba(220,220,220,255));
+            }
+            emit(h,SkillEventKind::Tooltip,slots.id[button],r.skill_max[button],r.skill_current[button],button);
+        }
+    } else if(phase==2 || phase==3) {
+        if(in->pressed>=0) {
+            const std::int32_t slot=in->pressed;emit(h,SkillEventKind::ButtonColour,slot,rgba(255,255,255,255));
+            if(button==slot && dr_skill_can_activate(s,slots.id[slot])) {
+                const std::int32_t count=r.skill_count;
+                dr_skill_activate(s,slots.id[slot],slot,&slots.active[slot],h);
+                // the cooldown of the skill object, which CollectBoard's RemoveSkill moved to the last slot
+                const std::int32_t at=r.skill_count<count?count-1:slot;
+                r.skill_current[at]=r.skill_max[at]>=0?0:r.skill_max[at];
+                if(board(s).character.race==8)dr_fire_breath(s,h,gh);
+                emit(h,SkillEventKind::UpdateSkills);
+            }
+            in->pressed=-1;
+        }
+        emit(h,SkillEventKind::TooltipHide);
+    }
+    in->previous_phase=phase;
+}
