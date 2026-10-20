@@ -48,7 +48,8 @@
 | T040 | 进行中 / Claude | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序；见 T040_SCHEDULE.md |
 | T040-A | 完成 / Claude，待复核 | 调用登记：Process 76 / ProcessInput 74 / InitNewGame 51 个直接调用点，已恢复段落与哈希 | scripts/t040_process_audit.py → docs/T040_PROCESS_CALLS.json（--check） |
 | T040-B | 完成 / Claude，待复核 | 新模块 schedule：ProcessInput 门槛 [0x16638,0x16748)（dr_input_gate，含 EndOfTurn 调度）与 CountAttackers；600 次比较 | verify_input_gate.py；五个错误副本被拒 |
-| T040-C | 待做 | ProcessInput 触摸分派后的未恢复部分（AddRevengeHealth、IncreaseStat、UpdateCrossVisibility、ProcessPretzels 等） | T040_PROCESS_CALLS.json |
+| T040-C | 完成 / Claude，待复核 | 松手 MatchPath 分支、短路径与公共尾段 [0x16890,0x16c1c)+[0x16d88,0x16e10)（dr_release_path / dr_release_clear）与 AddRevengeHealth；500 次比较 | verify_release.py；错误副本被拒；见 T040_SCHEDULE.md |
+| T040-C2 | 待做 | 职业卷轴分支 [0x16c1c,0x16d88)、Item::IncreaseStat、UpdateCrossVisibility / UpdateDimming / ProcessPretzels | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
 首次接力已验收：Claude Code 桌面会话于 2026-10-18 完成 T010 并提交 8d9604a，Codex 从干净工作区接手，重跑 `--check`、独立核对全部 18 段字节、确认 HavePerk/GetSpecialEnemyCount 和容器替代边界，修正一处 UI 误分类。详细结果见 T010_REVIEW.md。Gemini CLI 接力尚未发生。
@@ -116,6 +117,8 @@
 认领记录：`T030-N4a / claude / 起始 ded977a / 继承差异：无 / 目标：Game::UpdateStats / 文件：recovered/recovered_stats.*、recovered/verify_stats.py、recovered/build.sh、scripts/verify.py、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：Item::MakeStats 与 DestroyUpgrade`
 
 认领记录：`T030-N4b / claude / 起始 80e0e2e / 继承差异：无 / 目标：DestroyUpgrade / 文件：recovered/recovered_stats.*、recovered/recovered_turn.hpp、recovered/verify_stats.py、recovered/build.sh、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：SerialiseState 或 T040`
+
+认领记录：`T040-C / claude / 起始 88a0d7b / 继承差异：无 / 目标：松手 MatchPath 分支与公共尾段、AddRevengeHealth / 文件：recovered/recovered_schedule.*、recovered/verify_release.py、recovered/build.sh、scripts/t040_process_audit.py、scripts/verify.py、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：T040-C2`
 
 认领记录：`T040-A/B / claude / 起始 1ee4beb / 继承差异：无 / 目标：调度调用登记、ProcessInput 门槛 / 文件：recovered/recovered_schedule.*、recovered/verify_input_gate.py、recovered/build.sh、scripts/t040_process_audit.py、scripts/t030_eot_audit.py（排序确定化）、scripts/verify.py、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：T040-C`
 

@@ -1,6 +1,6 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T040-B）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T040-C）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
 
 ## 已核实
 
@@ -46,6 +46,7 @@
 - T030-N4a：新模块 stats 恢复 Game::UpdateStats，补上 ProcessAttack 输入（攻击几率/削弱/全体伤害）与回复量的生产者。
 - T030-N4b：DestroyUpgrade 与 GetStatUpgrade/Downgrade 恢复（stats 模块，经 TurnHooks.ability(28) 接线）。EndOfTurn 可触发的逻辑全部恢复，只剩 SerialiseState。
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
+- T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 
 ## 验证
 
@@ -99,4 +100,4 @@
 
 ProcessAttack（T020）与 EndOfTurn（T030，含 CheckEndGame、全部敌人能力、UpdateStats）已有原生恢复并经原版整函数差分；输入阶段门槛、新局初始化、存档（SerialiseState）及整个 Game::Process 尚未恢复，仍未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..N4b：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过；ActivateAbility 的 20 个能力全部恢复（DestroyUpgrade 经 TurnHooks.ability(28) 接 dr_destroy_upgrade）；新 stats 模块恢复 UpdateStats。剩余边界只有 SerialiseState（存档格式，0x91c4，896 字节，另需 Tile/Item/Skill/HelpMenu/CharacterClass 的 Serialise 与更完整的物品模型）。存档（T030-N5）按用户指示暂缓。T040 进行中：下一步 T040-C（ProcessInput 触摸分派后的未恢复部分），然后 Game::Process 游戏部分与 InitNewGame。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..N4b：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过；ActivateAbility 的 20 个能力全部恢复（DestroyUpgrade 经 TurnHooks.ability(28) 接 dr_destroy_upgrade）；新 stats 模块恢复 UpdateStats。剩余边界只有 SerialiseState（存档格式，0x91c4，896 字节，另需 Tile/Item/Skill/HelpMenu/CharacterClass 的 Serialise 与更完整的物品模型）。存档（T030-N5）按用户指示暂缓。T040 进行中：A/B/C 已完成（门槛、松手 MatchPath 与尾段）；下一步 T040-C2（职业卷轴分支、IncreaseStat、UpdateCrossVisibility 等），然后 Game::Process 游戏部分（T040-D）与 InitNewGame（T040-E）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

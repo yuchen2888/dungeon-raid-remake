@@ -309,3 +309,10 @@
 - T040-A：`scripts/t040_process_audit.py --check --out docs/T040_PROCESS_CALLS.json` matches true（Process 76 / ProcessInput 74 / InitNewGame 51 个直接调用点）。顺带把 T030 登记的未恢复列表排序改为（大小，符号），消除同大小项受哈希随机化影响的潜在不确定。
 - T040-B：新 verify_input_gate 600 次比较（阻塞 407、空闲 101、分派 70、开始攻击 22；73 次调用 EndOfTurn），CountAttackers 整函数同时比较；特长跳过、开始攻击、阶段 1..7 阻塞、EndOfTurn、分派分支均到达。错误副本：回合阈值 `<4`、阶段 8 也阻塞、CountAttackers 不排除冰冻、代币条件 `!=0`、忽略输入目标，均 exit 1。
 - 接力单测 4 项通过；T010 / T020 / T030 / T040 登记 --check matches true。
+
+## 2026-10-19 T040-C：松手 MatchPath 分支、短路径与公共尾段（Claude）
+
+- 新 verify_release 500 次比较（MatchPath 276、短路径清除 203、卷轴入口 21）：原版 ProcessInput 从入口执行到尾声，Rand / list::size / AddRevengeHealth 为原代码；18 个分支全部到达，含治疗后血条不变。比较事件（含标签位置）、选择状态、三个 LabelFlight、计数、flag_1554c、生命、36 格 attack、路径与 fake、随机种子。
+- 错误副本 18 个全部 exit 1（明细见 T040_SCHEDULE.md）。"MatchTiles 前不清 kill_count"最初存活：测试把 MatchTiles 结果写成覆盖值；改为与原 MatchTiles 一致的累加后被拒。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、50 个 verify 脚本共 53 步通过。运行目录 `.relay/runs/20261020T032836.370195Z`，输入指纹 `5c1a9aa2…df285c233`，inputs_unchanged true。
+- `scripts/t040_process_audit.py --check --out docs/T040_PROCESS_CALLS.json` matches true（ProcessInput 未恢复目标 16 个）。

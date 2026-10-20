@@ -19,12 +19,16 @@ import t030_eot_audit as t030
 FUNCTIONS=['__ZN4Game7ProcessEv','__ZN4Game12ProcessInputEv','__ZN4Game11InitNewGameEv']
 # Whole functions recovered outside the T010/T020/T030 call registries.
 EXTRA={'__ZN4Game9EndOfTurnEv':'T030:dr_end_of_turn','__ZN4Game11UpdateStatsEv':'T030:dr_update_stats',
-       '__ZN4Game14CountAttackersEv':'T040:dr_count_attackers'}
+       '__ZN4Game14CountAttackersEv':'T040:dr_count_attackers','__ZN4Game16AddRevengeHealthEv':'T040:dr_add_revenge_health'}
 SEGMENTS=[
     dict(function='__ZN4Game12ProcessInputEv',start='0x16638',end_exclusive='0x16748',native='dr_input_gate (recovered_schedule)',
          verify='recovered/verify_input_gate.py',task='T040-B'),
     dict(function='__ZN4Game12ProcessInputEv',start='0x16748',end_exclusive='0x1674e',native='dr_reset_rune_preview / in dr_input_gate',
          verify='recovered/verify_input_gate.py',task='T040-B'),
+    dict(function='__ZN4Game12ProcessInputEv',start='0x16890',end_exclusive='0x16c1c',native='dr_release_path (recovered_schedule)',
+         verify='recovered/verify_release.py',task='T040-C'),
+    dict(function='__ZN4Game12ProcessInputEv',start='0x16d88',end_exclusive='0x16e10',native='dr_release_clear (recovered_schedule)',
+         verify='recovered/verify_release.py',task='T040-C'),
     dict(function='__ZN4Game7ProcessEv',start='0x173c8',end_exclusive='0x17400',native='moving-list subsection (recovered_refill)',
          verify='recovered/verify_refill_integration.py',task='earlier'),
     dict(function='__ZN4Game7ProcessEv',start='0x1744c',end_exclusive='0x174da',extra=['0x17d56..0x17d62'],

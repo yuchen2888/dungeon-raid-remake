@@ -838,7 +838,7 @@
           "target": "__ZN4Game16AddRevengeHealthEv",
           "target_address": "0xce7c",
           "size": 208,
-          "category": "unrecovered"
+          "category": "T040:dr_add_revenge_health"
         },
         {
           "site": "0x16a82",
@@ -1311,10 +1311,6 @@
           "size": 116
         },
         {
-          "symbol": "__ZN4Game16AddRevengeHealthEv",
-          "size": 208
-        },
-        {
           "symbol": "__ZN4Game15ProcessPretzelsEv",
           "size": 400
         },
@@ -1784,6 +1780,24 @@
       "verify": "recovered/verify_input_gate.py",
       "task": "T040-B",
       "original_bytes_sha256": "87bbc1e4d67f3f0ea4cbee25cea861e946da09f4357e591f9944357d33c96226"
+    },
+    {
+      "function": "__ZN4Game12ProcessInputEv",
+      "start": "0x16890",
+      "end_exclusive": "0x16c1c",
+      "native": "dr_release_path (recovered_schedule)",
+      "verify": "recovered/verify_release.py",
+      "task": "T040-C",
+      "original_bytes_sha256": "5ac3d817d84d253da19f353df0de7636602abbd046a49ecbd173f36ccac72ab2"
+    },
+    {
+      "function": "__ZN4Game12ProcessInputEv",
+      "start": "0x16d88",
+      "end_exclusive": "0x16e10",
+      "native": "dr_release_clear (recovered_schedule)",
+      "verify": "recovered/verify_release.py",
+      "task": "T040-C",
+      "original_bytes_sha256": "7872ac05edf54b7089d1baa5cd4b13b38d46842589bf9db3e55330f487e2e38d"
     },
     {
       "function": "__ZN4Game7ProcessEv",
