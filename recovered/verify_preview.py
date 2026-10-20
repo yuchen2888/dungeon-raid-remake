@@ -61,7 +61,7 @@ class Original(StrokeOriginal):
     def run(self):
         self.direct=True;self.events=[];u=self.u
         u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
-        u.emu_start(0xefe1,self.STOP,timeout=500000,count=500000)
+        u.emu_start(0xefe1,self.STOP,timeout=0,count=500000)
         assert u.reg_read(self.PC)==self.STOP
         return dict(counts=[C.c_int32(self.read(self.GAME+0x164b0+4*i)).value for i in range(6)],total=self.total(),events=self.events)
     def step(self,phase,touch):

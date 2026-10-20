@@ -180,7 +180,7 @@ class Original(OriginalBattle):
             u.mem_write(nodes+16*i,struct.pack('<III',nodes+16*(i+1) if i+1<n else sentinel,
                 nodes+16*(i-1) if i else sentinel,self.GAME+0x5e58+608*index))
         u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
-        u.emu_start(0x12189,self.STOP,timeout=300000,count=200000)
+        u.emu_start(0x12189,self.STOP,timeout=0,count=200000)
         assert u.reg_read(self.PC)==self.STOP
         game=dict(g)
         for k,offset in self.game_ints.items():game[k]=self.i32(self.GAME+offset)

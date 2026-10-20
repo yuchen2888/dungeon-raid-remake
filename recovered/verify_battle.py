@@ -189,7 +189,7 @@ class OriginalBattle:
         else:raise ValueError(op)
         for reg,value in zip(self.regs,args):u.reg_write(reg,value&0xffffffff)
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
-        u.emu_start(self.addresses[op]|1,self.STOP,timeout=100000,count=10000)
+        u.emu_start(self.addresses[op]|1,self.STOP,timeout=0,count=10000)
         assert u.reg_read(self.PC)==self.STOP
         result=u.reg_read(self.regs[0]) if op=='attack' else None
         after=dict(s)

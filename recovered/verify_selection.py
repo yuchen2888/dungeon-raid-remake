@@ -190,7 +190,7 @@ class Original:
         sentinel=G+0xb3d8;u.mem_write(sentinel,struct.pack('<II',sentinel,sentinel))
         for index in case['path']:self.push(sentinel,self.tile(index))
         u.reg_write(self.regs[0],G);u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
-        u.emu_start(0xfb6d,self.STOP,timeout=500000,count=500000)
+        u.emu_start(0xfb6d,self.STOP,timeout=0,count=500000)
         assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
         game=dict(g)
         for k,a in INTS.items():game[k]=C.c_int32(self.read(G+a)).value

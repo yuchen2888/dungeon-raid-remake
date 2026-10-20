@@ -105,7 +105,7 @@ class Original(PreviewOriginal):
         self.rune_direct=True;self.events=[];u=self.u
         u.reg_write(self.regs[0],self.GAME);u.reg_write(self.regs[1],int(commit))
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
-        u.emu_start(0xf7bd,self.STOP,timeout=1000000,count=1000000)
+        u.emu_start(0xf7bd,self.STOP,timeout=0,count=1000000)
         assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
         return dict(self.status(),events=self.events)
     def step(self,phase,touch):

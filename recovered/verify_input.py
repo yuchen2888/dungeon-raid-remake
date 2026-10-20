@@ -73,7 +73,7 @@ def original_runner():
         for reg, value in ((UC_ARM_REG_R0, r0), (UC_ARM_REG_R1, r1), (UC_ARM_REG_R2, r2),
                            (UC_ARM_REG_SP, 0x140FFF0), (UC_ARM_REG_LR, STOP | 1)):
             u.reg_write(reg, value)
-        u.emu_start(addresses[op] | 1, STOP, timeout=100000, count=200)
+        u.emu_start(addresses[op] | 1, STOP, timeout=0, count=200)
         assert u.reg_read(UC_ARM_REG_PC) == STOP
         result = u.reg_read(UC_ARM_REG_R0)
         if op == 'tile_at':

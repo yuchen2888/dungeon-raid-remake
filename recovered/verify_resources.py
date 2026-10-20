@@ -112,7 +112,7 @@ class Original(TokenOriginal):
         for reg,value in zip(self.regs,[self.GAME,reward,token,amount]):u.reg_write(reg,value & 0xffffffff)
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
         try:
-            u.emu_start(0x12ee9,self.STOP,timeout=1000000,count=1000000)
+            u.emu_start(0x12ee9,self.STOP,timeout=0,count=1000000)
             assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
             return self.resource_status()
         finally:self.resource_active=False

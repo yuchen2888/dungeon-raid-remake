@@ -296,3 +296,9 @@
 - verify_stats：UpdateStats 400 + DestroyUpgrade 300，共 700 次比较（271 次实际削减属性）；降级/升级各档、特长两种结果与无正值属性分支均到达。
 - 错误副本（隔离开发副本）：降级按升级档、去掉下限 0、type 10 只看 record、特长结果对调，均 exit 1；"去掉 min(几率,100)"为等价变异。
 - 接力单测 4 项通过；T010 / T020 / T030 登记 --check matches true（T030 未恢复数 1：SerialiseState）。
+
+## 2026-10-19 测试稳定性：去掉继承测试的墙钟超时（Claude）
+
+- 现象：T040-B 的一次全套运行（`.relay/runs/20261020T012132.253858Z`）中 verify_encounters 失败，停在 0x3f3a4；该测试经 verify_refill.py 的 `emu_start(..., timeout=1000000, count=1000000)` 带 1 秒墙钟限制，单独重跑两次均通过——系统负载下的假失败。
+- 修改：18 个继承的 verify 脚本里 19 处 `emu_start` 的墙钟超时改为 0，指令数上限不变（与 a638bfd 对自写测试的处理一致）。只改这些参数，比较逻辑不变。
+- 验证：`./scripts/relay.sh verify --full` → exit 0，构建、2 个示例、49 个 verify 脚本共 52 步通过。运行目录 `.relay/runs/20261020T013826.005802Z`，输入指纹 `6c002e88…3056f5a3`，与提交时源码一致（该运行同时覆盖随后的 T040-A/B 提交）。

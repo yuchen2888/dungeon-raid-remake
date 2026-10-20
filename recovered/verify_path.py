@@ -125,7 +125,7 @@ class Original(MotionOriginal):
         self.path_events=[];self.match_events=[];self.token_events=[];self.motion_events=[];self.path_active=True;self.int_sets={}
         u=self.u;u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
         try:
-            u.emu_start(0x12189,self.STOP,timeout=3000000,count=3000000)
+            u.emu_start(0x12189,self.STOP,timeout=0,count=3000000)
             assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC));return self.path_status()
         finally:self.path_active=False
 

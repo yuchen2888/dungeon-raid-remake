@@ -23,7 +23,7 @@ class Original(EncounterOriginal):
         from unicorn.arm_const import UC_ARM_REG_R4
         u=self.u;u.reg_write(UC_ARM_REG_R4,self.GAME);u.reg_write(self.SP,0x140fff0);self.write(self.GAME+4,bits(dt));self.fall_loop=True
         try:
-            u.emu_start(0x173c9,self.STOP,timeout=1000000,count=1000000);assert u.reg_read(self.PC) in [0x17400,0x1744c]
+            u.emu_start(0x173c9,self.STOP,timeout=0,count=1000000);assert u.reg_read(self.PC) in [0x17400,0x1744c]
         finally:self.fall_loop=False
         self.moving_list=[self.index(v) for v in self.list_values(self.GAME+0xb3f8)];return self.enc_status()
 def main():

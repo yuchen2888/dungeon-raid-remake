@@ -75,7 +75,7 @@ class Original:
         self.events=[];self.pending=None;before=bytearray(self.u.mem_read(GAME,0x20000))
         for reg,value in [(UC_ARM_REG_R8,GAME),(UC_ARM_REG_R10,absorbed),
                           (UC_ARM_REG_SP,TILE+0xf00),(UC_ARM_REG_LR,STOP|1)]:self.u.reg_write(reg,value)
-        self.u.emu_start(START|1,STOP,timeout=1000000,count=100000)
+        self.u.emu_start(START|1,STOP,timeout=0,count=100000)
         assert self.u.reg_read(UC_ARM_REG_PC)==END and self.pending is None
         result=dict(lost=self.u.reg_read(UC_ARM_REG_R5),armour=self.read(0xbda4),ui=self.read(0x59c0),
                     seeds=list(struct.unpack('<6I',self.u.mem_read(SEEDS,24))),events=self.events[:])

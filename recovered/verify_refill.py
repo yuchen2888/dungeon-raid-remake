@@ -104,7 +104,7 @@ class Original(PathOriginal):
         for reg,value in zip(self.regs,args):u.reg_write(reg,value&0xffffffff)
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1);self.write(0x140fff0,extra);self.refill_active=True
         try:
-            u.emu_start(address|1,self.STOP,timeout=1000000,count=1000000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
+            u.emu_start(address|1,self.STOP,timeout=0,count=1000000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
         finally:self.refill_active=False
         return self.refill_status()
     def move(self):self.refill_events=[];return self.call(0x10ed8,[self.GAME])

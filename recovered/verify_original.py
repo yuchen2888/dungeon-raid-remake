@@ -101,7 +101,7 @@ class Original:
         self.uc.reg_write(UC_ARM_REG_R0, TILE)
         self.uc.reg_write(UC_ARM_REG_R1, amount & 0xFFFFFFFF)
         self.uc.reg_write(UC_ARM_REG_LR, STOP | 1)
-        self.uc.emu_start(FUNCTIONS[name] | 1, STOP, timeout=100000, count=100)
+        self.uc.emu_start(FUNCTIONS[name] | 1, STOP, timeout=0, count=100)
         assert self.uc.reg_read(UC_ARM_REG_PC) == STOP, "Function did not return normally"
         return C.c_int32(self.uc.reg_read(UC_ARM_REG_R0)).value
 

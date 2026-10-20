@@ -122,7 +122,7 @@ def original_runner():
             u.reg_write(reg, value & 0xFFFFFFFF)
         u.reg_write(UC_ARM_REG_SP, stack + 0xFFF0)
         u.reg_write(UC_ARM_REG_LR, STOP | 1)
-        u.emu_start(addresses[op] | 1, STOP, timeout=100000, count=10000)
+        u.emu_start(addresses[op] | 1, STOP, timeout=0, count=10000)
         assert u.reg_read(UC_ARM_REG_PC) == STOP
         return C.c_int32(u.reg_read(UC_ARM_REG_R0)).value
     return run, original, addresses

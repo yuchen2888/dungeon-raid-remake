@@ -139,12 +139,12 @@ class Original(ResourceOriginal):
         self.motion_direct=True;self.motion_events=[];u=self.u
         for reg,value in zip(self.regs,[0x1600000,self.tile(tile),reward,self.tile(position)+0x54 if position>=0 else 0]):u.reg_write(reg,value)
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1);self.write(0x140fff0,incoming)
-        u.emu_start(0x21449,self.STOP,timeout=1000000,count=1000000);assert u.reg_read(self.PC)==self.STOP
+        u.emu_start(0x21449,self.STOP,timeout=0,count=1000000);assert u.reg_read(self.PC)==self.STOP
         self.motion_running=False;self.motion_return=None;return self.motion_status()
     def frame(self,slot,dt):
         self.motion_events=[];u=self.u;u.reg_write(self.regs[0],0x1600000+160*slot);u.reg_write(self.regs[1],bits(dt))
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
-        u.emu_start(0x21645,self.STOP,timeout=1000000,count=1000000);assert u.reg_read(self.PC)==self.STOP
+        u.emu_start(0x21645,self.STOP,timeout=0,count=1000000);assert u.reg_read(self.PC)==self.STOP
         self.motion_running=False;self.motion_return=None;return self.motion_status()
     def override(self,slot,values):
         offsets=dict(position=0x54,scale=0x64,direction=0x80,speed=0x88,progress=0x8c,acceleration=0x90,distance=0x94)
@@ -161,7 +161,7 @@ class Original(ResourceOriginal):
         from unicorn.arm_const import UC_ARM_REG_R4
         u.reg_write(UC_ARM_REG_R4,self.GAME);u.reg_write(self.SP,0x140fff0)
         try:
-            u.emu_start(0x1744d,self.STOP,timeout=1000000,count=1000000)
+            u.emu_start(0x1744d,self.STOP,timeout=0,count=1000000)
             assert self.batch_continued is not None,hex(u.reg_read(self.PC))
             return dict(continued=self.batch_continued,pending=self.read(self.GAME+0xb52c),motion=self.motion_status(),resources=self.resource_status())
         finally:self.batch_active=False;self.resource_active=False

@@ -104,7 +104,7 @@ class Original(MatchOriginal):
         for reg,value in zip(self.regs,[self.GAME,self.tile(tile),reward,int(bonus)]):u.reg_write(reg,value)
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
         self.write(0x140fff0,self.tile(position)+0x54 if position>=0 else 0)
-        u.emu_start(0x9891,self.STOP,timeout=1000000,count=1000000)
+        u.emu_start(0x9891,self.STOP,timeout=0,count=1000000)
         assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC));return self.token_status()
     def run_match(self,index,reward):
         self.token_direct=False;self.token_events=[];result=super().run_match(index,reward);result['tokens']=self.token_status();return result

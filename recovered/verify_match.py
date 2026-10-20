@@ -161,7 +161,7 @@ class Original(RuneOriginal):
         self.match_events=[];u=self.u
         for reg,value in zip(self.regs,[self.GAME,self.tile(index),reward,0]):u.reg_write(reg,value)
         u.reg_write(self.SP,0x140fff0);u.reg_write(self.LR,self.STOP|1)
-        u.emu_start(0xbe61,self.STOP,timeout=2000000,count=2000000)
+        u.emu_start(0xbe61,self.STOP,timeout=0,count=2000000)
         assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
         return self.match_status()
     def step(self,phase,touch):
