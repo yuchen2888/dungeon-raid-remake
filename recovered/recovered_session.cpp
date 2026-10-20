@@ -44,8 +44,10 @@ struct Session {
     ShieldShatterState shatter{};
     TouchState touch{};
     FrameScreens screens{};
-    std::int32_t input_target=-1;
     std::uint8_t current_label_active=0;
+    std::int32_t skill_button=-1;
+    SkillInput skill_input{-1,0};   // .pressed is Game+0x58ac (Interface+0xbd0), the gate's input target
+    SkillState skill_state{};
     InputGateInputs gate_inputs{};
     FrameState frame_state{};
     BoardEffectsState effects{};
@@ -86,6 +88,7 @@ struct Session {
     GameFrameHooks frame_hooks{};
     NewGameHooks new_game_hooks{};
     CrossHooks cross_hooks{};
+    SkillHooks skill_hooks{};
 };
 }
 namespace {
@@ -275,11 +278,39 @@ void release_event(void* c,const ReleaseEvent* e) {
     }
 }
 bool release_check_end_game(void* c) {return check_end_game(self(c));}
+// Skills: the board calls of Skill::Activate and the skill events that are other units' functions.
+void skill_event(void* c,const SkillEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::Skill,e);
+    const auto tile=static_cast<std::uint32_t>(e->b);
+    switch(e->kind) {
+    case SkillEventKind::Flare:add_flare(s);break;
+    case SkillEventKind::Particles:particles(s,e->a);break;
+    case SkillEventKind::Label:label(s,e->a);break;
+    case SkillEventKind::MoveMatchedTiles:move_matched_tiles(s);break;
+    case SkillEventKind::JumpDown:dr_jump_down(&s.generation,tile,&s.encounter_hooks);break;
+    case SkillEventKind::SwapTiles:dr_swap_tiles(&s.refill,e->a,e->b,e->c,e->d,&s.refill_hooks);break;
+    case SkillEventKind::SetSpecialType:dr_set_special_type(&s.generation,tile,e->a,&s.generation_hooks);break;
+    case SkillEventKind::FlameVisibility:dr_set_flame_visibility(&s.path,tile,true,e->a,true,&s.turn_hooks);break;
+    default:break;
+    }
+}
+void skill_action(void* c,SkillAction action,std::int32_t a,std::int32_t b) {
+    Session& s=self(c);dr_skill_action(&s.skill_state,action,a,b,&s.skill_hooks,&s.generation_hooks);
+}
+// Interface::Process: with an in-game menu open the menu runs (the renderer's); otherwise, with input ready,
+// Interface::ProcessInput's skill buttons.
+void frame_event(void* c,const GameFrameEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::GameFrame,e);
+    if(e->kind!=GameFrameEventKind::InterfaceProcess)return;
+    const auto& m=s.screens.menus;
+    if(m[0] || m[1] || m[2] || !e->a)return;
+    dr_skill_input(&s.skill_state,&s.skill_input,s.touch.phase,s.skill_button,&s.skill_hooks,&s.generation_hooks);
+}
 // Frame steps
 void step_input(Session& s) {
     s.stroke.selection.touch=s.touch.position;
     s.gate_inputs=InputGateInputs{static_cast<std::uint32_t>(s.falling.size()),static_cast<std::int32_t>(dr_token_queue_counters(s.tokens)->pending),
-                                  s.animation.flare_count,s.touch.phase,s.input_target};
+                                  s.animation.flare_count,s.touch.phase,s.skill_input.pressed};
     InputState state{&s.path,&s.damage,&s.rune,&s.gate_inputs,&s.release,&s.release_inputs,&s.scroll};
     s.input_route=static_cast<std::int32_t>(dr_process_input(&state,&s.input_hooks));
 }
@@ -330,6 +361,7 @@ void link(Session& s) {
     s.effects=BoardEffectsState{&s.path,&s.generation,&s.finish,&s.shatter};
     s.labels=DamageLabelState{&s.stroke.selection,&s.resources,&s.flights,s.extra.label_active};
     s.frame=GameFrame{&s.touch,&s.end,&s.screens,&s.stroke,&s.match,&s.path};
+    s.skill_state=SkillState{&s.skills,&s.resources,&s.path,&s.generation,&s.turn_flags,&s.finish,&s.rune,&s.animation,&s.end};
     s.new_game=NewGameState{&s.match,&s.preview,&s.resources,&s.path,&s.generation,s.tokens,&s.turn_flags,&s.finish,&s.rune,&s.end,
                             &s.animation.counterattack,&s.damage,&s.player,s.classes,s.difficulty,&s.shatter,&s.extra};
 
@@ -362,10 +394,11 @@ void link(Session& s) {
     s.effect_hooks={c,forward_event<SessionSource::BoardEffect,BoardEffectEvent>};
     s.part_hooks={c,part_event};
     s.label_hooks={c,forward_event<SessionSource::Label,LabelEvent>,label_check_end_game};
-    s.frame_hooks={c,forward_event<SessionSource::GameFrame,GameFrameEvent>,frame_input,frame_effects,frame_falling,frame_tokens,frame_pools,
+    s.frame_hooks={c,frame_event,frame_input,frame_effects,frame_falling,frame_tokens,frame_pools,
                    frame_flare_fade,frame_damage_label,frame_damage_labels,frame_attack};
     s.new_game_hooks={c,forward_event<SessionSource::NewGame,NewGameEvent>,&s.generation_hooks};
     s.cross_hooks={c,forward_event<SessionSource::Cross,CrossEvent>};
+    s.skill_hooks={c,skill_event,skill_action,&s.match_hooks,&s.path_hooks};
 }
 }
 extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t difficulty) {
@@ -378,8 +411,8 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
     return SessionObjects{&s->stroke,&s->preview,&s->match,&s->rune,s->tokens,&s->resources,&s->path,&s->refill,&s->generation,
         &s->damage,&s->animation,&s->overlay_alpha,&s->attack_inputs,&s->skills,&s->turn_flags,&s->finish,&s->end,s->activated,
         &s->end_of_turn,&s->flights,&s->release_inputs,s->classes,&s->scroll,&s->player,&s->extra,&s->shatter,&s->touch,&s->screens,
-        &s->input_target,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
-        s->falling.data(),static_cast<std::uint32_t>(s->falling.size())};
+        &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
+        s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 extern "C" void dr_session_set_falling(Session* s,const std::int32_t* tiles,std::uint32_t count) {s->falling.assign(tiles,tiles+count);}

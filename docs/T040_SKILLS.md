@@ -115,6 +115,16 @@ SkillHooks 增加 match（MatchTile）与 path（AttackSkull）钩子指针；Sk
 
 验证 `recovered/verify_skill_input.py`：原 Interface::ProcessInput 从入口执行（CursorInButton 按用例的按钮回答，ContainsPoint 回答否），Skill::CanActivate / Activate（内部调用按 verify_skills 记录）与 FireBreath 为原代码；1500 组（141 次使用技能、44 次 FireBreath）一致。错误副本 12 个全部 exit 1。测试发现并改正：提示参数是（类型、冷却上限、当前冷却）；一次性技能移除自身后冷却要设在它移到的槽。
 
+## H6：技能接入会话（Claude，2026-10-20）
+
+会话新增 SkillState（技能槽、资源、路径、生成、回合标志、结束标志、符文、动画、终局）、SkillInput（按下的槽与上一次触摸阶段）与 skill_button（触摸下的已装备按钮，由渲染层写入 SessionObjects.skill_button，−1 为无）。每帧 InterfaceProcess 事件处：没有菜单打开且输入就绪时调用 dr_skill_input。技能事件里属于其他单元的函数由会话直接调用：Flare → dr_add_flare，Particles / Label → 流 0 抽取，MoveMatchedTiles、JumpDown、SwapTiles、SetSpecialType、FlameVisibility → 对应单元；其余（音效、成就、按钮颜色、提示、UpdateSkills、PositionSkill、箭头颜色、冻结图层、菜单、文字、敌人图块）作为 SessionSource::Skill 事件交给渲染层。技能动作 → dr_skill_action。
+
+测试发现并改正：ProcessInput 门槛的“输入目标”Game+0x58ac 就是 Interface+0xbd0（按下的技能槽）——按住技能按钮时棋盘输入暂停（门槛返回 Idle）。会话原先把它当作单独的值（恒为 −1），现在门槛读 SkillInput.pressed，SessionObjects.input_target 也指向它。
+
+验证 verify_session 第三阶段（技能）：62 局携带状态，除 Upgrade 外的 39 种技能轮流装备（最后 12 局四个槽都是 PromoteNormalEnemy，各 30 回合，让升级出的敌人 31 跳下），多数回合按下并松开一个技能按钮（少数松开在别处），部分连线回合在回合进行中按按钮（输入未就绪，应被忽略）。493 次按下，其中 45 次在输入未就绪时；39 种技能全部被使用，FireBreath 60 次，敌人 31 跳下 2 次；9246 帧逐帧一致，并比较按槽顺序的装备技能（类型、等级、激活、冷却上限 / 当前）与技能数。原版侧让 Interface::Process 在输入就绪且无菜单时进入 Interface::ProcessInput，Skill::Activate、FireBreath 与 Game 技能函数作为原代码执行：CursorInButton 回答本帧按钮、ContainsPoint（菜单按钮）回答否；音效、成就、按钮颜色、提示、UpdateSkills、PositionSkill、箭头颜色、敌人图块、文字跳过；AddFlare / AddParticles / AddSimpleLabel 施加流 0 抽取；SetType、生成类技能、SwapTiles / MoveMatchedTiles、JumpDown 与 ExplodeArmour 按 verify_skill_board* / verify_abilities / verify_encounters 的方式打开对应宿主。错误副本 12 个（删去 Flare / Particles / Label / MoveMatchedTiles / JumpDown / SwapTiles / SetSpecialType / FlameVisibility 接线、动作不执行、不检查输入就绪、门槛不用按下的槽、不传按钮）全部 exit 1（只跑技能阶段）。
+
+Upgrade 技能会打开升级菜单（物品模型、FoldoutMenu），不在本测试中按下。至此技能系统（T040-H）完成。
+
 ## 后续
 
-- H6：会话接线（SkillState、技能事件与动作、在 InterfaceProcess 处调用 dr_skill_input），verify_session 中使用技能。Skill::Deactivate 已在 dr_end_of_turn 中；Game::SetSkill（装备技能）属 FoldoutMenu 任务。
+- Skill::Deactivate 已在 dr_end_of_turn 中；Game::SetSkill（装备技能）与 Upgrade 的升级菜单属 FoldoutMenu / 物品模型任务。

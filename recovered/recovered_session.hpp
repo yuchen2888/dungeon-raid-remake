@@ -3,6 +3,7 @@
 #include "recovered_motion.hpp"
 #include "recovered_encounters.hpp"
 #include "recovered_refill.hpp"
+#include "recovered_skills.hpp"
 namespace dungeonraid {
 // One game: every recovered state object, each Game field owned once, and the recovered units wired
 // to each other as Game does it (see docs/T040_SESSION_PLAN.md). No original instruction runs here.
@@ -39,20 +40,22 @@ struct SessionObjects {
     ShieldShatterState* shatter;
     TouchState* touch;
     FrameScreens* screens;
-    std::int32_t* input_target;          // Game+0x58ac, -1 = none
+    std::int32_t* input_target;          // Game+0x58ac, -1 = none: the pressed skill button (skill_input->pressed)
     std::uint8_t* current_label_active;  // SimpleLabel active byte of the current-damage label (Game+0xb550)
     TokenMotion* motions;                // token slots (count: motion_count)
     std::uint32_t motion_count;
     std::int32_t* falling;               // the moving-tile list Game+0xb3f8 in order (count: falling_count)
     std::uint32_t falling_count;
+    std::int32_t* skill_button;          // renderer-owned: the equipped skill button under the touch (-1 none)
+    SkillInput* skill_input;             // the pressed skill button and the previous touch phase (Interface)
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
 enum class SessionSource : std::int32_t { Selection=1, Match, Token, Motion, Resource, Path, Refill, Generation, Encounter,
     AttackFlare, AttackAnim, AttackAbsorb, AttackShield, AttackWeaken, AttackHealth, AttackFade, AttackAll, Vampires,
     Turn, EndGame, GameOver, Score, Release, BoardEffect, Frame, Label, GameFrame, NewGame,
-    Ability, Cross };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), Game::DestroyUpgrade needs the item model;
-                        // Cross: a CrossEvent of Game::UpdateCrossVisibility
+    Ability, Cross, Skill };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), Game::DestroyUpgrade needs the item model;
+                        // Cross: a CrossEvent of Game::UpdateCrossVisibility; Skill: a SkillEvent
 struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 struct SessionHost {
     void* context;

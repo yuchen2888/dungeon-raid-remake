@@ -74,7 +74,8 @@
 | T040-J1 | 完成 / Claude，待复核 | AddParticles（33 / 81 次）与 SimpleLabel::Initialise（经 AddSimpleLabel 两个重载，1 次，类型 1/3/8/9/10 除外）的流 0 抽取：dr_add_particles / dr_add_simple_label，会话所有粒子 / 标签事件接上 | verify_effect_draws.py；verify_session.py |
 | T040-J2 | 完成 / Claude，待复核 | Game::UpdateCrossVisibility：dr_update_cross_visibility（路径格子按 Tile::GetDamageType 设置十字可见性、十字标签 30 / 35 各抽 1 次、未选中的敌人 30），会话在 SelectionEvent / ReleaseEvent CrossVisibility 调用 | verify_cross.py；verify_session.py |
 | T040-J | 完成（J1..J3） / Claude，待复核 | J3：Game::Start 只在 App 启动时调用，每局 InitNewGame 用 time() 重设六路种子，其抽取到不了游戏，无需代码（REVERSE_ENGINEERING.md T040-J3）。 表现层代码里的流 0 随机抽取（同 T040-I 的 AddFlare）：AddParticles（类型 0 抽 33 次，类型 1–3 抽 81 次）、SimpleLabel::Initialise（除类型 1/3/8/9/10 外抽 1 次；经 AddSimpleLabel 两个重载）、UpdateCrossVisibility（路径每次变化时为路径格子重建十字标签，类型 30 / 35 各抽 1 次，需恢复 Tile::GetDamageType）、Game::Start。流 0 也决定职业卷轴出现的倒计数、代币飞行速度等，所以这些抽取改变后续游戏结果 | 计数已用原版实测（40 个随机棋盘不变）；见 REVERSE_ENGINEERING.md T040-J |
-| T040-H | 进行中 / Claude | 技能系统：Skill::Activate（40 种类型）/ CanActivate 与约 25 个 Game 技能函数、技能输入目标；符文玩法依赖它 | 新单元测试 + 会话接线 |
+| T040-H6 | 完成 / Claude，待复核 | 技能接入会话：SkillState / SkillInput / skill_button，InterfaceProcess 处 dr_skill_input，技能事件与动作接到各单元；门槛输入目标改为按下的技能槽 | verify_session.py 技能阶段；12 个错误副本被拒 |
+| T040-H | 完成（H1..H6） / Claude，待复核 | 技能系统：Skill::Activate（40 种类型）/ CanActivate 与 22 个 Game 技能函数、技能按钮、会话接线；Upgrade 的升级菜单属物品模型任务 | verify_skills / skill_board / skill_board2 / skill_board3 / skill_input / session |
 | T040-G | 完成（G0..G2b） / Claude，待复核 | 原生会话库：把测试宿主中的共享对象与钩子接线固化为 C++ 会话（新局、每帧 dr_process_frame、触摸输入、状态查询），供 iOS 层调用；用 F4 方式与原版逐帧比较 | 新 recovered_session 模块 + 测试 |
 | T040-F | 完成（F1..F4） | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |
 | T040-C3 | 待做 | ProcessInput 剩余：UpdateDimming（ProcessPretzels 已由 T040-G1 完成）；UpdateCrossVisibility 已由 T040-J2 完成 | T040_PROCESS_CALLS.json unrecovered_by_size |

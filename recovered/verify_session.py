@@ -4,11 +4,21 @@
 The native side is one C++ session: its objects are loaded with the case (the harness loaders fill ctypes
 objects, which are copied into the session's objects and linked), then dr_session_new_game and one
 dr_session_frame per frame run every unit with the session's own wiring -- no Python callback takes part in
-the play. The harness reads the state from the session's memory. Two phases:
+the play. The harness reads the state from the session's memory. Three phases:
 - new games as verify_new_game_play.py (T040-F4): original InitNewGame, then the whole original
   Game::Process every frame; some games weakened (they end early), some strengthened (long games);
 - carried mid-game states as verify_game_frames.py (T040-F3): random boards with every enemy type, flags,
-  poison and abilities, a few turns each.
+  poison and abilities, a few turns each;
+- skills (T040-H6): carried states with equipped skills (every type but Upgrade, which opens the upgrade menu;
+  the last games PromoteNormalEnemy in every slot), where most turns press a skill button (touch down, then
+  release on it or elsewhere) and some path turns press one while the turn still runs (input not ready).
+  The original runs Interface::Process's Interface::ProcessInput (input ready, no menu open) with Skill::
+  Activate, FireBreath and the Game skill functions as original code: Interface::CursorInButton answers the
+  frame's button, Quad::ContainsPoint (menu buttons) no; sounds, achievements, button colours, tooltips,
+  UpdateSkills, PositionSkill, arrow colour, enemy UV and text skipped; AddFlare / AddParticles /
+  AddSimpleLabel apply their stream-0 draws; SetType, the generation skills, SwapTiles / MoveMatchedTiles,
+  JumpDown and ExplodeArmour with the harnesses of verify_skill_board*.py / verify_abilities.py /
+  verify_encounters.py. The equipped skills (type, level, active, cooldowns, in slot order) are compared too.
 The original side is the F4 / F3 harness, except that the functions the session wires itself from unit events
 (SetSpecialType, Shapeshift, Healing, ProcessPretzels, CheckEndGame in the units, InialiseShieldShatter) run as
 original code instead of the unit harnesses' adapters (OriginalMixin); carried-state variants make them occur.
@@ -37,6 +47,8 @@ from verify_match import RandomState
 
 GAMES,TURNS,LONG_TURNS=9,12,40
 CARRIED_GAMES,CARRIED_TURNS=15,5
+SKILL_GAMES,SKILL_TURNS,PROMOTE_GAMES=62,6,12   # the last games: PromoteNormalEnemy in every slot (an enemy 31 jumps down)
+BUTTON_TOUCH=[5.0,5.0]   # a skill button: no tile under the touch
 # carried-state variants that reach the functions the session wires from unit events (and checks below)
 def variant(c,game):
     kind=game%5
@@ -46,6 +58,14 @@ def variant(c,game):
     elif kind==3:c['match'].update(spawn_enabled_14ae0=max(1,c['match']['spawn_enabled_14ae0']),spawn_remaining_15558=1,spawn_count_1555c=0)  # class scroll: SetSpecialType
     else:c['game']['race']=5                                                 # mortal enemy 12 generated: InialiseShieldShatter
     return c
+def skill_variant(c,rng,game):
+    """Equipped skills, every type but Upgrade in turn (four per game), most cooldowns ready."""
+    count=rng.choice([2,3,4,4,4]);r=c['resources'];r['skill_count']=count
+    c['skill_id']=[SKILL_TYPES[(4*game+i)%len(SKILL_TYPES)] for i in range(4)];c['skill_level']=[rng.randrange(0,4) for _ in range(4)];c['skill_active']=[0]*4
+    r['skill_max']=[rng.randrange(1,6) for _ in range(4)]
+    r['skill_current']=[m if rng.random()<.85 else rng.randrange(0,m) for m in r['skill_max']]
+    if game>=SKILL_GAMES-PROMOTE_GAMES:r['skill_count']=4;c['skill_id']=[23]*4;r['skill_max']=r['skill_current']=[1]*4
+    return c
 # (unit, event kind) the session acts on, required to occur: Selection ProcessPretzels, Match SetSpecialType / Shapeshift,
 # Resource Healing (the Stab / thrown-skull CheckEndGame and ShieldShatter depend on chance: see events_by_unit_kind)
 REQUIRED={(1,15),(2,8),(2,9),(5,11)}
@@ -53,13 +73,14 @@ NAMES=('stroke','preview','match','rune','tokens','resources','path','refill','g
        'attack_inputs','skills','turn_flags','finish','end','activated','end_of_turn','flights','release_inputs','classes','scroll',
        'player','extra','shatter','touch','screens','input_target','current_label_active','motions')
 class Objects(C.Structure):
-    _fields_=[(k,C.c_void_p) for k in NAMES]+[('motion_count',C.c_uint32),('falling',C.c_void_p),('falling_count',C.c_uint32)]
+    _fields_=[(k,C.c_void_p) for k in NAMES]+[('motion_count',C.c_uint32),('falling',C.c_void_p),('falling_count',C.c_uint32),
+              ('skill_button',C.c_void_p),('skill_input',C.c_void_p)]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,I32,C.c_void_p)
 TARGET=C.CFUNCTYPE(None,C.c_void_p,I32,I32,C.POINTER(Point))
 CHOOSE=C.CFUNCTYPE(I32,C.c_void_p,C.POINTER(Motion))
 START=C.CFUNCTYPE(None,C.c_void_p,I32,C.POINTER(Point))
 class Host(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT),('target',TARGET),('choose',CHOOSE),('start',START)]
-SOURCE_GENERATION,SOURCE_NEW_GAME=8,28
+SOURCE_GENERATION,SOURCE_NEW_GAME,SOURCE_SKILL,SKILL_USED,SKILL_FLAME,SKILL_JUMP=8,28,31,17,16,13   # SkillEventKind UpdateSkills: a skill used; FlameVisibility: FireBreath; JumpDown
 
 SCREEN_INIT=0x307f8   # GameOverScreen::Initialise
 SPECIAL,SHAPESHIFT,SHAPESHIFT_END,HEALING,PRETZELS,CHECK_END=0x3f43c,0x918c,0x91c4,0x12e68,0xd03c,0x10b18
@@ -67,6 +88,17 @@ SHATTER_INIT,SHATTER_INIT_END=0x9810,0x9882
 ADD_FLARE,FLARE_COUNT,SEEDS=0x9f94,0xbd8c,0x1eac20
 ADD_PARTICLES,ADD_LABEL,ADD_TILE_LABEL=0xa914,0xae2c,0xb130
 CROSS,CROSS_END,CROSS_POOL,CROSS_INDEX,CROSS_SCRATCH=0xaa24,0xae2c,0x164c8,0x164d4,0x3000000
+# Interface::Process (from Game::Process): Interface::ProcessInput's skill buttons with input ready and no menu open
+IFACE_PROCESS,IFACE_INPUT,IFACE_INPUT_END,INTERFACE,MENUS=0x20c64,0x209e4,0x20c4e,0x4cdc,(0x59f4,0x5b0c,0x5b9c)
+PROCESS,PROCESS_END,SKILL_OBJECTS,SWAP_TILES,MOVE_MATCHED,JUMP_DOWN=0x1717c,0x17db8,0x1700000,0xb494,0x10ed8,0xb5c4
+SKILL_SKIP=('__ZN4Game10QueueSoundE5Sound','__ZN4Game16QueueAchievementE11Achievementf','__ZN4Quad9SetColourERK9GLcolour4',
+            '__ZN7Tooltip4ShowE9SkillTypeiiRK8GLfloat2','__ZN7Tooltip4HideEv','__ZN9Interface12UpdateSkillsEv','__ZN9Interface13PositionSkillEi',
+            '__ZN5Arrow9SetColourEjjj','__ZN4Tile13UpdateEnemyUVEv','__ZN4Tile10UpdateTextEbbb')
+# board skill functions run with the generation harness on (verify_skill_board*.py): FreezeSkulls, ConvertTiles,
+# CreateManaPotions, CreateExplosivePotions, CreateArrows, CreateMagicSword, DemoteSpecialEnemy, PromoteNormalEnemy;
+# ExplodeArmour with the path harness
+GEN_SKILLS,PATH_SKILLS=(0xa470,0xa7f4,0xa548,0xa380,0xcdac,0xccc0,0xa6f4,0xb648),(0x115dc,)
+SKILL_TYPES=[t for t in range(40) if t!=10]   # 10 Upgrade opens the upgrade menu (the item model)
 CROSS_SKIP=('__ZNKSt6vectorI11SimpleLabelSaIS0_EE4sizeEv','__ZN11SimpleLabelC1Ev','__ZNSt6vectorI11SimpleLabelSaIS0_EE9push_backERKS0_',
             '__ZN11SimpleLabelD1Ev','__ZN11SimpleLabel15RegenerateLabelEv','__ZN11SimpleLabel9SetColourEi')
 EFFECTS=C.CDLL(str(HERE/'recovered_attack_shield_native.dylib'))
@@ -93,6 +125,11 @@ class OriginalMixin:
         self.release_calls={k:v for k,v in self.release_calls.items() if v!='cross'}
         self.u.mem_map(CROSS_SCRATCH,0x200000);self.cross_return=None
         self.cross_skip={addr(n):n for n in CROSS_SKIP};self.cross_skip.update({a:'stub' for a in (0x194cec,0x194cf0,0x194cf4)})
+        self.skill_skip={addr(n) for n in SKILL_SKIP};self.skill_input=False;self.button=-1;self.set_type_return=None
+        self.cursor=addr('__ZN9Interface14CursorInButtonEi');self.contains=addr('__ZN4Quad13ContainsPointERK8GLfloat2')
+        self.set_type=addr('__ZN4Tile7SetTypeE8TileTypeii')
+        self.overlay_quad={addr(q) for q in ('__ZN4Quad7SetSizeERK8GLfloat2','__ZN4Quad5SetUVERK8GLfloat2S2_','__ZN4Quad8SetAlphaEh')}
+        assert addr('__ZN9Interface7ProcessEfb')==IFACE_PROCESS and addr('__ZN9Interface12ProcessInputEv')==IFACE_INPUT
         assert addr('__ZN4Game15ProcessPretzelsEv')==PRETZELS and addr('__ZN4Game12CheckEndGameEv')==CHECK_END
     def until_return(self,u,flag,value=True):
         lr=u.reg_read(self.LR)&~1;old=getattr(self,flag,False);setattr(self,flag,value)
@@ -105,6 +142,31 @@ class OriginalMixin:
         elif address==CHECK_END and not self.recording:self.until_return(u,'recording')
         elif address==self.update_skills and SHAPESHIFT<lr<SHAPESHIFT_END:u.reg_write(self.PC,lr|1);return
         elif address==self.quad_alpha and SHATTER_INIT<lr<SHATTER_INIT_END:u.reg_write(self.PC,lr|1);return
+        if address==IFACE_PROCESS and PROCESS<=lr<PROCESS_END:   # the skill buttons run as original code (verify_skill_input.py)
+            G=self.GAME
+            if u.reg_read(self.regs[2])&0xff and not any(u.mem_read(G+a,1)[0] for a in MENUS):
+                self.write(G+INTERFACE+0x1030,G);self.until_return(u,'skill_input');u.reg_write(self.PC,IFACE_INPUT|1);return
+            u.reg_write(self.PC,lr|1);return
+        if self.skill_input:
+            r=[u.reg_read(v) for v in self.regs]
+            if address==self.cursor:u.reg_write(self.regs[0],int(C.c_int32(r[1]).value==self.button));u.reg_write(self.PC,lr|1);return
+            if address==self.contains and IFACE_INPUT<lr<IFACE_INPUT_END:u.reg_write(self.regs[0],0);u.reg_write(self.PC,lr|1);return   # menu buttons
+            if address in self.skill_skip:u.reg_write(self.PC,lr|1);return
+            if address==self.set_type and not self.gen_active:self.until_return(u,'gen_active')   # Tile::SetType with the generation harness
+            if address in self.overlay_quad and (0x3d89c<=lr<0x3d9a4):return   # Set{Flame,Freeze}Visibility's overlay quads run as original code
+            if address in GEN_SKILLS:self.until_return(u,'gen_active')
+            elif address in PATH_SKILLS:self.until_return(u,'path_active')
+            if address==JUMP_DOWN:   # a promoted enemy 31 jumps down: with the encounter harness (verify_encounters.py)
+                for flag in ('enc_active','refill_active'):self.until_return(u,flag)
+            if address in (SWAP_TILES,MOVE_MATCHED):   # SwapTiles / MoveMatchedTiles with the refill / generation / encounter harnesses (as verify_abilities.py)
+                for flag in ('refill_active','gen_active','enc_active'):self.until_return(u,flag)
+                self.until_return(u,'path_active',False)   # not ExplodeArmour's path harness
+            if address==ADD_FLARE:self.effect_draw(0,0.0,360.0);self.write(self.GAME+FLARE_COUNT,self.read(self.GAME+FLARE_COUNT)+1);u.reg_write(self.PC,lr|1);return
+            if address in (ADD_PARTICLES,ADD_LABEL,ADD_TILE_LABEL):
+                seeds=RandomState((C.c_uint32*6)(*struct.unpack('<6I',u.mem_read(SEEDS,24))))
+                if address==ADD_PARTICLES:EFFECTS.dr_add_particles(C.byref(seeds),C.c_int32(r[2]).value)
+                else:EFFECTS.dr_add_simple_label(C.byref(seeds),C.c_int32(r[1]).value if address==ADD_LABEL else 0)
+                u.mem_write(SEEDS,struct.pack('<6I',*seeds.seeds));u.reg_write(self.PC,lr|1);return
         if address==CROSS:   # the labels it initialises (pool + cursor * 0x358, the cursor wrapping) land in scratch pages until it returns
             G=self.GAME;self.cross_return=(u.reg_read(self.LR)&~1,self.read(G+CROSS_POOL));cursor=self.read(G+CROSS_INDEX);assert cursor<0x400,cursor
             self.write(G+CROSS_POOL,(CROSS_SCRATCH+0x100000-cursor*0x358)&0xffffffff)
@@ -130,9 +192,20 @@ class OriginalMixin:
         if address==SCREEN_INIT and self.recording:   # recorded and skipped by the harness; its game state is written here
             u.mem_write(self.GAME+0xcac4,b'\x01');self.write(self.GAME+0xcc1c,0)
         return super().hook(u,address,size,context)
+    def effect_draw(self,stream,lo,hi):
+        seeds=RandomState((C.c_uint32*6)(*struct.unpack('<6I',self.u.mem_read(SEEDS,24))))
+        RANDOM.dr_random_float(C.byref(seeds),lo,hi,stream);self.u.mem_write(SEEDS,struct.pack('<6I',*seeds.seeds))
+    def load(self,c):
+        super().load(c);G=self.GAME;I=G+INTERFACE
+        for i in range(4):self.write(SKILL_OBJECTS+0x100*i+0x7c,G)   # Skill -> Game
+        self.write(I+0xbd0,0xffffffff);self.write(I+0x1034,0)       # no skill button pressed, previous touch phase 0
+    def set_button(self,button):self.button=button
     def game_state(self):   # plus the stroke's resource counts (Game+0x164b0, ProcessResourceShadows)
+        G=self.GAME;i32=lambda a:C.c_int32(self.read(a)).value;slots=[]
+        for i in range(4):   # the equipped skill objects in slot order (RemoveSkill reorders Game+0xbf90)
+            o=self.read(G+0xbf90+4*i);slots.append([i32(o+0x84),i32(o+0x88),self.u.mem_read(o+0x80,1)[0],i32(o+0x8c),i32(o+0x90)])
         return dict(super().game_state(),counts=[C.c_int32(self.read(self.GAME+0x164b0+4*i)).value for i in range(6)],
-                    game_over_state=C.c_int32(self.read(self.GAME+0xcc1c)).value)
+                    game_over_state=C.c_int32(self.read(self.GAME+0xcc1c)).value,skill_slots=slots,skill_count=i32(G+0xbfa0))
 class NewGameSessionOriginal(OriginalMixin,NewGameOriginal):pass
 class CarriedSessionOriginal(OriginalMixin,FramesOriginal):pass
 
@@ -194,9 +267,14 @@ class SessionMixin:
         self.moving_list=list((I32*o.falling_count).from_address(o.falling)) if o.falling_count else []
         self.motions={i:Motion.from_address(o.motions+i*C.sizeof(Motion)) for i in range(o.motion_count)}
     def game_state(self):
-        return dict(super().game_state(),counts=list(self.state.counts),game_over_state=self.screens.game_over_state_cc1c)
+        k,r=self.skills,self.r
+        slots=[[k.id[i],k.level[i],k.active[i],r.skill_max[i],r.skill_current[i]] for i in range(4)]
+        return dict(super().game_state(),counts=list(self.state.counts),game_over_state=self.screens.game_over_state_cc1c,skill_slots=slots,
+                    skill_count=r.skill_count)
     def new_game(self,time):
         self.new_events=[];self.gen_events=[];self.session_lib.dr_session_new_game(self.session,time);self.sync()
+    def set_button(self,button):
+        o=self.session_lib.dr_session_objects(self.session);I32.from_address(o.skill_button).value=button
     def play_frame(self,phase,touch,dt):
         self.frame_route=self.session_lib.dr_session_frame(self.session,dt,phase,Point(*touch));self.sync()
         return dict(self.game_state(),reached_attack=self.frame_route==0)
@@ -216,7 +294,7 @@ def set_health(old,new,health,maximum=None):
     if maximum is not None:old.write(old.GAME+RESOURCE_INTS['health_max'],maximum);new.r.health_max=maximum
 
 def main():
-    rng=random.Random(0x5e55);frames=turns=moves=ended=0;routes={};sources={};phases={}
+    rng=random.Random(0x5e55);frames=turns=moves=ended=presses=busy_presses=busy_blocked=0;routes={};sources={};phases={};used={}
     def signed_states(x):
         if isinstance(x,dict):return {k:(C.c_int32(v).value if k=='enemy_state' and isinstance(v,int) else signed_states(v)) for k,v in x.items()}
         if isinstance(x,list):return [signed_states(v) for v in x]
@@ -226,23 +304,40 @@ def main():
         if a!=b:
             (HERE/'session_failure.json').write_text(json.dumps(dict(stage=stage,info=info,original=a,native=b),indent=2,default=str))
             raise AssertionError(f'session_failure.json ({stage})')
-    def play(old,new,game,count):
-        nonlocal frames,turns,moves,ended
+    def play(old,new,game,count,skills=False):
+        nonlocal frames,turns,moves,ended,presses,busy_presses,busy_blocked;ready_before=1
         for turn in range(count):
-            path=new.pick_path(rng);moves+=len(path)>=3
-            script=[(1,i) for i in path]+[(2,path[-1])] if len(path)>=3 else []
+            count_=new.r.skill_count
+            if skills and count_>0 and rng.random()<.75:   # a skill button pressed and released (sometimes released on another)
+                button=turn%count_ if rng.random()<.9 else rng.randrange(count_);release=button if rng.random()<.92 else rng.randrange(-1,4)
+                script=[(1,('button',button)),(2,('button',release))];presses+=1;path=[]
+                pressed_type,used_before=new.skills.id[button],new.sources.get((SOURCE_SKILL,SKILL_USED),0)
+            else:
+                path=new.pick_path(rng);moves+=len(path)>=3
+                script=[(1,i) for i in path]+[(2,path[-1])] if len(path)>=3 else []
+            busy=len(script)+rng.randrange(1,12) if skills and count_>0 and len(path)>=3 and rng.random()<.6 else None   # a press while the turn runs
             for frame in range(3000):
                 dt=f32(rng.choice([1/60,1/30]))
+                button=-1
                 if frame<len(script):
-                    phase,i=script[frame];centre=new.state.selection.tiles[i].geometry.center;touch=[centre.x,centre.y]
+                    phase,i=script[frame]
+                    if isinstance(i,tuple):button,touch=i[1],BUTTON_TOUCH
+                    else:centre=new.state.selection.tiles[i].geometry.center;touch=[centre.x,centre.y]
                 else:phase,touch=0,[0.5,0.5]
+                if busy is not None and frame in (busy,busy+1):
+                    phase,touch,button=1 if frame==busy else 2,BUTTON_TOUCH,turn%count_
+                    if frame==busy:busy_presses+=1;busy_blocked+=not ready_before
+                old.set_button(button);new.set_button(button)
                 if not script and frame==0:old.set_ready(0);new.set_ready(0)
                 info=dict(game=game,turn=turn,frame=frame,phase=phase)
-                a,b=old.play_frame(phase,touch,dt),new.play_frame(phase,touch,dt);compare('frame',a,b,**info);frames+=1
+                if button>=0:info.update(button=button,skill=new.skills.id[button],skills=list(new.skills.id),count=new.r.skill_count)
+                a,b=old.play_frame(phase,touch,dt),new.play_frame(phase,touch,dt);compare('frame',a,b,**info);frames+=1;ready_before=a['common']['input_ready']
                 routes[new.frame_route]=routes.get(new.frame_route,0)+1
                 if new.frame_route==11 or new.flags.game_over_screen:ended+=1;return
                 if frame>=len(script) and a['common']['input_ready'] and a['common']['phase']==0 and not new.moving_list and not a['common']['pending']:break
             else:raise AssertionError('turn did not finish')
+            if script and isinstance(script[0][1],tuple) and new.sources.get((SOURCE_SKILL,SKILL_USED),0)>used_before:
+                used[pressed_type]=used.get(pressed_type,0)+1
             turns+=1
     old,new=NewGameSessionOriginal(),NewGameSession()
     for game in range(GAMES):
@@ -264,16 +359,27 @@ def main():
     phases['carried']=dict(games=CARRIED_GAMES,turns=turns-phases['new_games']['turns'],frames=frames-phases['new_games']['frames'],
                            ended=ended-phases['new_games']['ended'])
     for k,v in new.sources.items():sources[k]=sources.get(k,0)+v
+    rng=random.Random(0x2ad40)   # the skill phase's own sequence (independent of the phases before it)
+    old,new=CarriedSessionOriginal(),CarriedSession();mark=dict(turns=turns,frames=frames,ended=ended)
+    for game in range(SKILL_GAMES):
+        c=skill_variant(turn_case(rng),rng,game);old.load(c);new.load(c);set_health(old,new,5000,5000)
+        compare('load',old.game_state(),new.game_state(),game=game)
+        play(old,new,100+game,SKILL_TURNS if game<SKILL_GAMES-PROMOTE_GAMES else 5*SKILL_TURNS,skills=True)
+    phases['skills']=dict(games=SKILL_GAMES,presses=presses,presses_while_busy=busy_presses,presses_input_not_ready=busy_blocked,used={k:used[k] for k in sorted(used)},**{k:v-mark[k] for k,v in dict(turns=turns,frames=frames,ended=ended).items()})
+    for k,v in new.sources.items():sources[k]=sources.get(k,0)+v
     assert phases['new_games']['ended'] and phases['carried']['ended'],phases
     assert REQUIRED<=set(sources),REQUIRED-set(sources)
+    assert busy_blocked>20 and sources.get((SOURCE_SKILL,SKILL_JUMP),0)>0,(busy_blocked,sources.get((SOURCE_SKILL,SKILL_JUMP)))
+    assert set(used)==set(SKILL_TYPES) and sources.get((SOURCE_SKILL,SKILL_FLAME),0)>3,(set(SKILL_TYPES)-set(used),sources.get((SOURCE_SKILL,SKILL_FLAME)))
     report=dict(status='passed',phases=phases,turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',
                 boundaries=['time() returns the case seed; item construction and UpdateStats recorded (zero item stats)',
-                            'the harness picks the paths; screens closed; interface targets from the harness',
+                            'the harness picks the paths and the skill button under the touch; screens closed; menu buttons not touched',
+                            'skill Upgrade (the upgrade menu, item model) not pressed',
                             'events and presentation mirrors not compared here (unit tests)'],
-                scope='games from their start through many turns up to the end of the game, and carried mid-game states')
+                scope='games from their start through many turns up to the end of the game, carried mid-game states, and skill use')
     (HERE/'session_verification.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
 
 if __name__=='__main__':main()

@@ -48,6 +48,8 @@
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
 - T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 - T040-C2a：stats 模块恢复 Item::IncreaseStat（dr_item_increase_stat），松手的种族 6 升级事件接此函数。
+- T040-H6：技能接入整局会话（按技能按钮、39 种技能的效果、火焰吐息），与原版逐帧一致；技能系统完成（Upgrade 的升级菜单待物品模型）。按住技能按钮时棋盘输入暂停，这一点原先会话没有，测试发现后已改正。
+- T040-J3：Game::Start 的抽取到不了游戏（每局重设种子），无需代码。
 - T040-J2：恢复 UpdateCrossVisibility（路径上“会被打死”的十字标记及其标签抽取），会话在路径变化与松手时调用。
 - T040-J1：恢复粒子与标签的流 0 随机抽取，会话所有相关事件接上。
 - T040-H5：恢复技能按钮规则（按下 / 松开 / 冷却重置）、FireBreath 与动作分派；技能系统的规则部分完整，剩会话接线（H6）。

@@ -450,3 +450,10 @@
 - 新 verify_cross：原 Game::UpdateCrossVisibility 从入口执行，1500 组（154 组无路径）、3188 个十字标签后可见性、种子、标签一致；错误副本 7 个全部 exit 1（第一轮“无路径清空”存活，补上无路径用例后被拒）。
 - verify_session（原版侧让 UpdateCrossVisibility 原样执行，标签池指向临时页）：12419 帧一致；删去选择 / 松手两处会话调用的错误副本均 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：74 步通过。运行目录 `.relay/runs/20261020T200712.274487Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-H6：技能接入会话（Claude）
+
+- verify_session 新增技能阶段：62 局、493 次按技能（45 次在输入未就绪时，被正确忽略）、39 种技能全部使用、FireBreath 60 次、敌人 31 跳下 2 次，9246 帧一致；三个阶段合计 21665 帧一致（新局 9392、携带 3027、技能 9246）。
+- 测试发现并改正会话缺口：门槛的输入目标（Game+0x58ac）就是按下的技能槽，原先会话恒为 −1。
+- 错误副本 12 个（只跑技能阶段）全部 exit 1；其中“跳下”和“输入就绪”两个在第一版测试中存活，补上升级敌人局与回合中按键后被拒，并用最终版测试复跑确认。
+- `./scripts/relay.sh verify --full` → exit 0：74 步通过。运行目录 `.relay/runs/20261020T205157.879922Z`，inputs_unchanged true。
