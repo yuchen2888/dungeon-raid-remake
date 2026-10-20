@@ -846,7 +846,7 @@
           "target": "__ZN4Item12IncreaseStatE11UpgradeType",
           "target_address": "0x29d58",
           "size": 68,
-          "category": "unrecovered"
+          "category": "T040:dr_item_increase_stat"
         },
         {
           "site": "0x16a88",
@@ -1296,10 +1296,6 @@
         },
         {
           "symbol": "__ZN4Game14QueueTileSoundEP4Tile",
-          "size": 68
-        },
-        {
-          "symbol": "__ZN4Item12IncreaseStatE11UpgradeType",
           "size": 68
         },
         {

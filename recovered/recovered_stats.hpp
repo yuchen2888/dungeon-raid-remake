@@ -50,4 +50,9 @@ std::int32_t dr_stat_downgrade(const dungeonraid::StatsTargets*,std::int32_t typ
 // empty item vector otherwise).
 void dr_destroy_upgrade(dungeonraid::StatsTargets*,dungeonraid::ItemStats* const* items,std::uint32_t count,
     std::uint32_t tile,const dungeonraid::StatsHooks*);
+// Original Item::IncreaseStat 0x29d58: the stat grows by GetStatUpgrade (floor 0), then the item
+// text is redone (ItemText event, a=item). ProcessInput applies it to the item at Game+0xbe90 (type 11)
+// on a race-6 release with more than 14 kills (ReleaseEventKind::IncreaseStat).
+void dr_item_increase_stat(const dungeonraid::StatsTargets*,dungeonraid::ItemStats*,std::int32_t item,std::int32_t type,
+    const dungeonraid::StatsHooks*);
 }

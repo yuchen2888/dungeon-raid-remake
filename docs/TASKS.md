@@ -49,7 +49,8 @@
 | T040-A | 完成 / Claude，待复核 | 调用登记：Process 76 / ProcessInput 74 / InitNewGame 51 个直接调用点，已恢复段落与哈希 | scripts/t040_process_audit.py → docs/T040_PROCESS_CALLS.json（--check） |
 | T040-B | 完成 / Claude，待复核 | 新模块 schedule：ProcessInput 门槛 [0x16638,0x16748)（dr_input_gate，含 EndOfTurn 调度）与 CountAttackers；600 次比较 | verify_input_gate.py；五个错误副本被拒 |
 | T040-C | 完成 / Claude，待复核 | 松手 MatchPath 分支、短路径与公共尾段 [0x16890,0x16c1c)+[0x16d88,0x16e10)（dr_release_path / dr_release_clear）与 AddRevengeHealth；500 次比较 | verify_release.py；错误副本被拒；见 T040_SCHEDULE.md |
-| T040-C2 | 待做 | 职业卷轴分支 [0x16c1c,0x16d88)、Item::IncreaseStat、UpdateCrossVisibility / UpdateDimming / ProcessPretzels | T040_PROCESS_CALLS.json unrecovered_by_size |
+| T040-C2a | 完成 / Claude，待复核 | Item::IncreaseStat（dr_item_increase_stat，stats 模块）；verify_stats 增 300 组 | 三个错误副本被拒 |
+| T040-C2 | 待做 | 职业卷轴分支 [0x16c1c,0x16d88)、UpdateCrossVisibility / UpdateDimming / ProcessPretzels | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
 首次接力已验收：Claude Code 桌面会话于 2026-10-18 完成 T010 并提交 8d9604a，Codex 从干净工作区接手，重跑 `--check`、独立核对全部 18 段字节、确认 HavePerk/GetSpecialEnemyCount 和容器替代边界，修正一处 UI 误分类。详细结果见 T010_REVIEW.md。Gemini CLI 接力尚未发生。

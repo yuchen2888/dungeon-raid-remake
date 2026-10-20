@@ -19,7 +19,8 @@ import t030_eot_audit as t030
 FUNCTIONS=['__ZN4Game7ProcessEv','__ZN4Game12ProcessInputEv','__ZN4Game11InitNewGameEv']
 # Whole functions recovered outside the T010/T020/T030 call registries.
 EXTRA={'__ZN4Game9EndOfTurnEv':'T030:dr_end_of_turn','__ZN4Game11UpdateStatsEv':'T030:dr_update_stats',
-       '__ZN4Game14CountAttackersEv':'T040:dr_count_attackers','__ZN4Game16AddRevengeHealthEv':'T040:dr_add_revenge_health'}
+       '__ZN4Game14CountAttackersEv':'T040:dr_count_attackers','__ZN4Game16AddRevengeHealthEv':'T040:dr_add_revenge_health',
+       '__ZN4Item12IncreaseStatE11UpgradeType':'T040:dr_item_increase_stat'}
 SEGMENTS=[
     dict(function='__ZN4Game12ProcessInputEv',start='0x16638',end_exclusive='0x16748',native='dr_input_gate (recovered_schedule)',
          verify='recovered/verify_input_gate.py',task='T040-B'),

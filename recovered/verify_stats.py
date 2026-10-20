@@ -22,6 +22,7 @@ from verify_stroke import HERE, I32, U8
 
 ENTRY,END=0x14c04,0x15150
 DESTROY,DESTROY_END,REDUCE,REDUCE_END=0x1515c,0x1528c,0x29d9c,0x29de0
+INCREASE,INCREASE_END=0x29d58,0x29d9c
 INT_DATA=0x16bd000
 ITEMS,ITEM_PTRS,ITEM_VECTOR=0x16c0000,0x16bf000,0x16be000
 INTERFACE,HEALTH_QUAD=0x4cdc,0x4d4c
@@ -64,7 +65,7 @@ class Original(AllOriginal):
         if self.destroying:
             lr=u.reg_read(self.LR)&~1;name=self.destroy_calls.get(address)
             if DESTROY<=address<DESTROY_END or 0x2d774<=address<0x2d958:self.stats_visits[hex(address)]=self.stats_visits.get(hex(address),0)+1
-            if name and (DESTROY<lr<=DESTROY_END or REDUCE<lr<=REDUCE_END):
+            if name and (DESTROY<lr<=DESTROY_END or REDUCE<lr<=REDUCE_END or INCREASE<lr<=INCREASE_END):
                 r=[u.reg_read(v) for v in self.regs];s=lambda v:C.c_int32(v).value;sp=u.reg_read(self.SP);e=None
                 if name=='item_text':i,rest=divmod(r[0]-ITEMS,0x100);assert rest==0;e=['item_text',i]
                 elif name=='achievement':e=['achievement',r[1],s(r[2])]
@@ -126,6 +127,12 @@ class Original(AllOriginal):
         result['items']=[[C.c_int32(self.read(ITEMS+0x100*i+0x94+4*k)).value for k in range(20)] for i in range(count)]
         result['seeds']=list(struct.unpack('<6I',self.u.mem_read(0x1eac20,24)))
         return result
+    def increase(self,item,type_,count):
+        self.int_vectors={};self.destroying=True;u=self.u;self.stats_events=[]
+        u.reg_write(self.regs[0],ITEMS+0x100*item);u.reg_write(self.regs[1],type_);u.reg_write(self.SP,0x140ff00);u.reg_write(self.LR,self.STOP|1)
+        try:u.emu_start(INCREASE|1,self.STOP,timeout=0,count=200000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
+        finally:self.destroying=False
+        return dict(events=self.stats_events[:],items=[[C.c_int32(self.read(ITEMS+0x100*i+0x94+4*k)).value for k in range(20)] for i in range(count)])
 
 class Native(AllNative):
     def __init__(self):
@@ -134,6 +141,8 @@ class Native(AllNative):
         self.stats_fn.argtypes=[C.POINTER(StatsTargets),C.POINTER(C.POINTER(ItemStats)),C.c_uint32,C.POINTER(StatsHooks)];self.stats_fn.restype=None
         self.destroy_fn=lib.dr_destroy_upgrade
         self.destroy_fn.argtypes=[C.POINTER(StatsTargets),C.POINTER(C.POINTER(ItemStats)),C.c_uint32,C.c_uint32,C.POINTER(StatsHooks)];self.destroy_fn.restype=None
+        self.increase_fn=lib.dr_item_increase_stat
+        self.increase_fn.argtypes=[C.POINTER(StatsTargets),C.POINTER(ItemStats),I32,I32,C.POINTER(StatsHooks)];self.increase_fn.restype=None
         def event(_,p):
             e=p.contents;k=e.kind;ev=self.stats_events.append
             if k==1:ev(['health_bar',e.a])
@@ -167,6 +176,10 @@ class Native(AllNative):
         result=self.read_stats();result['events']=self.stats_events[:]
         result['items']=[list(i.upgrade) for i in self.items];result['seeds']=list(self.m.random.seeds)
         return result
+    def increase(self,item,type_,count):
+        self.stats_events=[]
+        self.increase_fn(C.byref(self.targets),C.byref(self.items[item]),item,type_,C.byref(self.stats_hooks))
+        return dict(events=self.stats_events[:],items=[list(i.upgrade) for i in self.items])
     def read_stats(self):
         r,p,sel,b,pl=self.r,self.p,self.state.selection,self.path_state.battle,self.player
         out=dict(health=r.health,health_max=r.health_max,health_bonus=r.health_bonus,ui_health=r.ui_health,ui_armour=r.ui_armour,
@@ -232,10 +245,23 @@ def main():
     # downgrade grades 2/3/5/10, upgrade 0/1/2/10 and both perk outcomes, no positive stat
     assert destroyed and all(hex(x) in old.stats_visits for x in (0x2d948,0x2d94c,0x2d950,0x2d93e,0x2d798,0x2d882,0x2d88e,0x2d7c8,0x2d87c,0x2d87e,0x15218)),\
         sorted(k for k in old.stats_visits if k.startswith('0x2d'))
-    report=dict(status='passed',comparisons=count,events=kinds,destroyed_stats=destroyed,
+    increased=0;rng=random.Random(0x29d58);before=dict(old.stats_visits)
+    for n in range(300):
+        c=make_case(rng,min_items=1);c['match']['perks']=[rng.choice([5,1,255]),255,255,255]
+        s=c['stats'];s['leech']=rng.choice([0,15,18,21,23]);s['armour_loss_chance']=rng.choice([5,12,13,14,17,18,20,40,120])
+        item=rng.randrange(len(s['items']));type_=rng.choice([11,11,2,10,14,17,rng.randrange(20)])
+        if rng.random()<.2:s['items'][item][type_]=rng.choice([-30,-2,-1])   # floor 0
+        old.load(c);new.load(c);a,b=old.increase(item,type_,len(s['items'])),new.increase(item,type_,len(s['items']))
+        if a!=b:
+            (HERE/'stats_failure.json').write_text(json.dumps(dict(case=c,item=item,type=type_,original=a,native=b),indent=2))
+            raise AssertionError('stats_failure.json (increase)')
+        count+=1;increased+=a['items'][item][type_]!=s['items'][item][type_]
+    assert increased and all(old.stats_visits.get(hex(x),0)>before.get(hex(x),0) for x in (0x2d798,0x2d7c8,0x2d87c)),'increase coverage'
+    report=dict(status='passed',comparisons=count,events=kinds,destroyed_stats=destroyed,increased_stats=increased,
                 functions=[dict(symbol='__ZN4Game11UpdateStatsEv',address=hex(ENTRY),native='dr_update_stats'),
                            dict(symbol='__ZN4Game14DestroyUpgradeEP4Tile',address=hex(DESTROY),native='dr_destroy_upgrade'),
                            dict(symbol='__ZN11ItemUpgrade16GetStatDowngradeE11UpgradeTypeP4Game',address='0x2d8a4',native='dr_stat_downgrade'),
+                           dict(symbol='__ZN4Item12IncreaseStatE11UpgradeType',address=hex(INCREASE),native='dr_item_increase_stat'),
                            dict(symbol='__ZN11ItemUpgrade14GetStatUpgradeE11UpgradeTypeP4Game',address='0x2d774',native='dr_stat_upgrade')],
                 original='Actual UpdateStats with original HaveFlaw, Skill::GetStat/GetStatChance, ItemUpgrade::GetFloatValue',
                 boundaries=['items laid out by the harness (Item+0x94 stats, Item** vector)','Interface value/bar updates recorded'],

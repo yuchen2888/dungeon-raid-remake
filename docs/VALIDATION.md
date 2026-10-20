@@ -316,3 +316,9 @@
 - 错误副本 18 个全部 exit 1（明细见 T040_SCHEDULE.md）。"MatchTiles 前不清 kill_count"最初存活：测试把 MatchTiles 结果写成覆盖值；改为与原 MatchTiles 一致的累加后被拒。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、50 个 verify 脚本共 53 步通过。运行目录 `.relay/runs/20261020T032836.370195Z`，输入指纹 `5c1a9aa2…df285c233`，inputs_unchanged true。
 - `scripts/t040_process_audit.py --check --out docs/T040_PROCESS_CALLS.json` matches true（ProcessInput 未恢复目标 16 个）。
+
+## 2026-10-19 T040-C2a：Item::IncreaseStat（Claude）
+
+- verify_stats 新增 300 组 IncreaseStat 比较（共 1000 组），原版 IncreaseStat / GetStatUpgrade 为原代码，MakeStats 记录；293 组属性改变。错误副本：不触底、改用 Downgrade、不发 ItemText，均 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：53 步通过。运行目录 `.relay/runs/20261020T034043.158475Z`，inputs_unchanged true。
+- `scripts/t040_process_audit.py --check` matches true（ProcessInput 未恢复目标 15 个）。

@@ -150,3 +150,8 @@ extern "C" void dr_destroy_upgrade(StatsTargets* t,ItemStats* const* items,std::
     emit(h,StatsEventKind::Sound,22);
     dr_update_stats(t,items,count,h);
 }
+extern "C" void dr_item_increase_stat(const StatsTargets* t,ItemStats* item,std::int32_t index,std::int32_t type,const StatsHooks* h) {
+    const std::int32_t increased=add(dr_stat_upgrade(t,type),item->upgrade[type]);
+    item->upgrade[type]=increased>0?increased:0;
+    emit(h,StatsEventKind::ItemText,index);   // Item::MakeStats
+}

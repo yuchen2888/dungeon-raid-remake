@@ -57,6 +57,12 @@ LabelFlight 字段含义由 Game::Process 0x177a4 起的读取确认：speed += 
 
 错误副本（18 个，全部 exit 1）：帮助位改 0x20、成就 74 用 ≥9、去掉全敌人条件、火焰 ≥0、复仇阈值 >15、去掉种族 6 条件、治疗不封顶、血条总更新、吸血条件反转、尾段总清火焰伤害、复仇不排除已匹配、复仇改行优先、起飞 speed 0、MatchTiles 前不清 kill_count / killed_attack、敌人与剑音效优先级、短路径卷轴先返回不清吸血、成就 57 无条件。其中"不清 kill_count"最初存活（测试把 MatchTiles 结果写成覆盖值），改为累加后被拒。
 
+## T040-C2a：Item::IncreaseStat（Claude，2026-10-19）
+
+stats 模块新增 `dr_item_increase_stat`（原版 Item::IncreaseStat 0x29d58）：属性 += GetStatUpgrade（dr_stat_upgrade；下限 0），再重做物品文字（ItemText 事件）。与已恢复的 ReduceStat（DestroyUpgrade 内）对称。松手 MatchPath 的种族 6 升级（ReleaseEventKind::IncreaseStat，Game+0xbe90 的物品，类型 11）接此函数。
+
+验证：verify_stats 新增 300 组，原版 IncreaseStat 与 GetStatUpgrade 为原代码，MakeStats 记录；随机物品与类型（偏向 11、2、10、14、17）及负值触底。错误副本：不触底、改用 Downgrade、不发 ItemText，均 exit 1。
+
 ## 后续
 
 - T040-C2：职业卷轴分支 [0x16c1c,0x16d88)（升级 / UnlockMenu、MatchTile、MoveMatchedTiles、CheckEndGame、SerialiseState）；Item::IncreaseStat（stats 模块，对称于 ReduceStat）；UpdateCrossVisibility（1032 字节）、UpdateDimming、ProcessPretzels 等仍为边界，见登记 unrecovered_by_size。

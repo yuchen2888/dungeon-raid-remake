@@ -46,7 +46,8 @@ struct ReleaseState {
 // Sound: a=sound. Help: HelpMenu::Initialise(Game+0x10298, x, y, d=size bits, size, a=type).
 // MatchTiles: Game::MatchTiles (wire to dr_commit_path). Achievement: a=id, b=float bits.
 // Label: Game::AddSimpleLabel(a=type, (x, y), b=number, c=colour, d=scale bits). Text:
-// Tile::UpdateText(a, b, c). IncreaseStat: Item::IncreaseStat(a) on the item at Game+0xbe90.
+// Tile::UpdateText(a, b, c). IncreaseStat: Item::IncreaseStat(a) on the item at Game+0xbe90 (wire to
+// dr_item_increase_stat).
 // UpdateStats: Game::UpdateStats (wire to dr_update_stats). HealthBar: a=value.
 // CrossVisibility: Game::UpdateCrossVisibility (still a boundary).
 enum class ReleaseEventKind : std::int32_t { Sound=1, Help, MatchTiles, Achievement, Label, Text, IncreaseStat,
