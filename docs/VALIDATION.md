@@ -336,3 +336,10 @@
 - 错误副本 22 个全部 exit 1（明细见 T040_SCHEDULE.md）；"代币 pending 不清零"最初存活，随机化代币计数后被拒。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、51 个 verify 脚本共 54 步通过。运行目录 `.relay/runs/20261020T041627.700591Z`，输入指纹 `4379138e…2f04a3ed`，inputs_unchanged true。
 - `scripts/t040_process_audit.py --check` matches true（InitNewGame 未恢复目标 3 个：Item 构造/析构、list 清空）。
+
+## 2026-10-19 T040-D1：Game::Process 伤害标签段（Claude）
+
+- 新 verify_damage_labels：段差分，原版从 0x176fc 执行到 0x17cda / 0x17da4，Interpolate / Sqr 原代码，powf 桩用本机 powf；300 组 1081 帧（多帧携带状态），41 帧因 CheckEndGame 结束，各事件类型均出现。错误副本 21 个全部 exit 1。
+- 发现测试工具问题：Unicorn TCI 在装 UC_HOOK_MEM_WRITE 时 IT 块后的条件分支落点偏 2 字节（明细见 T040_SCHEDULE.md）；本测试改用代码钩子。T040-E 的写入追踪字段表已用执行前后内存比较复核。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、52 个 verify 脚本共 55 步通过。运行目录 `.relay/runs/20261020T043915.763682Z`，inputs_unchanged true。
+- `scripts/t040_process_audit.py --check` matches true（Process 未恢复目标 6 个）。

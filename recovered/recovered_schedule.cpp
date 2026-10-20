@@ -1,5 +1,6 @@
 #include "recovered_schedule.hpp"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <vector>
 using namespace dungeonraid;
@@ -253,4 +254,79 @@ extern "C" void dr_init_new_game(NewGameState* n,std::uint32_t time,const NewGam
     n->finish->flag_1554c=0;
     for(auto& v:x.label_active)v=0;
     emit(h,NewGameEventKind::InterfaceReset,-1);
+}
+namespace {
+void emit(const LabelHooks* h,LabelEventKind kind,std::int32_t label,std::int32_t a=0,std::int32_t b=0,Point at={0,0}) {
+    const LabelEvent e{kind,label,a,b,at.x,at.y};h->event(h->context,&e);
+}
+// Interpolate(GLfloat2, GLfloat2, t) 0x1be38 and Interpolate(float, float, t) 0x1b800 (note the
+// opposite weighting of the float overload).
+// The original's "0.06" label offset literal is 0x3d75c290, one ulp above 0.06f.
+float label_gap() {const std::uint32_t raw=0x3d75c290u;float out;std::memcpy(&out,&raw,sizeof out);return out;}
+Point interpolate(Point a,Point b,float t) {const float u=1.0f-t;return Point{u*a.x+t*b.x,u*a.y+t*b.y};}
+float interpolate(float a,float b,float t) {return a*t+(1.0f-t)*b;}
+// One frame of a released label's flight; true on arrival.
+bool fly(LabelFlight& f,int label,float dt,const LabelHooks* h) {
+    f.speed=f.speed+dt*10.0f;
+    f.progress=f.progress+f.speed*dt;
+    if(f.progress>1.0f)f.progress=1.0f;
+    const Point at=interpolate(f.start,Point{0.8625f,1.29375f},f.progress);
+    const float d=f.progress-0.5f;
+    emit(h,LabelEventKind::Position,label,0,0,Point{at.x,at.y-(0.25f-d*d)*f.arc});
+    emit(h,LabelEventKind::Scale,label,bits(interpolate(0.1f,1.0f,std::pow(f.progress,5.0f))));
+    return !(f.progress<1.0f);
+}
+void show(std::uint8_t active,int label,std::int32_t type,std::int32_t value,Point at,const LabelHooks* h) {
+    if(!active)emit(h,LabelEventKind::Initialise,label,type,value,at);
+    else {emit(h,LabelEventKind::Position,label,0,0,at);emit(h,LabelEventKind::Number,label,value);}
+}
+void health_bar(ResourceState& r,const LabelHooks* h) {
+    if(r.health!=r.ui_health) {r.ui_health=r.health;emit(h,LabelEventKind::HealthBar,-1,r.health);}
+}
+// Flame / spike arrival: the label's damage hits the player.
+bool hurt(ResourceState& r,std::int32_t& value,std::uint8_t& moving,std::int32_t achievement,std::int32_t sound,const LabelHooks* h) {
+    r.health=r.health-value;
+    if(r.health<0) {r.health=0;emit(h,LabelEventKind::Achievement,-1,achievement,bits(100.0f));}
+    health_bar(r,h);
+    value=0;moving=0;
+    emit(h,LabelEventKind::Sound,-1,sound);
+    return h->check_end_game(h->context);
+}
+}
+extern "C" bool dr_process_damage_labels(DamageLabelState* d,float dt,Point touch,const LabelHooks* h) {
+    SelectionState& s=*d->selection;ResourceState& r=*d->resources;ReleaseFlights& f=*d->flights;
+    const std::uint8_t* active=d->active;
+    // leech
+    if(active[0] && s.current_leech==0)emit(h,LabelEventKind::Process,0,bits(dt));
+    else if(s.current_leech>0) {
+        if(s.current_damage>0) {
+            show(active[0],0,8,s.current_leech,Point{touch.x,touch.y-0.1f},h);
+            emit(h,LabelEventKind::Alpha,0,s.skull_counted?0xff:0x80);
+        } else if(fly(f.leech,0,dt,h)) {
+            r.health=r.health+s.current_leech;
+            const std::int32_t ceiling=r.health_max+r.health_bonus;
+            if(r.health>ceiling)r.health=ceiling;
+            health_bar(r,h);
+            s.current_leech=0;
+            emit(h,LabelEventKind::Sound,-1,4);
+        }
+    }
+    // flame
+    if(active[1] && s.current_flame_damage==0)emit(h,LabelEventKind::Process,1,bits(dt));
+    else if(s.current_flame_damage>0) {
+        if(!s.flame_label_moving) {
+            const float offset=s.current_leech>0?label_gap():0.1f;
+            show(active[1],1,9,s.current_flame_damage,Point{touch.x,touch.y-offset},h);
+        } else if(fly(f.flame,1,dt,h) && hurt(r,s.current_flame_damage,s.flame_label_moving,35,17,h))return true;
+    }
+    // spike
+    if(active[2] && s.current_spike_damage==0)emit(h,LabelEventKind::Process,2,bits(dt));
+    else if(s.current_spike_damage>0) {
+        if(!s.spike_label_moving) {
+            float offset=s.current_leech>0?label_gap():0.1f;
+            if(s.current_flame_damage>0)offset=offset-0.04f;
+            show(active[2],2,10,s.current_spike_damage,Point{touch.x,touch.y-offset},h);
+        } else if(fly(f.spike,2,dt,h) && hurt(r,s.current_spike_damage,s.spike_label_moving,34,25,h))return true;
+    }
+    return false;
 }

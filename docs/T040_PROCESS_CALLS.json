@@ -269,7 +269,7 @@
           "target": "__ZN4Game12ProcessInputEv",
           "target_address": "0x16638",
           "size": 2884,
-          "category": "unrecovered"
+          "category": "T040:partial (dr_input_gate, stroke, release units; see recovered_segments)"
         },
         {
           "site": "0x1771c",
@@ -325,7 +325,7 @@
           "target": "__Z11InterpolateRK8GLfloat2S1_f",
           "target_address": "0x1be38",
           "size": 64,
-          "category": "unrecovered"
+          "category": "T040:interpolate in dr_process_damage_labels"
         },
         {
           "site": "0x17822",
@@ -333,7 +333,7 @@
           "target": "__Z3Sqrf",
           "target_address": "0x1b828",
           "size": 16,
-          "category": "unrecovered"
+          "category": "T040:inline in dr_process_damage_labels"
         },
         {
           "site": "0x1784a",
@@ -357,7 +357,7 @@
           "target": "__Z11Interpolatefff",
           "target_address": "0x1b800",
           "size": 40,
-          "category": "unrecovered"
+          "category": "T040:interpolate in dr_process_damage_labels"
         },
         {
           "site": "0x178b4",
@@ -413,7 +413,7 @@
           "target": "__Z11InterpolateRK8GLfloat2S1_f",
           "target_address": "0x1be38",
           "size": 64,
-          "category": "unrecovered"
+          "category": "T040:interpolate in dr_process_damage_labels"
         },
         {
           "site": "0x17a22",
@@ -421,7 +421,7 @@
           "target": "__Z3Sqrf",
           "target_address": "0x1b828",
           "size": 16,
-          "category": "unrecovered"
+          "category": "T040:inline in dr_process_damage_labels"
         },
         {
           "site": "0x17a4a",
@@ -445,7 +445,7 @@
           "target": "__Z11Interpolatefff",
           "target_address": "0x1b800",
           "size": 40,
-          "category": "unrecovered"
+          "category": "T040:interpolate in dr_process_damage_labels"
         },
         {
           "site": "0x17a98",
@@ -517,7 +517,7 @@
           "target": "__Z11InterpolateRK8GLfloat2S1_f",
           "target_address": "0x1be38",
           "size": 64,
-          "category": "unrecovered"
+          "category": "T040:interpolate in dr_process_damage_labels"
         },
         {
           "site": "0x17c26",
@@ -525,7 +525,7 @@
           "target": "__Z3Sqrf",
           "target_address": "0x1b828",
           "size": 16,
-          "category": "unrecovered"
+          "category": "T040:inline in dr_process_damage_labels"
         },
         {
           "site": "0x17c4e",
@@ -549,7 +549,7 @@
           "target": "__Z11Interpolatefff",
           "target_address": "0x1b800",
           "size": 40,
-          "category": "unrecovered"
+          "category": "T040:interpolate in dr_process_damage_labels"
         },
         {
           "site": "0x17c9c",
@@ -605,7 +605,7 @@
           "target": "__ZN4Game12ProcessInputEv",
           "target_address": "0x16638",
           "size": 2884,
-          "category": "unrecovered"
+          "category": "T040:partial (dr_input_gate, stroke, release units; see recovered_segments)"
         },
         {
           "site": "0x17d4c",
@@ -618,10 +618,6 @@
       ],
       "unrecovered_by_size": [
         {
-          "symbol": "__Z3Sqrf",
-          "size": 16
-        },
-        {
           "symbol": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
           "size": 16
         },
@@ -630,16 +626,8 @@
           "size": 24
         },
         {
-          "symbol": "__Z11Interpolatefff",
-          "size": 40
-        },
-        {
           "symbol": "__ZN4Game10UpdateTimeEv",
           "size": 60
-        },
-        {
-          "symbol": "__Z11InterpolateRK8GLfloat2S1_f",
-          "size": 64
         },
         {
           "symbol": "__ZN4Game12CalculateFPSEv",
@@ -652,10 +640,6 @@
         {
           "symbol": "__ZN4Tile14ProcessEffectsEf",
           "size": 344
-        },
-        {
-          "symbol": "__ZN4Game12ProcessInputEv",
-          "size": 2884
         }
       ]
     },
@@ -1804,6 +1788,18 @@
       "verify": "recovered/verify_new_game.py",
       "task": "T040-E",
       "original_bytes_sha256": "67e527053312ef101fad08b3bd51c0fa6f66d14cea8c3037afbea9fae5f2458a"
+    },
+    {
+      "function": "__ZN4Game7ProcessEv",
+      "start": "0x176fc",
+      "end_exclusive": "0x17cda",
+      "extra": [
+        "0x17d74..0x17da4"
+      ],
+      "native": "dr_process_damage_labels (recovered_schedule)",
+      "verify": "recovered/verify_damage_labels.py",
+      "task": "T040-D1",
+      "original_bytes_sha256": "9d4f7918f0ab584965ee924e6d8930d33252288d05373c63a4be3a88a495bd78"
     },
     {
       "function": "__ZN4Game7ProcessEv",

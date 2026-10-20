@@ -22,7 +22,10 @@ EXTRA={'__ZN4Game9EndOfTurnEv':'T030:dr_end_of_turn','__ZN4Game11UpdateStatsEv':
        '__ZN4Game14CountAttackersEv':'T040:dr_count_attackers','__ZN4Game16AddRevengeHealthEv':'T040:dr_add_revenge_health',
        '__ZN4Item12IncreaseStatE11UpgradeType':'T040:dr_item_increase_stat',
        '__ZN4Game22CalculateTilePositionsEv':'T040:dr_calculate_tile_positions',
-       '__ZN14CharacterClass8HavePerkE8PerkType':'T040:have_perk in recovered_schedule (MatchState.perks of the active class)'}
+       '__ZN14CharacterClass8HavePerkE8PerkType':'T040:have_perk in recovered_schedule (MatchState.perks of the active class)',
+       '__Z11InterpolateRK8GLfloat2S1_f':'T040:interpolate in dr_process_damage_labels','__Z11Interpolatefff':'T040:interpolate in dr_process_damage_labels',
+       '__Z3Sqrf':'T040:inline in dr_process_damage_labels',
+       '__ZN4Game12ProcessInputEv':'T040:partial (dr_input_gate, stroke, release units; see recovered_segments)'}
 SEGMENTS=[
     dict(function='__ZN4Game12ProcessInputEv',start='0x16638',end_exclusive='0x16748',native='dr_input_gate (recovered_schedule)',
          verify='recovered/verify_input_gate.py',task='T040-B'),
@@ -36,6 +39,8 @@ SEGMENTS=[
          verify='recovered/verify_release.py',task='T040-C'),
     dict(function='__ZN4Game11InitNewGameEv',start='0x15c50',end_exclusive='0x164c0',native='dr_init_new_game (recovered_schedule)',
          verify='recovered/verify_new_game.py',task='T040-E'),
+    dict(function='__ZN4Game7ProcessEv',start='0x176fc',end_exclusive='0x17cda',extra=['0x17d74..0x17da4'],
+         native='dr_process_damage_labels (recovered_schedule)',verify='recovered/verify_damage_labels.py',task='T040-D1'),
     dict(function='__ZN4Game7ProcessEv',start='0x173c8',end_exclusive='0x17400',native='moving-list subsection (recovered_refill)',
          verify='recovered/verify_refill_integration.py',task='earlier'),
     dict(function='__ZN4Game7ProcessEv',start='0x1744c',end_exclusive='0x174da',extra=['0x17d56..0x17d62'],

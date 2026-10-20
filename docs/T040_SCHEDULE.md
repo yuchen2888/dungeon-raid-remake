@@ -88,6 +88,21 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 错误副本 22 个全部 exit 1：垂直偏移条件反转、x 不加 0.003125、半尺寸改全尺寸、x/y 对调、种子只设流 0、不 Flush、跳过职业 0 成就、晋升条件 mode≠1、缺陷 8 改 7、生成前不置 filter、PositionTile 行列对调、不清 filter_swords、特长 4 改 5、生命 100 条件 mode 0、第一次血条传上限、经验条总更新、特长 7 加错几率、去掉缺陷 4、代币 pending 不清零、等级 0、不清 victory、不清标签活动字节。其中"pending 不清零"最初存活（用例初始 pending 恒为 0），改为随机代币计数后被拒。
 
+## T040-D1：Game::Process 伤害标签段（Claude，2026-10-19）
+
+`recovered_schedule` 新增 `dr_process_damage_labels`（Game::Process [0x176fc,0x17cda) 及分支块 [0x17d74,0x17da4)），每帧依次处理吸血、火焰、尖刺三个伤害标签（SimpleLabel：Game+0xbfc0 / 0x14afc / 0x14e70，活动字节为 NewGameExtra.label_active[0..2]）：
+
+1. 标签活动且数值为 0：SimpleLabel::Process(dt)（淡出）。数值 >0 才继续，负值跳过。
+2. 显示：吸血在路径有伤害（current_damage>0）时显示在触摸点上方 0.1 处（类型 8，未活动时 Initialise，否则 SetPosition + SetNumber），透明度按 skull_counted 为 255/128；火焰在未飞行时显示（类型 9，有吸血时偏移改为 0x3d75c290≈0.06，比 0.06f 大一个 ulp）；尖刺类似（类型 10，有火焰时再上移 0.04）。
+3. 飞行（吸血松手后、火焰/尖刺标签 moving 时）：speed += 10·dt，progress += speed·dt（上限 1），位置 = Interpolate(起点, (0.8625, 1.29375), progress) 再按 arc·(0.25 − (progress−0.5)²) 抬高，缩放 = Interpolate(0.1, 1, progress⁵)（float 版 Interpolate 为 a·t + b·(1−t)，与 GLfloat2 版方向相反）。
+4. 到达（progress ≥ 1）：吸血回血（上限 health_max + health_bonus）、清零、音效 4；火焰/尖刺扣玩家生命（不足 0 取 0 并成就 35 / 34），清零与 moving 标志，音效 17 / 25，CheckEndGame：为真时原版直接离开 Game::Process（不调用 ProcessAttack），原生返回 true。
+
+验证 `recovered/verify_damage_labels.py`：段差分，原版从 0x176fc（R4=Game）执行到 ProcessAttack 调用 0x17cda 或尾声 0x17da4；Interpolate、Sqr 为原代码，powf 桩用本机 C 库 powf（与原生同一函数）；SimpleLabel 调用、音效、成就、血条、CheckEndGame 记录。300 组、1081 帧（每组 1/3/8 帧连续携带状态），41 帧因 CheckEndGame 结束；各事件类型均出现。
+
+错误副本 21 个全部 exit 1：速度系数 5、进度用旧速度、进度不封顶、Interpolate 权重对调、弧线符号、缩放指数 4、到达改 >1、吸血不封顶、吸血不清零、拖动条件 ≥0、透明度 64、负值也淡出、Initialise 条件反转、火焰偏移不随吸血、尖刺不随火焰上移、扣血下限 −1、火焰成就号、忽略 CheckEndGame、不清 moving、血条总更新、尖刺类型 9。
+
+测试工具注意：Unicorn（本仓库 TCI 构建）在装有 UC_HOOK_MEM_WRITE 时，`it gt; strgt` 条件存储不执行后 IT 状态滞后，下一条 `beq` 落点偏 2 字节。本测试改用代码钩子记录缩放存储；现有测试均未使用内存钩子。T040-E 的写入追踪曾用内存钩子，已用"执行前后 Game 内存比较"（12 组）复核，字段表无遗漏。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

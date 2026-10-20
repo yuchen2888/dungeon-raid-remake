@@ -113,8 +113,36 @@ struct NewGameHooks {
     void (*event)(void*,const NewGameEvent*);
     const GenerationHooks* generation;   // RandomiseTile events
 };
+// The leech, flame and spike damage labels (SimpleLabel at Game+0xbfc0 / 0x14afc / 0x14e70): shown at the
+// touch while a path is drawn, then flown to the health bar (Game::Process).
+struct DamageLabelState {
+    SelectionState* selection;   // current damage / leech / flame / spike, label moving flags, skull_counted
+    ResourceState* resources;    // health, health_max, health_bonus, ui_health
+    ReleaseFlights* flights;
+    std::uint8_t* active;        // SimpleLabel active bytes: NewGameExtra.label_active[0..2] (renderer-maintained)
+};
+// Label index 0 leech, 1 flame, 2 spike. Process: SimpleLabel::Process(dt) (fade, a=dt bits). Initialise:
+// SimpleLabel::Initialise(a=type 8/9/10, (x, y), b=number, scale 1). Position: SetPosition((x, y)). Number:
+// SetNumber(a). Alpha: SetAlpha(a). Scale: label scale (SimpleLabel+0x33c) = a float bits. HealthBar: a=value.
+// Sound: a. Achievement: a=id, b=float bits.
+enum class LabelEventKind : std::int32_t { Process=1, Initialise, Position, Number, Alpha, Scale, HealthBar, Sound, Achievement };
+struct LabelEvent { LabelEventKind kind; std::int32_t label,a,b; float x,y; };
+struct LabelHooks {
+    void* context;
+    void (*event)(void*,const LabelEvent*);
+    bool (*check_end_game)(void*);   // Game::CheckEndGame (wire to dr_check_end_game)
+};
 }
 extern "C" {
+// Original Game::Process [0x176fc,0x17cda) with [0x17d74,0x17da4): for each damage label in turn, a
+// shown label whose value is 0 fades (Process); a positive value is shown at the touch (y - 0.1 for leech
+// while the path deals damage; flame 0.06 below a leech label, spike another 0.04 below a flame label)
+// until released, then flies (speed += 10dt, progress += speed*dt, at most 1) from its start towards
+// (0.8625, 1.29375) along an arc, its scale shrinking from 1 to 0.1 with progress^5. On arrival leech
+// heals (up to health_max + health_bonus, sound 4); flame and spike hurt the player (floor 0 with
+// achievement 35 / 34, sounds 17 / 25) and CheckEndGame runs: true returns true (the original leaves
+// Game::Process before ProcessAttack).
+bool dr_process_damage_labels(dungeonraid::DamageLabelState*,float dt,dungeonraid::Point touch,const dungeonraid::LabelHooks*);
 // Original Game::CalculateTilePositions 0xb264: vertical offset 0.015625 in record mode (else 0);
 // tile y*6+x rests at ((x+0.5)*pitch+0.003125, (y+0.5)*pitch+0.246875+offset), its centre is
 // placed there with size pitch (half pitch), SetSize and InitialiseLabels events.
