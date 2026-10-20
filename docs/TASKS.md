@@ -53,6 +53,7 @@
 | T040-C2b | 完成 / Claude，待复核 | 职业卷轴分支 [0x16c1c,0x16d88)（dr_release_class_scroll，接 dr_class_level_up）；verify_release 增至 800 组 | 十个错误副本被拒 |
 | T040-E | 完成 / Claude，待复核 | InitNewGame 整函数（dr_init_new_game）与 CalculateTilePositions；字段表来自写入追踪；200 次比较 | verify_new_game.py；错误副本被拒；物品构造仍为边界 |
 | T040-D1 | 完成 / Claude，待复核 | Game::Process 伤害标签段 [0x176fc,0x17cda)（dr_process_damage_labels：显示、飞行、到达回血/扣血、CheckEndGame）；300 组 1081 帧 | verify_damage_labels.py；错误副本被拒 |
+| T040-D2a | 完成 / Claude，待复核 | Process 棋盘效果段（dr_process_board_effects：首局帮助随机、盾牌碎裂、毒效果淡出）与 InialiseShieldShatter；250 组 620 帧 | verify_board_effects.py；错误副本被拒 |
 | T040-C3 | 待做 | ProcessInput 剩余：ProcessPretzels、UpdateDimming；UpdateCrossVisibility 定为表现层边界 | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -121,6 +122,8 @@
 认领记录：`T030-N4a / claude / 起始 ded977a / 继承差异：无 / 目标：Game::UpdateStats / 文件：recovered/recovered_stats.*、recovered/verify_stats.py、recovered/build.sh、scripts/verify.py、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：Item::MakeStats 与 DestroyUpgrade`
 
 认领记录：`T030-N4b / claude / 起始 80e0e2e / 继承差异：无 / 目标：DestroyUpgrade / 文件：recovered/recovered_stats.*、recovered/recovered_turn.hpp、recovered/verify_stats.py、recovered/build.sh、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：SerialiseState 或 T040`
+
+认领记录：`T040-D2a / claude / 起始 a866a5e / 继承差异：无 / 目标：Process 棋盘效果段 / 文件：recovered/recovered_schedule.*、recovered/verify_board_effects.py、recovered/verify_new_game.py（0xbf88 改归属）、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：T040-D2b`
 
 认领记录：`T040-D1 / claude / 起始 6088b38 / 继承差异：无 / 目标：Game::Process 伤害标签段 / 文件：recovered/recovered_schedule.*、recovered/verify_damage_labels.py、scripts/t040_process_audit.py、scripts/verify.py、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：T040-D2`
 

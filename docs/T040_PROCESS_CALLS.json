@@ -125,7 +125,7 @@
           "target": "__ZN4Game20ProcessShieldShatterEv",
           "target_address": "0x9784",
           "size": 140,
-          "category": "unrecovered"
+          "category": "T040:in dr_process_board_effects"
         },
         {
           "site": "0x173b4",
@@ -133,7 +133,7 @@
           "target": "__ZN4Tile14ProcessEffectsEf",
           "target_address": "0x3dcfc",
           "size": 344,
-          "category": "unrecovered"
+          "category": "T040:in dr_process_board_effects"
         },
         {
           "site": "0x173d2",
@@ -613,7 +613,7 @@
           "target": "__ZN4Tile14ProcessEffectsEf",
           "target_address": "0x3dcfc",
           "size": 344,
-          "category": "unrecovered"
+          "category": "T040:in dr_process_board_effects"
         }
       ],
       "unrecovered_by_size": [
@@ -632,14 +632,6 @@
         {
           "symbol": "__ZN4Game12CalculateFPSEv",
           "size": 136
-        },
-        {
-          "symbol": "__ZN4Game20ProcessShieldShatterEv",
-          "size": 140
-        },
-        {
-          "symbol": "__ZN4Tile14ProcessEffectsEf",
-          "size": 344
         }
       ]
     },
@@ -1800,6 +1792,19 @@
       "verify": "recovered/verify_damage_labels.py",
       "task": "T040-D1",
       "original_bytes_sha256": "9d4f7918f0ab584965ee924e6d8930d33252288d05373c63a4be3a88a495bd78"
+    },
+    {
+      "function": "__ZN4Game7ProcessEv",
+      "start": "0x1733a",
+      "end_exclusive": "0x173c8",
+      "extra": [
+        "0x17d22..0x17d32",
+        "0x17d32..0x17d56"
+      ],
+      "native": "dr_process_board_effects (recovered_schedule)",
+      "verify": "recovered/verify_board_effects.py",
+      "task": "T040-D2a",
+      "original_bytes_sha256": "7a40f74bb5839b231fc4fa8a2213affc79a44cda2a34aa5709a26a10de8acbbd"
     },
     {
       "function": "__ZN4Game7ProcessEv",

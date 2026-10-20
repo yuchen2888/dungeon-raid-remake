@@ -247,7 +247,7 @@ extern "C" void dr_init_new_game(NewGameState* n,std::uint32_t time,const NewGam
     r.health_bonus=0;pl.skill_cooldown_be64=0;
     emit(h,NewGameEventKind::UpdateStats,-1);
     r.xp_fraction=r.gold_fraction=r.up_fraction=0;
-    n->attack->phase=0;p.input_ready=1;x.flag_bf88=0;r.skill_count=0;
+    n->attack->phase=0;p.input_ready=1;n->shatter->active=0;r.skill_count=0;
     counters.pending=0;dr_token_queue_restore(n->tokens,&counters);
     x.tokens_b53c=x.tokens_b54c=0;
     r.level=1;r.total_xp=r.total_gold=r.total_up=0;
@@ -329,4 +329,48 @@ extern "C" bool dr_process_damage_labels(DamageLabelState* d,float dt,Point touc
         } else if(fly(f.spike,2,dt,h) && hurt(r,s.current_spike_damage,s.spike_label_moving,34,25,h))return true;
     }
     return false;
+}
+namespace {
+void emit(const BoardEffectHooks* h,BoardEffectEventKind kind,std::int32_t tile,std::int32_t a=0,std::int32_t b=0,std::int32_t c=0,Point at={0,0}) {
+    const BoardEffectEvent e{kind,tile,a,b,c,at.x,at.y};h->event(h->context,&e);
+}
+float from_bits(std::uint32_t raw) {float out;std::memcpy(&out,&raw,sizeof out);return out;}
+std::uint32_t to_bits(float value) {std::uint32_t out;std::memcpy(&out,&value,sizeof out);return out;}
+// Tile::ProcessEffects 0x3dcfc
+void tile_effects(PathState& p,GenerationState& g,int i,float dt,const BoardEffectHooks* h) {
+    if(g.tiles[i].flag_224)emit(h,BoardEffectEventKind::Spin,i,bits(dt));
+    PoisonState& poison=p.combat[i].poison;
+    if(!poison.effect_active && !poison.effect_clearing)return;
+    float progress=from_bits(poison.effect_progress_bits)+dt*3.0f;
+    if(progress>=1.0f)progress=1.0f;
+    poison.effect_progress_bits=to_bits(progress);
+    const bool clearing=poison.effect_clearing;
+    const auto channel=[&](float tinted) {
+        return static_cast<std::int32_t>(clearing?interpolate(255.0f,tinted,progress):interpolate(tinted,255.0f,progress));
+    };
+    emit(h,BoardEffectEventKind::Colour,i,channel(169.0f),channel(76.0f),channel(202.0f));
+    if(progress>=1.0f) {
+        poison.effect_active=0;poison.effect_clearing=0;
+        emit(h,BoardEffectEventKind::Text,i,1,0,0);
+    }
+}
+}
+extern "C" void dr_initialise_shield_shatter(ShieldShatterState* s,const BoardEffectHooks* h) {
+    emit(h,BoardEffectEventKind::ShatterInitialise,-1);
+    s->progress=0;s->active=1;
+}
+extern "C" void dr_process_board_effects(BoardEffectsState* b,float dt,const BoardEffectHooks* h) {
+    PathState& p=*b->path;MatchState& m=*p.match;const SelectionState& s=m.stroke->selection;
+    if(b->finish->help_flags_102d0&1) {
+        const std::int32_t a=dr_random_int(&m.random,0,5,0);
+        const std::int32_t c=dr_random_int(&m.random,0,5,0);
+        emit(h,BoardEffectEventKind::Help,a*6+c,0,0,0,s.tiles[a*6+c].resting_position);
+    }
+    ShieldShatterState& shatter=*b->shatter;
+    if(shatter.active) {
+        shatter.progress=shatter.progress+dt*2.0f;
+        if(shatter.progress>1.0f)shatter.active=0;
+        else {emit(h,BoardEffectEventKind::ShieldChunk,-1,0);emit(h,BoardEffectEventKind::ShieldChunk,-1,1);}
+    }
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y)tile_effects(p,*b->generation,y*6+x,dt,h);
 }

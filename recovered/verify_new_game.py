@@ -60,12 +60,13 @@ BYTES=dict(input_ready=0x5e14,cooldown=0xbe64,flag_bf88=0xbf88,filter_enabled=0x
 BYTES.update({f'double_{i}':0xbe74+i for i in range(4)});BYTES.update({f'next_be78_{i}':0xbe78+i for i in range(4)})
 class Extra(C.Structure):
     _fields_=[(k,I32) for k in ('tokens_type0_165d8','tokens_type4_165e8','bonus_type0_165ec','bonus_type4_165fc','value_164d4',
-              'tokens_b53c','tokens_b54c')]+[('base_bde8',I32*4),('flag_bf88',U8),('label_active',U8*4),('skill_ff',(U8*4)*4)]
+              'tokens_b53c','tokens_b54c')]+[('base_bde8',I32*4),('label_active',U8*4),('skill_ff',(U8*4)*4)]
+class Shatter(C.Structure):_fields_=[('active',U8),('progress',C.c_float)]
 class State(C.Structure):
     _fields_=[('match',C.c_void_p),('preview',C.c_void_p),('resources',C.c_void_p),('path',C.c_void_p),('generation',C.c_void_p),
               ('tokens',C.c_void_p),('flags',C.POINTER(TurnFlags)),('finish',C.POINTER(TurnFinishFlags)),('rune',C.c_void_p),
               ('end',C.POINTER(EndGameState)),('counterattack',C.POINTER(U8)),('attack',C.c_void_p),('player',C.POINTER(PlayerStats)),
-              ('classes',C.POINTER(Profile)),('difficulty',I32),('extra',C.POINTER(Extra))]
+              ('classes',C.POINTER(Profile)),('difficulty',I32),('shatter',C.POINTER(Shatter)),('extra',C.POINTER(Extra))]
 class Event(C.Structure):_fields_=[(k,I32) for k in ('kind','tile','a','b')]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,C.POINTER(Event))
 class Hooks(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT),('generation',C.c_void_p)]
@@ -142,7 +143,7 @@ class Native(GateNative):
         for i in range(1,10):m.unlocked[i-1]=self.classes[i].level
         iv,bv=n['ints'],n['bytes'];r,pv,s,p,g=self.r,self.p,self.state.selection,self.path_state,self.gen
         self.flags=TurnFlags();self.finish=TurnFinishFlags();self.end=EndGameState();self.counter=U8(bv['counterattack'])
-        self.player=PlayerStats();self.extra=Extra()
+        self.player=PlayerStats();self.extra=Extra();self.shatter=Shatter()
         self.native_fields={}
         for k,v in iv.items():self.set_field(k,v)
         for k,v in bv.items():self.set_field(k,v)
@@ -151,7 +152,7 @@ class Native(GateNative):
         self.state_obj=State(C.cast(C.pointer(m),C.c_void_p),C.cast(C.pointer(pv),C.c_void_p),C.cast(C.pointer(r),C.c_void_p),
                              C.cast(C.pointer(p),C.c_void_p),C.cast(C.pointer(g),C.c_void_p),C.c_void_p(self.q),C.pointer(self.flags),
                              C.pointer(self.finish),C.cast(C.pointer(self.rune),C.c_void_p),C.pointer(self.end),C.pointer(self.counter),
-                             C.cast(C.pointer(self.damage),C.c_void_p),C.pointer(self.player),self.classes,1,C.pointer(self.extra))
+                             C.cast(C.pointer(self.damage),C.c_void_p),C.pointer(self.player),self.classes,1,C.pointer(self.shatter),C.pointer(self.extra))
         self.hooks=Hooks(None,self.new_cb,C.cast(C.pointer(self.gen_hooks),C.c_void_p))
     # field name -> (object, attribute or (attribute, index))
     def targets(self):
@@ -171,7 +172,7 @@ class Native(GateNative):
                vertical_offset=(s.geometry,'offset'),total=(p,'total'),round_kills=(pv,'total'),
                crossing_samples=(p,'crossing_samples'),crossing_average=(p,'crossing_average'),crossing_best=(p,'crossing_best'),
                tokens_0=(x,'tokens_type0_165d8'),tokens_4=(x,'tokens_type4_165e8'),bonus_0=(x,'bonus_type0_165ec'),bonus_4=(x,'bonus_type4_165fc'),
-               input_ready=(p,'input_ready'),cooldown=(pl,'skill_cooldown_be64'),flag_bf88=(x,'flag_bf88'),filter_enabled=(g,'filter_enabled'),
+               input_ready=(p,'input_ready'),cooldown=(pl,'skill_cooldown_be64'),flag_bf88=(self.shatter,'active'),filter_enabled=(g,'filter_enabled'),
                filter_swords=(g,'filter_swords'),coin=(p.battle,'coin_on_attack'),next_coin=(f,'next_coin_bfbc'),
                label_bfc0=(x,('label_active',0)),label_14afc=(x,('label_active',1)),label_14e70=(x,('label_active',2)),
                label_151e4=(x,('label_active',3)),promotion_enabled=(g,'promotion_enabled'),one_health=(g,'one_health'),

@@ -103,6 +103,18 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 测试工具注意：Unicorn（本仓库 TCI 构建）在装有 UC_HOOK_MEM_WRITE 时，`it gt; strgt` 条件存储不执行后 IT 状态滞后，下一条 `beq` 落点偏 2 字节。本测试改用代码钩子记录缩放存储；现有测试均未使用内存钩子。T040-E 的写入追踪曾用内存钩子，已用"执行前后 Game 内存比较"（12 组）复核，字段表无遗漏。
 
+## T040-D2a：Process 棋盘效果段、ProcessShieldShatter、Tile::ProcessEffects（Claude，2026-10-19）
+
+`recovered_schedule` 新增 `dr_process_board_effects`（Game::Process 0x17d22 → [0x1733a,0x173c8) 及效果循环块 [0x17d32,0x17d56)，含 ProcessShieldShatter 0x9784 与 Tile::ProcessEffects 0x3dcfc）和 `dr_initialise_shield_shatter`（InialiseShieldShatter 0x9810，接 generation 的 ShieldShatter 事件）：
+
+1. 首局帮助（help_flags_102d0 位 0）：RandI(0,5,流 0) 两次选格 a*6+b，在其静止位置显示帮助 0（每帧都会消耗随机数，直到帮助菜单接管）。
+2. 盾牌碎裂（ShieldShatterState：Game+0xbf88 活动、+0xbf8c 进度）：进度 += 2·dt，超过 1 结束，否则画两块碎片（ProcessShieldChunk，表现层）。0xbf88 原先在 NewGameExtra.flag_bf88，现归 ShieldShatterState（NewGameState 增加 shatter 指针）。
+3. 列优先逐格效果：flag_224 时自转（Tile+0x220 += dt·Tile+0x228；游戏中 flag_224 从未被置 1，只被清零或交换，故为事件）；毒效果（PoisonState.effect_active 或 effect_clearing）：进度 += 3·dt（上限 1），颜色在 (255,255,255) 与 (169,76,202) 之间插值（活动时变绿、清除时变回，截断取整，alpha 不变），到 1 时结束并 UpdateText(1,0,0)。
+
+验证 `recovered/verify_board_effects.py`：段差分，原版从 0x17d22（R4=Game）执行到 0x173c8，RandI、Interpolate 为原代码；帮助、碎片、SetColour、UpdateText 记录，自转用 0x3dd12 代码钩子记录。250 组 620 帧（多帧携带状态，含 dt=0 与进度恰为 1 的帧），另每 10 组比较一次 InialiseShieldShatter。帮助、碎片、自转、颜色、文字事件及碎裂结束/继续、效果结束分支均到达。
+
+错误副本 17 个全部 exit 1：帮助位 2、帮助格行列对调、帮助随机流 1、碎裂速率 3、碎裂结束 ≥0.99 与 ≥1、结束后仍画碎片、行优先遍历、毒进度速率 2、不封顶、颜色方向对调、绿色分量 77、结束时不清 clearing、不发 UpdateText、只看 active、初始化不置活动、初始化不清进度。其中"结束 ≥0.99"最初存活（无进度落在 [0.99,1] 的用例），补充进度 0.995/1.0 与 dt=0 后被拒。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

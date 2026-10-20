@@ -69,13 +69,17 @@ struct ClassScrollState {
     std::size_t current;
     std::int32_t difficulty;   // Game::QueueAchievement gate (dr_class_level_up)
 };
+// The shield shatter animation started by Game::InialiseShieldShatter (generation ShieldShatter event).
+struct ShieldShatterState {
+    std::uint8_t active;   // Game+0xbf88
+    float progress;        // Game+0xbf8c, += 2dt
+};
 // Game fields reset by Game::InitNewGame that no other recovered state owns (named by offset).
 struct NewGameExtra {
     std::int32_t tokens_type0_165d8, tokens_type4_165e8;   // ends of the 5-wide token counters around
     std::int32_t bonus_type0_165ec, bonus_type4_165fc;     // TokenQueueCounters.normal[3] / bonus[3]
     std::int32_t value_164d4, tokens_b53c, tokens_b54c;
     std::int32_t base_bde8[4];          // Game+0xbde8/0xbdf0/0xbdf8/0xbe00 (each before PlayerStats.base_*)
-    std::uint8_t flag_bf88;
     std::uint8_t label_active[4];       // SimpleLabel active bytes: leech 0xbfc0, flame 0x14afc, spike 0x14e70, 0x151e4
     std::uint8_t skill_ff[4][4];        // bytes +0x0f/+0x23/+0x37/+0x4b of the four skill objects (Game+0xbf90)
 };
@@ -97,6 +101,7 @@ struct NewGameState {
     PlayerStats* player;
     ClassProfile* classes;          // the 10 class records (UnlockAchievement)
     std::int32_t difficulty;        // Game::QueueAchievement gate
+    ShieldShatterState* shatter;
     NewGameExtra* extra;
 };
 // Achievement: a=id, b=float bits. SetSize: Quad::SetSize(tile, (a, b) float bits). Labels:
@@ -121,6 +126,22 @@ struct DamageLabelState {
     ReleaseFlights* flights;
     std::uint8_t* active;        // SimpleLabel active bytes: NewGameExtra.label_active[0..2] (renderer-maintained)
 };
+// The part of Game::Process between the screen gates and the falling list.
+struct BoardEffectsState {
+    PathState* path;               // combat poison effect (Tile+0x244/0x245/0x248)
+    GenerationState* generation;   // tiles[i].flag_224 (spin; never set by the game)
+    TurnFinishFlags* finish;       // help_flags_102d0 bit 0: first-game help
+    ShieldShatterState* shatter;
+};
+// Help: HelpMenu::Initialise(Game+0x10298, (x, y) = resting position of tile, 0, 0, type a=0).
+// ShatterInitialise: chunk quads reset (presentation). ShieldChunk: Game::ProcessShieldChunk for chunk a
+// (0: quad Game+0xbea8, direction -1, target (0.485938, 1.29375); 1: quad Game+0xbf18, direction 1,
+// target (0.507812, 1.29375)) at the current progress (presentation). Spin: Tile+0x220 += dt * Tile+0x228
+// (renderer-owned floats). Colour: Quad::SetColour(tile, a=r, b=g, c=b; alpha unchanged). Text:
+// Tile::UpdateText(1, 0, 0).
+enum class BoardEffectEventKind : std::int32_t { Help=1, ShatterInitialise, ShieldChunk, Spin, Colour, Text };
+struct BoardEffectEvent { BoardEffectEventKind kind; std::int32_t tile,a,b,c; float x,y; };
+struct BoardEffectHooks { void* context; void (*event)(void*,const BoardEffectEvent*); };
 // Label index 0 leech, 1 flame, 2 spike. Process: SimpleLabel::Process(dt) (fade, a=dt bits). Initialise:
 // SimpleLabel::Initialise(a=type 8/9/10, (x, y), b=number, scale 1). Position: SetPosition((x, y)). Number:
 // SetNumber(a). Alpha: SetAlpha(a). Scale: label scale (SimpleLabel+0x33c) = a float bits. HealthBar: a=value.
@@ -143,6 +164,16 @@ extern "C" {
 // achievement 35 / 34, sounds 17 / 25) and CheckEndGame runs: true returns true (the original leaves
 // Game::Process before ProcessAttack).
 bool dr_process_damage_labels(dungeonraid::DamageLabelState*,float dt,dungeonraid::Point touch,const dungeonraid::LabelHooks*);
+// Original Game::InialiseShieldShatter 0x9810: active, progress 0 (the chunk quads are presentation).
+void dr_initialise_shield_shatter(dungeonraid::ShieldShatterState*,const dungeonraid::BoardEffectHooks*);
+// Original Game::Process [0x17d22,0x17d32)+[0x1733a,0x173c8)+[0x17d32,0x17d56) with
+// Game::ProcessShieldShatter 0x9784 and Tile::ProcessEffects 0x3dcfc: first-game help (help flag bit 0:
+// RandI(0,5,0) twice picks tile a*6+b, help 0 at its resting position); the shield shatter advances
+// (progress += 2dt; past 1 it ends, else both chunks are drawn); then column-major every tile's effects:
+// spin (flag_224), and the poison effect (active or clearing): progress += 3dt up to 1, colour interpolated
+// between (255,255,255) and (169,76,202) (towards green while active, back while clearing), and at 1 the
+// effect ends with UpdateText(1,0,0).
+void dr_process_board_effects(dungeonraid::BoardEffectsState*,float dt,const dungeonraid::BoardEffectHooks*);
 // Original Game::CalculateTilePositions 0xb264: vertical offset 0.015625 in record mode (else 0);
 // tile y*6+x rests at ((x+0.5)*pitch+0.003125, (y+0.5)*pitch+0.246875+offset), its centre is
 // placed there with size pitch (half pitch), SetSize and InitialiseLabels events.

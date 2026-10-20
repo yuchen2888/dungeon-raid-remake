@@ -48,6 +48,7 @@
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
 - T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 - T040-C2a：stats 模块恢复 Item::IncreaseStat（dr_item_increase_stat），松手的种族 6 升级事件接此函数。
+- T040-D2a：schedule 模块恢复 Process 棋盘效果段（首局帮助随机、盾牌碎裂进度、Tile::ProcessEffects 毒效果）与 InialiseShieldShatter；0xbf88 归 ShieldShatterState。
 - T040-D1：schedule 模块恢复 Game::Process 伤害标签段（dr_process_damage_labels：吸血/火焰/尖刺标签显示与飞行，到达时回血或扣血并 CheckEndGame）。
 - T040-E：schedule 模块恢复 Game::InitNewGame 整函数与 CalculateTilePositions（dr_init_new_game：种子、坐标、职业成就、全部状态清零、晋升计时、逐行生成棋盘、起始属性）；物品构造与 UpdateStats 为事件边界。
 - T040-C2b：schedule 模块恢复职业卷轴分支（dr_release_class_scroll：升级当前职业或解锁随机未解锁职业、UnlockMenu、MatchTile 7、MoveMatchedTiles、CheckEndGame、存档边界）。
@@ -104,4 +105,4 @@
 
 ProcessAttack（T020）与 EndOfTurn（T030，含 CheckEndGame、全部敌人能力、UpdateStats）已有原生恢复并经原版整函数差分；输入阶段门槛、新局初始化、存档（SerialiseState）及整个 Game::Process 尚未恢复，仍未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..N4b：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过；ActivateAbility 的 20 个能力全部恢复（DestroyUpgrade 经 TurnHooks.ability(28) 接 dr_destroy_upgrade）；新 stats 模块恢复 UpdateStats。剩余边界只有 SerialiseState（存档格式，0x91c4，896 字节，另需 Tile/Item/Skill/HelpMenu/CharacterClass 的 Serialise 与更完整的物品模型）。存档（T030-N5）按用户指示暂缓。T040 进行中：A/B/C/C2a/C2b 已完成（门槛、松手 MatchPath、职业卷轴与尾段、IncreaseStat）；剩余 ProcessInput 边界见 T040-C3；T040-E（InitNewGame）与 T040-D1（Process 伤害标签段）已完成；下一步 Game::Process 其余游戏部分（T040-D2：ShieldShatter、Tile::ProcessEffects、ProcessAttack 调用条件等，界面部分为表现层）或物品模型（Item 构造）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..N4b：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过；ActivateAbility 的 20 个能力全部恢复（DestroyUpgrade 经 TurnHooks.ability(28) 接 dr_destroy_upgrade）；新 stats 模块恢复 UpdateStats。剩余边界只有 SerialiseState（存档格式，0x91c4，896 字节，另需 Tile/Item/Skill/HelpMenu/CharacterClass 的 Serialise 与更完整的物品模型）。存档（T030-N5）按用户指示暂缓。T040 进行中：A/B/C/C2a/C2b 已完成（门槛、松手 MatchPath、职业卷轴与尾段、IncreaseStat）；剩余 ProcessInput 边界见 T040-C3；T040-E（InitNewGame）与 T040-D1（Process 伤害标签段）已完成；下一步 Game::Process 整帧调度（T040-D2b：界面门槛、下落列表后的回合计数清零、代币段、ProcessInput 调用条件、ProcessAttack 与 Interface::Process、触摸阶段复位），或物品模型（Item 构造）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
