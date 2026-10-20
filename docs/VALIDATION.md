@@ -302,3 +302,10 @@
 - 现象：T040-B 的一次全套运行（`.relay/runs/20261020T012132.253858Z`）中 verify_encounters 失败，停在 0x3f3a4；该测试经 verify_refill.py 的 `emu_start(..., timeout=1000000, count=1000000)` 带 1 秒墙钟限制，单独重跑两次均通过——系统负载下的假失败。
 - 修改：18 个继承的 verify 脚本里 19 处 `emu_start` 的墙钟超时改为 0，指令数上限不变（与 a638bfd 对自写测试的处理一致）。只改这些参数，比较逻辑不变。
 - 验证：`./scripts/relay.sh verify --full` → exit 0，构建、2 个示例、49 个 verify 脚本共 52 步通过。运行目录 `.relay/runs/20261020T013826.005802Z`，输入指纹 `6c002e88…3056f5a3`，与提交时源码一致（该运行同时覆盖随后的 T040-A/B 提交）。
+
+## 2026-10-19 T040-A / T040-B：调度调用登记与 ProcessInput 门槛（Claude）
+
+- 同一次全套运行 `.relay/runs/20261020T013826.005802Z`（52 步通过，指纹 `6c002e88…3056f5a3`）。
+- T040-A：`scripts/t040_process_audit.py --check --out docs/T040_PROCESS_CALLS.json` matches true（Process 76 / ProcessInput 74 / InitNewGame 51 个直接调用点）。顺带把 T030 登记的未恢复列表排序改为（大小，符号），消除同大小项受哈希随机化影响的潜在不确定。
+- T040-B：新 verify_input_gate 600 次比较（阻塞 407、空闲 101、分派 70、开始攻击 22；73 次调用 EndOfTurn），CountAttackers 整函数同时比较；特长跳过、开始攻击、阶段 1..7 阻塞、EndOfTurn、分派分支均到达。错误副本：回合阈值 `<4`、阶段 8 也阻塞、CountAttackers 不排除冰冻、代币条件 `!=0`、忽略输入目标，均 exit 1。
+- 接力单测 4 项通过；T010 / T020 / T030 / T040 登记 --check matches true。

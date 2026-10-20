@@ -1,0 +1,1814 @@
+{
+  "task": "T040",
+  "executable_sha256": "5ab6e00407f865f126d4b0bd30a33296942d20cb2ecb4e813db5090caded9356",
+  "functions": {
+    "__ZN4Game7ProcessEv": {
+      "address": "0x1717c",
+      "size": 3168,
+      "original_bytes_sha256": "66b09c2104a268a77d96cbe751eb64b3080dc6c460e948d9d566a0c1500e1941",
+      "call_sites": [
+        {
+          "site": "0x1718c",
+          "instruction": "bl",
+          "target": "__ZN4Game10UpdateTimeEv",
+          "target_address": "0x9d74",
+          "size": 60,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17192",
+          "instruction": "bl",
+          "target": "__ZN4Game12CalculateFPSEv",
+          "target_address": "0x9cec",
+          "size": 136,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x171c4",
+          "instruction": "bl",
+          "target": "__ZN14GameOverScreen7ProcessEf",
+          "target_address": "0x30c28",
+          "size": 2068,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x171ec",
+          "instruction": "bl",
+          "target": "__ZN11ScoreScreen4ShowE8GameModeb",
+          "target_address": "0x367a8",
+          "size": 32,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17204",
+          "instruction": "bl",
+          "target": "__ZN11ScoreScreen4ShowE10Difficultyb",
+          "target_address": "0x367c8",
+          "size": 48,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17228",
+          "instruction": "bl",
+          "target": "__ZN8HelpMenu7ProcessEf",
+          "target_address": "0x38128",
+          "size": 320,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1724a",
+          "instruction": "bl",
+          "target": "__ZN10UnlockMenu7ProcessEf",
+          "target_address": "0x1090e8",
+          "size": 280,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17286",
+          "instruction": "bl",
+          "target": "__ZN8MainMenu7ProcessEf",
+          "target_address": "0x2e668",
+          "size": 1488,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x172a4",
+          "instruction": "bl",
+          "target": "__ZN10NameScreen7ProcessEf",
+          "target_address": "0x3cac0",
+          "size": 664,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x172ca",
+          "instruction": "bl",
+          "target": "__ZN11IntroScreen7ProcessEf",
+          "target_address": "0x2dd04",
+          "size": 396,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x172ee",
+          "instruction": "bl",
+          "target": "__ZN11ScoreScreen7ProcessEf",
+          "target_address": "0x367f8",
+          "size": 1152,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17340",
+          "instruction": "bl",
+          "target": "__Z5RandIii8RandType",
+          "target_address": "0x1bca0",
+          "size": 128,
+          "category": "inventory46:dr_random_int"
+        },
+        {
+          "site": "0x1734c",
+          "instruction": "bl",
+          "target": "__Z5RandIii8RandType",
+          "target_address": "0x1bca0",
+          "size": 128,
+          "category": "inventory46:dr_random_int"
+        },
+        {
+          "site": "0x17382",
+          "instruction": "bl",
+          "target": "__ZN8HelpMenu10InitialiseEffff8HelpType",
+          "target_address": "0x380b8",
+          "size": 112,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17390",
+          "instruction": "bl",
+          "target": "__ZN4Game20ProcessShieldShatterEv",
+          "target_address": "0x9784",
+          "size": 140,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x173b4",
+          "instruction": "bl",
+          "target": "__ZN4Tile14ProcessEffectsEf",
+          "target_address": "0x3dcfc",
+          "size": 344,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x173d2",
+          "instruction": "bl",
+          "target": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
+          "target_address": "0x18f9c",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x173e0",
+          "instruction": "bl",
+          "target": "__ZN4Tile7ProcessEf",
+          "target_address": "0x3d1d0",
+          "size": 76,
+          "category": "T010:dr_process_falling_tile"
+        },
+        {
+          "site": "0x173f0",
+          "instruction": "bl",
+          "target": "__ZNSt4listIP4TileSaIS1_EE5eraseESt14_List_iteratorIS1_E",
+          "target_address": "0x1a378",
+          "size": 24,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17470",
+          "instruction": "bl",
+          "target": "__ZN5Token7ProcessEf",
+          "target_address": "0x21644",
+          "size": 372,
+          "category": "inventory46:dr_process_token"
+        },
+        {
+          "site": "0x17492",
+          "instruction": "bl",
+          "target": "__ZN4Game11AddResourceE8TileType9TokenTypei",
+          "target_address": "0x12ee8",
+          "size": 1676,
+          "category": "inventory46:dr_add_resource"
+        },
+        {
+          "site": "0x174c2",
+          "instruction": "bl",
+          "target": "__ZN4Game10QueueSoundE5Sound",
+          "target_address": "0x903c",
+          "size": 88,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17500",
+          "instruction": "bl",
+          "target": "__ZN9Particles7ProcessEf",
+          "target_address": "0x22028",
+          "size": 280,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1754a",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel7ProcessEf",
+          "target_address": "0x22f80",
+          "size": 132,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17602",
+          "instruction": "bl",
+          "target": "__ZN4Quad8SetAlphaEh",
+          "target_address": "0x1c714",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17642",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel7ProcessEf",
+          "target_address": "0x22f80",
+          "size": 132,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1766a",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel10InitialiseE15SimpleLabelTypeRK8GLfloat2if",
+          "target_address": "0x23078",
+          "size": 164,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17688",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+          "target_address": "0x22d6c",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17692",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel9SetNumberEi",
+          "target_address": "0x2311c",
+          "size": 68,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x176c8",
+          "instruction": "bl",
+          "target": "__ZN8HelpMenu10InitialiseEffff8HelpType",
+          "target_address": "0x380b8",
+          "size": 112,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x176ce",
+          "instruction": "bl",
+          "target": "__ZN9Interface15ShowHelpBaseDmgEv",
+          "target_address": "0x20178",
+          "size": 52,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x176de",
+          "instruction": "bl",
+          "target": "__ZN9Interface17ShowHelpWeaponDmgEv",
+          "target_address": "0x20110",
+          "size": 52,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x176f8",
+          "instruction": "bl",
+          "target": "__ZN4Game12ProcessInputEv",
+          "target_address": "0x16638",
+          "size": 2884,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x1771c",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel7ProcessEf",
+          "target_address": "0x22f80",
+          "size": 132,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1774e",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel10InitialiseE15SimpleLabelTypeRK8GLfloat2if",
+          "target_address": "0x23078",
+          "size": 164,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1776c",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+          "target_address": "0x22d6c",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17776",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel9SetNumberEi",
+          "target_address": "0x2311c",
+          "size": 68,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17786",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel8SetAlphaEh",
+          "target_address": "0x22f64",
+          "size": 28,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17794",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel8SetAlphaEh",
+          "target_address": "0x22f64",
+          "size": 28,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1780a",
+          "instruction": "bl",
+          "target": "__Z11InterpolateRK8GLfloat2S1_f",
+          "target_address": "0x1be38",
+          "size": 64,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17822",
+          "instruction": "bl",
+          "target": "__Z3Sqrf",
+          "target_address": "0x1b828",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x1784a",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+          "target_address": "0x22d6c",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17852",
+          "instruction": "blx",
+          "target": "_powf",
+          "target_address": "0x194f40",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x1785e",
+          "instruction": "bl",
+          "target": "__Z11Interpolatefff",
+          "target_address": "0x1b800",
+          "size": 40,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x178b4",
+          "instruction": "bl",
+          "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "target_address": "0x21130",
+          "size": 332,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x178c2",
+          "instruction": "bl",
+          "target": "__ZN4Game10QueueSoundE5Sound",
+          "target_address": "0x903c",
+          "size": 88,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x178e4",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel7ProcessEf",
+          "target_address": "0x22f80",
+          "size": 132,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1797a",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel10InitialiseE15SimpleLabelTypeRK8GLfloat2if",
+          "target_address": "0x23078",
+          "size": 164,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17994",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+          "target_address": "0x22d6c",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1799e",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel9SetNumberEi",
+          "target_address": "0x2311c",
+          "size": 68,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17a0a",
+          "instruction": "bl",
+          "target": "__Z11InterpolateRK8GLfloat2S1_f",
+          "target_address": "0x1be38",
+          "size": 64,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17a22",
+          "instruction": "bl",
+          "target": "__Z3Sqrf",
+          "target_address": "0x1b828",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17a4a",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+          "target_address": "0x22d6c",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17a52",
+          "instruction": "blx",
+          "target": "_powf",
+          "target_address": "0x194f40",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x17a5e",
+          "instruction": "bl",
+          "target": "__Z11Interpolatefff",
+          "target_address": "0x1b800",
+          "size": 40,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17a98",
+          "instruction": "bl",
+          "target": "__ZN4Game16QueueAchievementE11Achievementf",
+          "target_address": "0xbd68",
+          "size": 140,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17ab6",
+          "instruction": "bl",
+          "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "target_address": "0x21130",
+          "size": 332,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17ac8",
+          "instruction": "bl",
+          "target": "__ZN4Game10QueueSoundE5Sound",
+          "target_address": "0x903c",
+          "size": 88,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17ace",
+          "instruction": "bl",
+          "target": "__ZN4Game12CheckEndGameEv",
+          "target_address": "0x10b18",
+          "size": 780,
+          "category": "T030:dr_check_end_game+dr_game_over"
+        },
+        {
+          "site": "0x17af6",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel7ProcessEf",
+          "target_address": "0x22f80",
+          "size": 132,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17b4c",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel10InitialiseE15SimpleLabelTypeRK8GLfloat2if",
+          "target_address": "0x23078",
+          "size": 164,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17b66",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+          "target_address": "0x22d6c",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17b70",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel9SetNumberEi",
+          "target_address": "0x2311c",
+          "size": 68,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17c0e",
+          "instruction": "bl",
+          "target": "__Z11InterpolateRK8GLfloat2S1_f",
+          "target_address": "0x1be38",
+          "size": 64,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17c26",
+          "instruction": "bl",
+          "target": "__Z3Sqrf",
+          "target_address": "0x1b828",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17c4e",
+          "instruction": "bl",
+          "target": "__ZN11SimpleLabel11SetPositionERK8GLfloat2",
+          "target_address": "0x22d6c",
+          "size": 16,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17c56",
+          "instruction": "blx",
+          "target": "_powf",
+          "target_address": "0x194f40",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x17c62",
+          "instruction": "bl",
+          "target": "__Z11Interpolatefff",
+          "target_address": "0x1b800",
+          "size": 40,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17c9c",
+          "instruction": "bl",
+          "target": "__ZN4Game16QueueAchievementE11Achievementf",
+          "target_address": "0xbd68",
+          "size": 140,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17cba",
+          "instruction": "bl",
+          "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "target_address": "0x21130",
+          "size": 332,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17ccc",
+          "instruction": "bl",
+          "target": "__ZN4Game10QueueSoundE5Sound",
+          "target_address": "0x903c",
+          "size": 88,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17cd2",
+          "instruction": "bl",
+          "target": "__ZN4Game12CheckEndGameEv",
+          "target_address": "0x10b18",
+          "size": 780,
+          "category": "T030:dr_check_end_game+dr_game_over"
+        },
+        {
+          "site": "0x17cdc",
+          "instruction": "bl",
+          "target": "__ZN4Game13ProcessAttackEv",
+          "target_address": "0x14118",
+          "size": 2796,
+          "category": "T020:dr_process_attack"
+        },
+        {
+          "site": "0x17cee",
+          "instruction": "bl",
+          "target": "__ZN9Interface7ProcessEfb",
+          "target_address": "0x20c64",
+          "size": 1228,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x17d10",
+          "instruction": "bl",
+          "target": "__ZN4Game12ProcessInputEv",
+          "target_address": "0x16638",
+          "size": 2884,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x17d4c",
+          "instruction": "bl",
+          "target": "__ZN4Tile14ProcessEffectsEf",
+          "target_address": "0x3dcfc",
+          "size": 344,
+          "category": "unrecovered"
+        }
+      ],
+      "unrecovered_by_size": [
+        {
+          "symbol": "__Z3Sqrf",
+          "size": 16
+        },
+        {
+          "symbol": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
+          "size": 16
+        },
+        {
+          "symbol": "__ZNSt4listIP4TileSaIS1_EE5eraseESt14_List_iteratorIS1_E",
+          "size": 24
+        },
+        {
+          "symbol": "__Z11Interpolatefff",
+          "size": 40
+        },
+        {
+          "symbol": "__ZN4Game10UpdateTimeEv",
+          "size": 60
+        },
+        {
+          "symbol": "__Z11InterpolateRK8GLfloat2S1_f",
+          "size": 64
+        },
+        {
+          "symbol": "__ZN4Game12CalculateFPSEv",
+          "size": 136
+        },
+        {
+          "symbol": "__ZN4Game20ProcessShieldShatterEv",
+          "size": 140
+        },
+        {
+          "symbol": "__ZN4Tile14ProcessEffectsEf",
+          "size": 344
+        },
+        {
+          "symbol": "__ZN4Game12ProcessInputEv",
+          "size": 2884
+        }
+      ]
+    },
+    "__ZN4Game12ProcessInputEv": {
+      "address": "0x16638",
+      "size": 2884,
+      "original_bytes_sha256": "12c2406308ac94493b04e34e69278104fea53ba82cdfa00cbe36dfcc720a6579",
+      "call_sites": [
+        {
+          "site": "0x1666e",
+          "instruction": "blx",
+          "target": "__Unwind_SjLj_Register",
+          "target_address": "0x194cec",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x1667c",
+          "instruction": "bl",
+          "target": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
+          "target_address": "0x18f9c",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x166d8",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "target_address": "0x1115c0",
+          "size": 32,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x166ea",
+          "instruction": "bl",
+          "target": "__ZN4Game14CountAttackersEv",
+          "target_address": "0x8fb0",
+          "size": 140,
+          "category": "T040:dr_count_attackers"
+        },
+        {
+          "site": "0x1671e",
+          "instruction": "bl",
+          "target": "__ZN4Game9EndOfTurnEv",
+          "target_address": "0x13574",
+          "size": 2292,
+          "category": "T030:dr_end_of_turn"
+        },
+        {
+          "site": "0x1677a",
+          "instruction": "bl",
+          "target": "__ZN4Tile5UndimEv",
+          "target_address": "0x3e670",
+          "size": 108,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x167c0",
+          "instruction": "bl",
+          "target": "__ZN4Quad7SetSizeERK8GLfloat2",
+          "target_address": "0x1c5dc",
+          "size": 72,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x167f6",
+          "instruction": "bl",
+          "target": "__ZN9Interface15SetHealthShadowEi",
+          "target_address": "0x2127c",
+          "size": 64,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16800",
+          "instruction": "bl",
+          "target": "__ZN9Interface11SetXPshadowEi",
+          "target_address": "0x1eae4",
+          "size": 60,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1680a",
+          "instruction": "bl",
+          "target": "__ZN9Interface11SetUPshadowEi",
+          "target_address": "0x21368",
+          "size": 60,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16814",
+          "instruction": "bl",
+          "target": "__ZN9Interface13SetGoldShadowEi",
+          "target_address": "0x207e4",
+          "size": 60,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16824",
+          "instruction": "bl",
+          "target": "__ZN4Game11ProcessRuneEb",
+          "target_address": "0xf7bc",
+          "size": 944,
+          "category": "inventory46:dr_process_rune"
+        },
+        {
+          "site": "0x16858",
+          "instruction": "bl",
+          "target": "__ZN4Quad7SetSizeERK8GLfloat2",
+          "target_address": "0x1c5dc",
+          "size": 72,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16892",
+          "instruction": "bl",
+          "target": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
+          "target_address": "0x18f9c",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x168c0",
+          "instruction": "bl",
+          "target": "__ZN4Game10QueueSoundE5Sound",
+          "target_address": "0x903c",
+          "size": 88,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x168f2",
+          "instruction": "bl",
+          "target": "__ZN8HelpMenu10InitialiseEffff8HelpType",
+          "target_address": "0x380b8",
+          "size": 112,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16902",
+          "instruction": "bl",
+          "target": "__ZN4Game10QueueSoundE5Sound",
+          "target_address": "0x903c",
+          "size": 88,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1692a",
+          "instruction": "bl",
+          "target": "__ZN4Game10MatchTilesEv",
+          "target_address": "0x12188",
+          "size": 1568,
+          "category": "inventory46:dr_match_path"
+        },
+        {
+          "site": "0x16946",
+          "instruction": "bl",
+          "target": "__ZN4Game16QueueAchievementE11Achievementf",
+          "target_address": "0xbd68",
+          "size": 140,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16966",
+          "instruction": "bl",
+          "target": "__Z4Randff8RandType",
+          "target_address": "0x1b7a8",
+          "size": 68,
+          "category": "inventory46:dr_random_float"
+        },
+        {
+          "site": "0x169dc",
+          "instruction": "bl",
+          "target": "__Z4Randff8RandType",
+          "target_address": "0x1b7a8",
+          "size": 68,
+          "category": "inventory46:dr_random_float"
+        },
+        {
+          "site": "0x16a50",
+          "instruction": "bl",
+          "target": "__ZN4Game16AddRevengeHealthEv",
+          "target_address": "0xce7c",
+          "size": 208,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16a82",
+          "instruction": "bl",
+          "target": "__ZN4Item12IncreaseStatE11UpgradeType",
+          "target_address": "0x29d58",
+          "size": 68,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16a88",
+          "instruction": "bl",
+          "target": "__ZN4Game11UpdateStatsEv",
+          "target_address": "0x14c04",
+          "size": 1368,
+          "category": "T030:dr_update_stats"
+        },
+        {
+          "site": "0x16aaa",
+          "instruction": "bl",
+          "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+          "target_address": "0xae2c",
+          "size": 316,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16ab6",
+          "instruction": "bl",
+          "target": "__ZN4Game16QueueAchievementE11Achievementf",
+          "target_address": "0xbd68",
+          "size": 140,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16acc",
+          "instruction": "bl",
+          "target": "__ZN4Game16QueueAchievementE11Achievementf",
+          "target_address": "0xbd68",
+          "size": 140,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16b22",
+          "instruction": "bl",
+          "target": "__ZN4Game10QueueSoundE5Sound",
+          "target_address": "0x903c",
+          "size": 88,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16b48",
+          "instruction": "bl",
+          "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "target_address": "0x21130",
+          "size": 332,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16b56",
+          "instruction": "bl",
+          "target": "__ZN9Interface9GetTargetE8TileType",
+          "target_address": "0x1ff40",
+          "size": 104,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16b70",
+          "instruction": "bl",
+          "target": "__ZN4Game14AddSimpleLabelE15SimpleLabelTypeRK8GLfloat2iif",
+          "target_address": "0xae2c",
+          "size": 316,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16b96",
+          "instruction": "bl",
+          "target": "__Z4Randff8RandType",
+          "target_address": "0x1b7a8",
+          "size": 68,
+          "category": "inventory46:dr_random_float"
+        },
+        {
+          "site": "0x16bf6",
+          "instruction": "bl",
+          "target": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
+          "target_address": "0x18f9c",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16c70",
+          "instruction": "bl",
+          "target": "__ZNSt6vectorIiSaIiEE9push_backERKi",
+          "target_address": "0x19ab0",
+          "size": 36,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16c80",
+          "instruction": "bl",
+          "target": "__ZNKSt6vectorIiSaIiEE5emptyEv",
+          "target_address": "0x1adec",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16c8e",
+          "instruction": "bl",
+          "target": "__ZNKSt6vectorIiSaIiEE4sizeEv",
+          "target_address": "0x18b3c",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16c9c",
+          "instruction": "bl",
+          "target": "__Z5RandIii8RandType",
+          "target_address": "0x1bca0",
+          "size": 128,
+          "category": "inventory46:dr_random_int"
+        },
+        {
+          "site": "0x16cc0",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass7LevelUpEv",
+          "target_address": "0x111a88",
+          "size": 32,
+          "category": "inventory46:dr_class_level_up"
+        },
+        {
+          "site": "0x16cd4",
+          "instruction": "bl",
+          "target": "__ZN10UnlockMenu4ShowE9ClassTypei",
+          "target_address": "0x1096fc",
+          "size": 208,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16ce0",
+          "instruction": "bl",
+          "target": "__ZNSt6vectorIiSaIiEED2Ev",
+          "target_address": "0x19bd8",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16cec",
+          "instruction": "blx",
+          "target": "__Unwind_SjLj_Resume",
+          "target_address": "0x194cf0",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x16cf2",
+          "instruction": "bl",
+          "target": "__ZNSt6vectorIiSaIiEED2Ev",
+          "target_address": "0x19bd8",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16d2a",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass7LevelUpEv",
+          "target_address": "0x111a88",
+          "size": 32,
+          "category": "inventory46:dr_class_level_up"
+        },
+        {
+          "site": "0x16d50",
+          "instruction": "bl",
+          "target": "__ZN10UnlockMenu4ShowE9ClassTypei",
+          "target_address": "0x1096fc",
+          "size": 208,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16d66",
+          "instruction": "bl",
+          "target": "__ZN4Game9MatchTileEP4Tile8TileType",
+          "target_address": "0xbe60",
+          "size": 2052,
+          "category": "inventory46:dr_match_tile"
+        },
+        {
+          "site": "0x16d6c",
+          "instruction": "bl",
+          "target": "__ZN4Game16MoveMatchedTilesEv",
+          "target_address": "0x10ed8",
+          "size": 664,
+          "category": "T010:dr_move_matched_tiles"
+        },
+        {
+          "site": "0x16d72",
+          "instruction": "bl",
+          "target": "__ZN4Game12CheckEndGameEv",
+          "target_address": "0x10b18",
+          "size": 780,
+          "category": "T030:dr_check_end_game+dr_game_over"
+        },
+        {
+          "site": "0x16d7e",
+          "instruction": "bl",
+          "target": "__ZN4Game14SerialiseStateEv",
+          "target_address": "0x91c4",
+          "size": 896,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16d84",
+          "instruction": "bl",
+          "target": "__ZN4Game16SerialiseClassesEv",
+          "target_address": "0x8ee8",
+          "size": 108,
+          "category": "inventory46:dr_classes_write"
+        },
+        {
+          "site": "0x16d96",
+          "instruction": "bl",
+          "target": "__ZNSt10_List_baseIP4TileSaIS1_EE8_M_clearEv",
+          "target_address": "0x19d6c",
+          "size": 24,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16dba",
+          "instruction": "bl",
+          "target": "__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE8_M_eraseEPSt13_Rb_tree_nodeIS1_E",
+          "target_address": "0x19d48",
+          "size": 36,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16e0a",
+          "instruction": "bl",
+          "target": "__ZN4Game21UpdateCrossVisibilityEv",
+          "target_address": "0xaa24",
+          "size": 1032,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16e1e",
+          "instruction": "bl",
+          "target": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
+          "target_address": "0x18f9c",
+          "size": 16,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16e3c",
+          "instruction": "bl",
+          "target": "__ZN4Game17GetTileAtPositionERK8GLfloat2",
+          "target_address": "0x89e0",
+          "size": 164,
+          "category": "inventory46:dr_tile_at"
+        },
+        {
+          "site": "0x16ea8",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass18GetMortalEnemyTypeE8RaceType",
+          "target_address": "0x1116f0",
+          "size": 60,
+          "category": "inventory46:dr_mortal_enemy"
+        },
+        {
+          "site": "0x16eb4",
+          "instruction": "bl",
+          "target": "__ZN4Game13GetEnemyCountE9EnemyType",
+          "target_address": "0x8cb8",
+          "size": 84,
+          "category": "inventory46:dr_enemy_count"
+        },
+        {
+          "site": "0x16eea",
+          "instruction": "bl",
+          "target": "__ZN7Tooltip4ShowE9EnemyTypeRK8GLfloat2",
+          "target_address": "0x2c384",
+          "size": 288,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16f62",
+          "instruction": "bl",
+          "target": "__ZN4Tile6SelectEv",
+          "target_address": "0x1aa3c",
+          "size": 52,
+          "category": "inventory46:dr_select_tile"
+        },
+        {
+          "site": "0x16f6a",
+          "instruction": "bl",
+          "target": "__ZNSt4listIP4TileSaIS1_EE9push_backERKS1_",
+          "target_address": "0x1a354",
+          "size": 36,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16f70",
+          "instruction": "bl",
+          "target": "__ZN4Game21UpdateCrossVisibilityEv",
+          "target_address": "0xaa24",
+          "size": 1032,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16f76",
+          "instruction": "bl",
+          "target": "__ZN4Game13UpdateDimmingEv",
+          "target_address": "0x9c78",
+          "size": 116,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16f7e",
+          "instruction": "bl",
+          "target": "__ZN4Game14QueueTileSoundEP4Tile",
+          "target_address": "0x9094",
+          "size": 68,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16fa6",
+          "instruction": "bl",
+          "target": "__ZN4Game22ProcessResourceShadowsEv",
+          "target_address": "0xefe0",
+          "size": 800,
+          "category": "inventory46:dr_preview_resources"
+        },
+        {
+          "site": "0x17002",
+          "instruction": "bl",
+          "target": "__ZN4Game17GetTileAtPositionERK8GLfloat2",
+          "target_address": "0x89e0",
+          "size": 164,
+          "category": "inventory46:dr_tile_at"
+        },
+        {
+          "site": "0x17018",
+          "instruction": "bl",
+          "target": "__ZN4Game11ProcessRuneEb",
+          "target_address": "0xf7bc",
+          "size": 944,
+          "category": "inventory46:dr_process_rune"
+        },
+        {
+          "site": "0x17042",
+          "instruction": "bl",
+          "target": "__ZN4Game20ProcessTileSelectionEv",
+          "target_address": "0xfb6c",
+          "size": 2156,
+          "category": "inventory46:dr_process_tile_selection"
+        },
+        {
+          "site": "0x1704a",
+          "instruction": "bl",
+          "target": "__ZN4Game11ProcessRuneEb",
+          "target_address": "0xf7bc",
+          "size": 944,
+          "category": "inventory46:dr_process_rune"
+        },
+        {
+          "site": "0x17050",
+          "instruction": "bl",
+          "target": "__ZN4Game22ProcessResourceShadowsEv",
+          "target_address": "0xefe0",
+          "size": 800,
+          "category": "inventory46:dr_preview_resources"
+        },
+        {
+          "site": "0x17056",
+          "instruction": "bl",
+          "target": "__ZN4Game13UpdateDimmingEv",
+          "target_address": "0x9c78",
+          "size": 116,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x1706e",
+          "instruction": "bl",
+          "target": "__ZN4Game15ProcessPretzelsEv",
+          "target_address": "0xd03c",
+          "size": 400,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x170a4",
+          "instruction": "bl",
+          "target": "__ZN4Tile5UndimEv",
+          "target_address": "0x3e670",
+          "size": 108,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x170be",
+          "instruction": "bl",
+          "target": "__Z5RandIii8RandType",
+          "target_address": "0x1bca0",
+          "size": 128,
+          "category": "inventory46:dr_random_int"
+        },
+        {
+          "site": "0x170e0",
+          "instruction": "bl",
+          "target": "__ZNSt6vectorIiSaIiEED2Ev",
+          "target_address": "0x19bd8",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x170e8",
+          "instruction": "blx",
+          "target": "__Unwind_SjLj_Unregister",
+          "target_address": "0x194cf4",
+          "size": null,
+          "category": "platform-library-boundary"
+        }
+      ],
+      "unrecovered_by_size": [
+        {
+          "symbol": "__ZNKSt6vectorIiSaIiEE4sizeEv",
+          "size": 12
+        },
+        {
+          "symbol": "__ZNSt6vectorIiSaIiEED2Ev",
+          "size": 12
+        },
+        {
+          "symbol": "__ZNKSt4listIP4TileSaIS1_EE4sizeEv",
+          "size": 16
+        },
+        {
+          "symbol": "__ZNKSt6vectorIiSaIiEE5emptyEv",
+          "size": 16
+        },
+        {
+          "symbol": "__ZNSt10_List_baseIP4TileSaIS1_EE8_M_clearEv",
+          "size": 24
+        },
+        {
+          "symbol": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "size": 32
+        },
+        {
+          "symbol": "__ZNSt4listIP4TileSaIS1_EE9push_backERKS1_",
+          "size": 36
+        },
+        {
+          "symbol": "__ZNSt6vectorIiSaIiEE9push_backERKi",
+          "size": 36
+        },
+        {
+          "symbol": "__ZNSt8_Rb_treeIP4TileS1_St9_IdentityIS1_ESt4lessIS1_ESaIS1_EE8_M_eraseEPSt13_Rb_tree_nodeIS1_E",
+          "size": 36
+        },
+        {
+          "symbol": "__ZN4Game14QueueTileSoundEP4Tile",
+          "size": 68
+        },
+        {
+          "symbol": "__ZN4Item12IncreaseStatE11UpgradeType",
+          "size": 68
+        },
+        {
+          "symbol": "__ZN4Tile5UndimEv",
+          "size": 108
+        },
+        {
+          "symbol": "__ZN4Game13UpdateDimmingEv",
+          "size": 116
+        },
+        {
+          "symbol": "__ZN4Game16AddRevengeHealthEv",
+          "size": 208
+        },
+        {
+          "symbol": "__ZN4Game15ProcessPretzelsEv",
+          "size": 400
+        },
+        {
+          "symbol": "__ZN4Game14SerialiseStateEv",
+          "size": 896
+        },
+        {
+          "symbol": "__ZN4Game21UpdateCrossVisibilityEv",
+          "size": 1032
+        }
+      ]
+    },
+    "__ZN4Game11InitNewGameEv": {
+      "address": "0x15c50",
+      "size": 2160,
+      "original_bytes_sha256": "67e527053312ef101fad08b3bd51c0fa6f66d14cea8c3037afbea9fae5f2458a",
+      "call_sites": [
+        {
+          "site": "0x15c86",
+          "instruction": "blx",
+          "target": "__Unwind_SjLj_Register",
+          "target_address": "0x194cec",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x15c8c",
+          "instruction": "blx",
+          "target": "_time",
+          "target_address": "0x194fcc",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x15c98",
+          "instruction": "bl",
+          "target": "__Z11SetRandSeedj8RandType",
+          "target_address": "0x1b6c0",
+          "size": 44,
+          "category": "inventory46:dr_random_set_seed"
+        },
+        {
+          "site": "0x15c9c",
+          "instruction": "bl",
+          "target": "__Z14FlushRandSeedsv",
+          "target_address": "0x1b6ec",
+          "size": 56,
+          "category": "inventory46:dr_random_flush"
+        },
+        {
+          "site": "0x15ca2",
+          "instruction": "bl",
+          "target": "__ZN4Game22CalculateTilePositionsEv",
+          "target_address": "0xb264",
+          "size": 356,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x15cb0",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass17UnlockAchievementEv",
+          "target_address": "0x111a38",
+          "size": 80,
+          "category": "inventory46:dr_class_unlock_achievements"
+        },
+        {
+          "site": "0x15cd8",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass17UnlockAchievementEv",
+          "target_address": "0x111a38",
+          "size": 80,
+          "category": "inventory46:dr_class_unlock_achievements"
+        },
+        {
+          "site": "0x15da4",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass8HaveFlawE8FlawType",
+          "target_address": "0x111608",
+          "size": 32,
+          "category": "inventory46:dr_have_flaw"
+        },
+        {
+          "site": "0x15e5c",
+          "instruction": "bl",
+          "target": "__ZN5Label7SetTextEPKci",
+          "target_address": "0x1d528",
+          "size": 612,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x15ea6",
+          "instruction": "bl",
+          "target": "__ZN5Label12UpdateColourEv",
+          "target_address": "0x1d490",
+          "size": 52,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x15eda",
+          "instruction": "bl",
+          "target": "__ZN4Game12PositionTileER4Tileiib",
+          "target_address": "0xb3c8",
+          "size": 204,
+          "category": "T010:dr_position_tile"
+        },
+        {
+          "site": "0x15ee8",
+          "instruction": "bl",
+          "target": "__ZN4Game13RandomiseTileER4Tile",
+          "target_address": "0xf5b8",
+          "size": 516,
+          "category": "T010:dr_randomise_tile"
+        },
+        {
+          "site": "0x15f4e",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "target_address": "0x1115c0",
+          "size": 32,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x15fa4",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "target_address": "0x1115c0",
+          "size": 32,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x15fda",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass8HaveFlawE8FlawType",
+          "target_address": "0x111608",
+          "size": 32,
+          "category": "inventory46:dr_have_flaw"
+        },
+        {
+          "site": "0x16012",
+          "instruction": "bl",
+          "target": "__ZN9Interface16UpdateSkullValueEv",
+          "target_address": "0x20224",
+          "size": 112,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16042",
+          "instruction": "bl",
+          "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "target_address": "0x21130",
+          "size": 332,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x1606e",
+          "instruction": "bl",
+          "target": "__ZN9Interface15UpdateHealthBarER4Quadi",
+          "target_address": "0x21130",
+          "size": 332,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16096",
+          "instruction": "bl",
+          "target": "__ZN9Interface11UpdateXPBarER4Quadi",
+          "target_address": "0x1ea2c",
+          "size": 184,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x160be",
+          "instruction": "bl",
+          "target": "__ZN9Interface11UpdateUPBarER4Quadi",
+          "target_address": "0x212bc",
+          "size": 172,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x160e6",
+          "instruction": "bl",
+          "target": "__ZN9Interface13UpdateGoldBarERA2_4Quadi",
+          "target_address": "0x20600",
+          "size": 484,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16130",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "target_address": "0x1115c0",
+          "size": 32,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16166",
+          "instruction": "bl",
+          "target": "__ZN14CharacterClass8HaveFlawE8FlawType",
+          "target_address": "0x111608",
+          "size": 32,
+          "category": "inventory46:dr_have_flaw"
+        },
+        {
+          "site": "0x16196",
+          "instruction": "bl",
+          "target": "__ZN4ItemD1Ev",
+          "target_address": "0x265f4",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x1619c",
+          "instruction": "blx",
+          "target": "__ZdlPv",
+          "target_address": "0x194d4c",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x161b4",
+          "instruction": "bl",
+          "target": "__ZN4ItemD1Ev",
+          "target_address": "0x265f4",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x161ba",
+          "instruction": "blx",
+          "target": "__ZdlPv",
+          "target_address": "0x194d4c",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x161d2",
+          "instruction": "bl",
+          "target": "__ZN4ItemD1Ev",
+          "target_address": "0x265f4",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x161d8",
+          "instruction": "blx",
+          "target": "__ZdlPv",
+          "target_address": "0x194d4c",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x161f0",
+          "instruction": "bl",
+          "target": "__ZN4ItemD1Ev",
+          "target_address": "0x265f4",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x161f6",
+          "instruction": "blx",
+          "target": "__ZdlPv",
+          "target_address": "0x194d4c",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x1620e",
+          "instruction": "bl",
+          "target": "__ZN4ItemD1Ev",
+          "target_address": "0x265f4",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16214",
+          "instruction": "blx",
+          "target": "__ZdlPv",
+          "target_address": "0x194d4c",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x16222",
+          "instruction": "blx",
+          "target": "__Znwm",
+          "target_address": "0x194d54",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x16230",
+          "instruction": "bl",
+          "target": "__ZN4ItemC1EP4Game8ItemType",
+          "target_address": "0x2a6bc",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x1624e",
+          "instruction": "blx",
+          "target": "__Znwm",
+          "target_address": "0x194d54",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x1625c",
+          "instruction": "bl",
+          "target": "__ZN4ItemC1EP4Game8ItemType",
+          "target_address": "0x2a6bc",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16262",
+          "instruction": "blx",
+          "target": "__ZdlPv",
+          "target_address": "0x194d4c",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x1626e",
+          "instruction": "blx",
+          "target": "__Unwind_SjLj_Resume",
+          "target_address": "0x194cf0",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x16286",
+          "instruction": "blx",
+          "target": "__Znwm",
+          "target_address": "0x194d54",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x16294",
+          "instruction": "bl",
+          "target": "__ZN4ItemC1EP4Game8ItemType",
+          "target_address": "0x2a6bc",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x162ac",
+          "instruction": "blx",
+          "target": "__Znwm",
+          "target_address": "0x194d54",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x162ba",
+          "instruction": "bl",
+          "target": "__ZN4ItemC1EP4Game8ItemType",
+          "target_address": "0x2a6bc",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x162d2",
+          "instruction": "blx",
+          "target": "__Znwm",
+          "target_address": "0x194d54",
+          "size": null,
+          "category": "platform-library-boundary"
+        },
+        {
+          "site": "0x162e0",
+          "instruction": "bl",
+          "target": "__ZN4ItemC1EP4Game8ItemType",
+          "target_address": "0x2a6bc",
+          "size": 12,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16366",
+          "instruction": "bl",
+          "target": "__ZN4Game12PositionTileER4Tileiib",
+          "target_address": "0xb3c8",
+          "size": 204,
+          "category": "T010:dr_position_tile"
+        },
+        {
+          "site": "0x16374",
+          "instruction": "bl",
+          "target": "__ZN4Game13RandomiseTileER4Tile",
+          "target_address": "0xf5b8",
+          "size": 516,
+          "category": "T010:dr_randomise_tile"
+        },
+        {
+          "site": "0x16394",
+          "instruction": "bl",
+          "target": "__ZN4Game11UpdateStatsEv",
+          "target_address": "0x14c04",
+          "size": 1368,
+          "category": "T030:dr_update_stats"
+        },
+        {
+          "site": "0x163e8",
+          "instruction": "bl",
+          "target": "__ZNSt10_List_baseIP4TileSaIS1_EE8_M_clearEv",
+          "target_address": "0x19d6c",
+          "size": 24,
+          "category": "unrecovered"
+        },
+        {
+          "site": "0x16440",
+          "instruction": "bl",
+          "target": "__ZN9Interface5ResetEv",
+          "target_address": "0x204a4",
+          "size": 348,
+          "category": "presentation-boundary"
+        },
+        {
+          "site": "0x16446",
+          "instruction": "blx",
+          "target": "__Unwind_SjLj_Unregister",
+          "target_address": "0x194cf4",
+          "size": null,
+          "category": "platform-library-boundary"
+        }
+      ],
+      "unrecovered_by_size": [
+        {
+          "symbol": "__ZN4ItemC1EP4Game8ItemType",
+          "size": 12
+        },
+        {
+          "symbol": "__ZN4ItemD1Ev",
+          "size": 12
+        },
+        {
+          "symbol": "__ZNSt10_List_baseIP4TileSaIS1_EE8_M_clearEv",
+          "size": 24
+        },
+        {
+          "symbol": "__ZN14CharacterClass8HavePerkE8PerkType",
+          "size": 32
+        },
+        {
+          "symbol": "__ZN4Game22CalculateTilePositionsEv",
+          "size": 356
+        }
+      ]
+    }
+  },
+  "recovered_segments": [
+    {
+      "function": "__ZN4Game12ProcessInputEv",
+      "start": "0x16638",
+      "end_exclusive": "0x16748",
+      "native": "dr_input_gate (recovered_schedule)",
+      "verify": "recovered/verify_input_gate.py",
+      "task": "T040-B",
+      "original_bytes_sha256": "c2f16f76cdfd876d228055b6a5453bf6912428bfb1cb841f9517d9213a950924"
+    },
+    {
+      "function": "__ZN4Game12ProcessInputEv",
+      "start": "0x16748",
+      "end_exclusive": "0x1674e",
+      "native": "dr_reset_rune_preview / in dr_input_gate",
+      "verify": "recovered/verify_input_gate.py",
+      "task": "T040-B",
+      "original_bytes_sha256": "87bbc1e4d67f3f0ea4cbee25cea861e946da09f4357e591f9944357d33c96226"
+    },
+    {
+      "function": "__ZN4Game7ProcessEv",
+      "start": "0x173c8",
+      "end_exclusive": "0x17400",
+      "native": "moving-list subsection (recovered_refill)",
+      "verify": "recovered/verify_refill_integration.py",
+      "task": "earlier",
+      "original_bytes_sha256": "e64de085cb38f5e9757abc05d8870011e27b289c76e7ad48d6409b911d1640c3"
+    },
+    {
+      "function": "__ZN4Game7ProcessEv",
+      "start": "0x1744c",
+      "end_exclusive": "0x174da",
+      "extra": [
+        "0x17d56..0x17d62"
+      ],
+      "native": "dr_process_reward_tokens (recovered_motion)",
+      "verify": "recovered/verify_motion.py",
+      "task": "earlier",
+      "original_bytes_sha256": "6d4fa713a20ced0224801ac7861c555fa461d7296ed430b1c16f6a96aedce959"
+    }
+  ],
+  "limits": [
+    "Direct bl/blx plus external b.w only; no indirect call graph",
+    "presentation-boundary is a naming heuristic (UI classes, labels, particles, menus)"
+  ]
+}

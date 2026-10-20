@@ -81,7 +81,7 @@ def build():
     for c in calls_of(ability):
         if c['target']==ability['symbol']:continue
         abilities.append(c)
-    unrecovered=sorted({(c['target'],c['size']) for c in calls+abilities if c['category']=='unrecovered'},key=lambda t:(t[1] or 0))
+    unrecovered=sorted({(c['target'],c['size']) for c in calls+abilities if c['category']=='unrecovered'},key=lambda t:(t[1] or 0,t[0]))
     return dict(task='T030',executable_sha256=executable_sha,original_symbol=block['symbol'],address=hex(block['start']),
                 size=block['end']-block['start'],original_bytes_sha256=hashlib.sha256(read(block['start'],block['end']-block['start'])).hexdigest(),
                 call_sites=calls,unique_targets=len({c['target'] for c in calls}),

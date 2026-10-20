@@ -12,6 +12,7 @@
 | 补位生成 | refill、generation、encounters | 下落补位、生成/晋升数值、SwapTiles/JumpDown/Stab；非完整敌人阶段 |
 | 敌人阶段 | attack_shield | ProcessAttack 每帧逻辑（dr_process_attack，T020），复用 ResourceState / MatchState / 规则及随机模块 |
 | 回合结束 | turn | Game::EndOfTurn 整函数（dr_end_of_turn）、CheckEndGame 与结束结算、Tile::ActivateAbility 及 19 个敌人能力；DestroyUpgrade 与 SerialiseState 仍为边界（T030） |
+| 回合调度 | schedule | ProcessInput 门槛（dr_input_gate）与 CountAttackers：何时开始敌人攻击、何时调用 EndOfTurn、何时分派触摸（T040） |
 | 玩家属性 | stats | Game::UpdateStats（dr_update_stats）：由装备物品与技能重算属性，产生 ProcessAttack 的攻击几率/削弱/全体伤害与回复量（T030-N4a） |
 | 职业档案 | progression | 职业进度、编解码、升级/成就；非完整局面存档 |
 
@@ -21,7 +22,7 @@ stroke / selection 持有棋盘；MatchState、PathState、ResourceState、Refil
 
 ## 两条构建路线
 
-- 恢复源码：`recovered/build.sh` 构建 22 个 macOS arm64+x86_64 动态库、iPhone arm64 对象和静态库（含 attack_shield、turn、stats）；两个 run_*_demo.sh 现场编译并运行无界面示例。静态库不能安装为 App。
+- 恢复源码：`recovered/build.sh` 构建 23 个 macOS arm64+x86_64 动态库、iPhone arm64 对象和静态库（含 attack_shield、turn、stats、schedule）；两个 run_*_demo.sh 现场编译并运行无界面示例。静态库不能安装为 App。
 - 兼容运行层：adapter/、unicorn-tci/、dynarmic-api/、liveexec32-source/、mini-gdbstub/、runtime/；旧 ARM32 游戏通过现代宿主/TCI 执行。rebuild.py / build-framework.py / package-app.py 属此路线，本轮不签名、不打包、不将其作为重制验收。
 
 ## 验证依赖与隔离
