@@ -328,3 +328,11 @@
 - verify_release 增至 800 组（卷轴 329 组）：原版 CharacterClass::LevelUp / UnlockAchievement / CheckIfAllClassesMaxed / RandI 为原代码，std::vector<int> 模拟；卷轴全部分支（RandI 选择、解锁、无可解锁、当前职业升级、等级 10 跳过、CheckEndGame 结束/继续、等级成就、全满级成就 28）到达。错误副本 10 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：53 步通过。运行目录 `.relay/runs/20261020T035159.428619Z`，输入指纹 `da8e72d7…a3f8bbbf`，inputs_unchanged true。
 - `scripts/t040_process_audit.py --check` matches true。
+
+## 2026-10-19 T040-E：InitNewGame 与 CalculateTilePositions（Claude）
+
+- 字段表来源：在测试宿主中执行原版 InitNewGame 并追踪其对 Game 内存的全部写入（约 190 个字段 + 36 格各 6 个字段），逐个归入原生状态。
+- 新 verify_new_game 200 次比较：原版从入口执行到返回（time() 返回用例种子），SetRandSeed / FlushRandSeeds / UnlockAchievement / CheckIfAllClassesMaxed / HavePerk / HaveFlaw / PositionTile / RandomiseTile 为原代码；比较全部追踪字段（除表现层标签字段与物品指针）、36 格、生成/补位棋盘与事件、随机种子、事件序列；各分支结果均出现。
+- 错误副本 22 个全部 exit 1（明细见 T040_SCHEDULE.md）；"代币 pending 不清零"最初存活，随机化代币计数后被拒。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、51 个 verify 脚本共 54 步通过。运行目录 `.relay/runs/20261020T041627.700591Z`，输入指纹 `4379138e…2f04a3ed`，inputs_unchanged true。
+- `scripts/t040_process_audit.py --check` matches true（InitNewGame 未恢复目标 3 个：Item 构造/析构、list 清空）。

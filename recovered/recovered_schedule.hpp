@@ -2,6 +2,7 @@
 #include "recovered_attack_shield.hpp"
 #include "recovered_rune.hpp"
 #include "recovered_turn.hpp"
+#include "recovered_stats.hpp"
 namespace dungeonraid {
 // Inputs of the ProcessInput gate owned outside the recovered states.
 struct InputGateInputs {
@@ -68,8 +69,64 @@ struct ClassScrollState {
     std::size_t current;
     std::int32_t difficulty;   // Game::QueueAchievement gate (dr_class_level_up)
 };
+// Game fields reset by Game::InitNewGame that no other recovered state owns (named by offset).
+struct NewGameExtra {
+    std::int32_t tokens_type0_165d8, tokens_type4_165e8;   // ends of the 5-wide token counters around
+    std::int32_t bonus_type0_165ec, bonus_type4_165fc;     // TokenQueueCounters.normal[3] / bonus[3]
+    std::int32_t value_164d4, tokens_b53c, tokens_b54c;
+    std::int32_t base_bde8[4];          // Game+0xbde8/0xbdf0/0xbdf8/0xbe00 (each before PlayerStats.base_*)
+    std::uint8_t flag_bf88;
+    std::uint8_t label_active[4];       // SimpleLabel active bytes: leech 0xbfc0, flame 0x14afc, spike 0x14e70, 0x151e4
+    std::uint8_t skill_ff[4][4];        // bytes +0x0f/+0x23/+0x37/+0x4b of the four skill objects (Game+0xbf90)
+};
+// Everything Game::InitNewGame resets. The active class is classes[0] (MatchState.perks and
+// SelectionState.character.flaws are its perks and flaws).
+struct NewGameState {
+    MatchState* match;              // random, bonus chances, spawn_count_1555c; ->stroke selection
+    ResourcePreviewState* preview;
+    ResourceState* resources;
+    PathState* path;
+    GenerationState* generation;    // ->refill for PositionTile
+    TokenQueue* tokens;
+    TurnFlags* flags;
+    TurnFinishFlags* finish;
+    RuneState* rune;
+    EndGameState* end;
+    std::uint8_t* counterattack;    // Game+0xbfba
+    AttackDamageState* attack;
+    PlayerStats* player;
+    ClassProfile* classes;          // the 10 class records (UnlockAchievement)
+    std::int32_t difficulty;        // Game::QueueAchievement gate
+    NewGameExtra* extra;
+};
+// Achievement: a=id, b=float bits. SetSize: Quad::SetSize(tile, (a, b) float bits). Labels:
+// Tile::InitialiseLabels(tile). TurnLabel: Label::SetText / UpdateColour on Game+0x5e18 (presentation).
+// SkullValue: Interface::UpdateSkullValue. HealthBar / XPBar / UPBar / GoldBar: Interface bar update with
+// a=value. Item: the item in slot a (Game+0xbe88+4a) is deleted and Item(Game, type b) constructed
+// (Item::Initialise / GenerateName / GenerateStats / MakeStats, boundary). UpdateStats: wire to
+// dr_update_stats. InterfaceReset: Interface::Reset.
+enum class NewGameEventKind : std::int32_t { Achievement=1, SetSize, Labels, TurnLabel, SkullValue, HealthBar, XPBar,
+    UPBar, GoldBar, Item, UpdateStats, InterfaceReset };
+struct NewGameEvent { NewGameEventKind kind; std::int32_t tile,a,b; };
+struct NewGameHooks {
+    void* context;
+    void (*event)(void*,const NewGameEvent*);
+    const GenerationHooks* generation;   // RandomiseTile events
+};
 }
 extern "C" {
+// Original Game::CalculateTilePositions 0xb264: vertical offset 0.015625 in record mode (else 0);
+// tile y*6+x rests at ((x+0.5)*pitch+0.003125, (y+0.5)*pitch+0.246875+offset), its centre is
+// placed there with size pitch (half pitch), SetSize and InitialiseLabels events.
+void dr_calculate_tile_positions(dungeonraid::StrokeState*,const dungeonraid::NewGameHooks*);
+// Original Game::InitNewGame 0x15c50: seeds all random streams with time (SetRandSeed(time, 6),
+// FlushRandSeeds), CalculateTilePositions, class achievements (class 0, then 1..9), resets the turn,
+// path, battle, token, label and flag state, time to promotion (200 in record mode 0, else 50, 49
+// with flaw 8), generates the board row by row (PositionTile + RandomiseTile with filter_enabled set),
+// starting stats (base damage 3, +1 perk 4; health 40, 100 in record mode 1, +10 perk 9, -10 flaw 1;
+// bonus chances 20, +10 perk 7 on Game+0xbe18, -10 flaw 4 on Game+0xbe30), new items of types 0..4,
+// UpdateStats, then the phase/input/list/level resets and Interface::Reset.
+void dr_init_new_game(dungeonraid::NewGameState*,std::uint32_t time,const dungeonraid::NewGameHooks*);
 // Original Game::CountAttackers 0x8fb0: enemies (type 1) without attack flag, not frozen, with
 // GetAttack > 0 (row-major).
 std::int32_t dr_count_attackers(const dungeonraid::PathState*);

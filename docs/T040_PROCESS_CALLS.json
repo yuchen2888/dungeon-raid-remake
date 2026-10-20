@@ -686,7 +686,7 @@
           "target": "__ZN14CharacterClass8HavePerkE8PerkType",
           "target_address": "0x1115c0",
           "size": 32,
-          "category": "unrecovered"
+          "category": "T040:have_perk in recovered_schedule (MatchState.perks of the active class)"
         },
         {
           "site": "0x166ea",
@@ -1279,10 +1279,6 @@
           "size": 24
         },
         {
-          "symbol": "__ZN14CharacterClass8HavePerkE8PerkType",
-          "size": 32
-        },
-        {
           "symbol": "__ZNSt4listIP4TileSaIS1_EE9push_backERKS1_",
           "size": 36
         },
@@ -1363,7 +1359,7 @@
           "target": "__ZN4Game22CalculateTilePositionsEv",
           "target_address": "0xb264",
           "size": 356,
-          "category": "unrecovered"
+          "category": "T040:dr_calculate_tile_positions"
         },
         {
           "site": "0x15cb0",
@@ -1427,7 +1423,7 @@
           "target": "__ZN14CharacterClass8HavePerkE8PerkType",
           "target_address": "0x1115c0",
           "size": 32,
-          "category": "unrecovered"
+          "category": "T040:have_perk in recovered_schedule (MatchState.perks of the active class)"
         },
         {
           "site": "0x15fa4",
@@ -1435,7 +1431,7 @@
           "target": "__ZN14CharacterClass8HavePerkE8PerkType",
           "target_address": "0x1115c0",
           "size": 32,
-          "category": "unrecovered"
+          "category": "T040:have_perk in recovered_schedule (MatchState.perks of the active class)"
         },
         {
           "site": "0x15fda",
@@ -1499,7 +1495,7 @@
           "target": "__ZN14CharacterClass8HavePerkE8PerkType",
           "target_address": "0x1115c0",
           "size": 32,
-          "category": "unrecovered"
+          "category": "T040:have_perk in recovered_schedule (MatchState.perks of the active class)"
         },
         {
           "site": "0x16166",
@@ -1746,14 +1742,6 @@
         {
           "symbol": "__ZNSt10_List_baseIP4TileSaIS1_EE8_M_clearEv",
           "size": 24
-        },
-        {
-          "symbol": "__ZN14CharacterClass8HavePerkE8PerkType",
-          "size": 32
-        },
-        {
-          "symbol": "__ZN4Game22CalculateTilePositionsEv",
-          "size": 356
         }
       ]
     }
@@ -1807,6 +1795,15 @@
       "verify": "recovered/verify_release.py",
       "task": "T040-C",
       "original_bytes_sha256": "7872ac05edf54b7089d1baa5cd4b13b38d46842589bf9db3e55330f487e2e38d"
+    },
+    {
+      "function": "__ZN4Game11InitNewGameEv",
+      "start": "0x15c50",
+      "end_exclusive": "0x164c0",
+      "native": "dr_init_new_game (recovered_schedule)",
+      "verify": "recovered/verify_new_game.py",
+      "task": "T040-E",
+      "original_bytes_sha256": "67e527053312ef101fad08b3bd51c0fa6f66d14cea8c3037afbea9fae5f2458a"
     },
     {
       "function": "__ZN4Game7ProcessEv",

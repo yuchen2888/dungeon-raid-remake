@@ -76,8 +76,20 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 验证：verify_release 增至 800 组（另 300 组强制卷轴），原版 CharacterClass::LevelUp / UnlockAchievement / CheckIfAllClassesMaxed / RandI 为原代码，std::vector<int> 在测试中模拟（无分配器），CharacterClass+0 写入 Game 指针。卷轴 329 组；分支：RandI 选择、解锁搜索、解锁升级、无可解锁、当前职业升级、等级 10 跳过、CheckEndGame 结束与继续、等级 >4 成就、全职业满级成就 28 均到达。错误副本 10 个（类型 0 也可选、等级阈值 ≤8、RandI 结果反转、可解锁条件 <10、从职业 1 开始搜索、UnlockMenu 传类型、等级 10 仍升级、忽略 CheckEndGame、奖励 5、不同步 MatchState 视图）全部 exit 1。
 
+## T040-E：新局初始化 InitNewGame（Claude，2026-10-19）
+
+`recovered_schedule` 新增 `dr_init_new_game`（原版 Game::InitNewGame 0x15c50，2160 字节，整函数）与 `dr_calculate_tile_positions`（Game::CalculateTilePositions 0xb264）。字段表由写入追踪得到：在测试宿主里执行原版 InitNewGame，记录其对 Game 内存的全部写入（约 190 个字段及 36 格的中心/坐标/尺寸），逐个归入现有原生状态（MatchState、StrokeState/SelectionState、ResourceState、ResourcePreviewState、PathState、GenerationState、TokenQueue 计数、TurnFlags、TurnFinishFlags、RuneState、EndGameState、AttackDamageState、PlayerStats）；没有归属的放入新结构 NewGameExtra（按偏移命名：5 宽代币计数两端、0x164d4、0xb53c/0xb54c、0xbde8 组、0xbf88、四个 SimpleLabel 活动字节、技能对象 4×4 字节）。
+
+顺序：time() 种子设所有随机流并 Flush → CalculateTilePositions（记录模式时垂直偏移 0.015625；格 y*6+x 静止位置 ((x+0.5)·pitch+0.003125, (y+0.5)·pitch+0.246875+偏移)，中心=静止位置，尺寸 pitch、半尺寸 pitch/2，SetSize 与 InitialiseLabels 事件）→ 职业成就（职业 0，再 1..9；dr_class_unlock_achievements）→ 回合/路径/战斗/代币/标签/标志清零 → 晋升计时（记录模式且 mode 0 为 200，否则 50，缺陷 8 为 49）→ filter_enabled=1 时逐行生成棋盘（dr_position_tile + dr_randomise_tile；filter_swords 沿用旧值）→ filter 清零、起始属性（基础伤害 3，特长 4 +1；生命上限 40，记录模式 1 为 100，特长 9 +10，缺陷 1 −10；界面值不同才更新；经验/升级/金币清零；奖励几率 20，特长 7 使 Game+0xbe18 +10，缺陷 4 使 Game+0xbe30 −10；护甲 0）→ 五件新物品（类型 0..4，Item 事件）、技能对象字节置 0xff → health_bonus/冷却清零、UpdateStats 事件 → 阶段 0、输入就绪、技能数 0、下落列表清空、代币计数 0、等级 1、累计 0、标签活动字节 0 → Interface::Reset。
+
+边界：物品构造（Item::Initialise / GenerateName / GenerateStats / MakeStats，物品模型未恢复）与 UpdateStats（嵌入方接 dr_update_stats）为事件；界面值/血条/Reset、格子标签、Quad::SetSize、Game+0x5e18 回合标签为表现层事件；QueueAchievement 的难度门槛由 NewGameState.difficulty 给出；当前职业取 classes[0]（与既有模块一致，MatchState.perks / SelectionState.character.flaws 为其特长与缺陷）。
+
+验证 `recovered/verify_new_game.py`：原版从入口执行到返回，time() 返回用例种子；SetRandSeed、FlushRandSeeds、UnlockAchievement / CheckIfAllClassesMaxed、HavePerk / HaveFlaw、PositionTile、RandomiseTile 为原代码（生成宿主记录 RandomiseTile 的调用，原生用 GenerationHooks）。200 组：比较追踪到的全部字段（除表现层标签字段与物品指针）、36 格、生成/补位棋盘状态与事件、随机种子、事件序列。晋升 200/50/49、基础伤害 3/4、几率 ±10、生命上限 30..110、血条 0/1/2 次、各界面值更新与否、成就 1..28（含全职业满级 28）均出现。
+
+错误副本 22 个全部 exit 1：垂直偏移条件反转、x 不加 0.003125、半尺寸改全尺寸、x/y 对调、种子只设流 0、不 Flush、跳过职业 0 成就、晋升条件 mode≠1、缺陷 8 改 7、生成前不置 filter、PositionTile 行列对调、不清 filter_swords、特长 4 改 5、生命 100 条件 mode 0、第一次血条传上限、经验条总更新、特长 7 加错几率、去掉缺陷 4、代币 pending 不清零、等级 0、不清 victory、不清标签活动字节。其中"pending 不清零"最初存活（用例初始 pending 恒为 0），改为随机代币计数后被拒。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
 - T040-D：Game::Process 中的游戏部分调度（ProcessEffects、ShieldShatter、标签动画对生命/音效/CheckEndGame 的作用、ProcessAttack 调用条件），界面部分为表现层边界。
-- T040-E：InitNewGame（CalculateTilePositions、物品构造、特长判断）。
+- 物品模型：Item 构造（Initialise / GenerateName / GenerateStats / MakeStats）仍为边界，完整新局需要它才能得到起始物品属性。
