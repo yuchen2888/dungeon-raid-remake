@@ -66,6 +66,9 @@ SPECIAL,SHAPESHIFT,SHAPESHIFT_END,HEALING,PRETZELS,CHECK_END=0x3f43c,0x918c,0x91
 SHATTER_INIT,SHATTER_INIT_END=0x9810,0x9882
 ADD_FLARE,FLARE_COUNT,SEEDS=0x9f94,0xbd8c,0x1eac20
 ADD_PARTICLES,ADD_LABEL,ADD_TILE_LABEL=0xa914,0xae2c,0xb130
+CROSS,CROSS_END,CROSS_POOL,CROSS_INDEX,CROSS_SCRATCH=0xaa24,0xae2c,0x164c8,0x164d4,0x3000000
+CROSS_SKIP=('__ZNKSt6vectorI11SimpleLabelSaIS0_EE4sizeEv','__ZN11SimpleLabelC1Ev','__ZNSt6vectorI11SimpleLabelSaIS0_EE9push_backERKS0_',
+            '__ZN11SimpleLabelD1Ev','__ZN11SimpleLabel15RegenerateLabelEv','__ZN11SimpleLabel9SetColourEi')
 EFFECTS=C.CDLL(str(HERE/'recovered_attack_shield_native.dylib'))
 for _f in (EFFECTS.dr_add_particles,EFFECTS.dr_add_simple_label):_f.argtypes=[C.POINTER(RandomState),I32];_f.restype=None
 RANDOM=C.CDLL(str(HERE/'recovered_random_native.dylib'));RANDOM.dr_random_float.argtypes=[C.POINTER(RandomState),C.c_float,C.c_float,C.c_uint32]
@@ -85,6 +88,11 @@ class OriginalMixin:
         text=(HERE.parent/'armv7-disassembly.txt').read_text()
         addr=lambda sym:int(re.search(r'^'+re.escape(sym)+r':\n\s*([0-9a-f]+):',text,re.M)[1],16)
         self.update_skills=addr('__ZN9Interface12UpdateSkillsEv');self.quad_alpha=addr('__ZN4Quad8SetAlphaEh');self.returns={}
+        # Game::UpdateCrossVisibility runs as original code (verify_cross.py), its cross-label storage skipped
+        self.boundaries={k:v for k,v in self.boundaries.items() if v!='cross'}
+        self.release_calls={k:v for k,v in self.release_calls.items() if v!='cross'}
+        self.u.mem_map(CROSS_SCRATCH,0x200000);self.cross_return=None
+        self.cross_skip={addr(n):n for n in CROSS_SKIP};self.cross_skip.update({a:'stub' for a in (0x194cec,0x194cf0,0x194cf4)})
         assert addr('__ZN4Game15ProcessPretzelsEv')==PRETZELS and addr('__ZN4Game12CheckEndGameEv')==CHECK_END
     def until_return(self,u,flag,value=True):
         lr=u.reg_read(self.LR)&~1;old=getattr(self,flag,False);setattr(self,flag,value)
@@ -97,6 +105,13 @@ class OriginalMixin:
         elif address==CHECK_END and not self.recording:self.until_return(u,'recording')
         elif address==self.update_skills and SHAPESHIFT<lr<SHAPESHIFT_END:u.reg_write(self.PC,lr|1);return
         elif address==self.quad_alpha and SHATTER_INIT<lr<SHATTER_INIT_END:u.reg_write(self.PC,lr|1);return
+        if address==CROSS:   # the labels it initialises (pool + cursor * 0x358, the cursor wrapping) land in scratch pages until it returns
+            G=self.GAME;self.cross_return=(u.reg_read(self.LR)&~1,self.read(G+CROSS_POOL));cursor=self.read(G+CROSS_INDEX);assert cursor<0x400,cursor
+            self.write(G+CROSS_POOL,(CROSS_SCRATCH+0x100000-cursor*0x358)&0xffffffff)
+        elif self.cross_return and address==self.cross_return[0]:self.write(self.GAME+CROSS_POOL,self.cross_return[1]);self.cross_return=None
+        if address in self.cross_skip and CROSS<lr<CROSS_END:
+            if 'size' in self.cross_skip[address]:u.reg_write(self.regs[0],0x7fffffff)   # the pool is never full
+            u.reg_write(self.PC,u.reg_read(self.LR));return
         if address==ADD_FLARE:   # the harnesses adapt Game::AddFlare; its game state (verify_add_flare.py) is applied here
             G=self.GAME;count=self.read(G+FLARE_COUNT);result=super().hook(u,address,size,context)
             if (u.reg_read(self.PC)&~1)!=ADD_FLARE:

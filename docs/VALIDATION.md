@@ -444,3 +444,9 @@
 - 新 verify_effect_draws：原 AddParticles、AddSimpleLabel 两个重载从入口执行，120 组 1440 次调用（粒子 595、标签 556、格子标签 289）后随机种子一致。
 - verify_session（原版侧在宿主跳过这三个函数时施加同一抽取）：12627 帧一致。会话接线错误副本 7 个：匹配粒子 / 标签、回合标签 / 粒子、攻击动画标签、松手标签 6 个 exit 1；路径标签（path_label）存活——它只来自毒伤标签（需装备属性，会话用零装备）与路径交叉成就标签（模式 1 且交叉 > 4），对局中未出现，已记录为未覆盖。
 - `./scripts/relay.sh verify --full` → exit 0：73 步通过。运行目录 `.relay/runs/20261020T191817.287018Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-J2：十字可见性（Claude）
+
+- 新 verify_cross：原 Game::UpdateCrossVisibility 从入口执行，1500 组（154 组无路径）、3188 个十字标签后可见性、种子、标签一致；错误副本 7 个全部 exit 1（第一轮“无路径清空”存活，补上无路径用例后被拒）。
+- verify_session（原版侧让 UpdateCrossVisibility 原样执行，标签池指向临时页）：12419 帧一致；删去选择 / 松手两处会话调用的错误副本均 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：74 步通过。运行目录 `.relay/runs/20261020T200712.274487Z`，inputs_unchanged true。

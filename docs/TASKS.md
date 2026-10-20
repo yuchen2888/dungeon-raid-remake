@@ -72,11 +72,12 @@
 | T040-H4 | 完成 / Claude，待复核 | 棋盘技能第三批：CheckShockAwe、CollectBoard、CollectRandomRow / Block、CollectEdgeTiles、ConvertColumnToSwords、Teleport、Earthquake、KillSkullsNextToCoins、CreateChain；22 个技能函数全部恢复 | verify_skill_board3.py；20 个错误副本被拒、1 个等价 |
 | T040-H5 | 完成 / Claude，待复核 | 技能按钮规则（Interface::ProcessInput 技能部分：按下 / 松开、冷却重置）、FireBreath、动作分派 dr_skill_action | verify_skill_input.py；12 个错误副本被拒 |
 | T040-J1 | 完成 / Claude，待复核 | AddParticles（33 / 81 次）与 SimpleLabel::Initialise（经 AddSimpleLabel 两个重载，1 次，类型 1/3/8/9/10 除外）的流 0 抽取：dr_add_particles / dr_add_simple_label，会话所有粒子 / 标签事件接上 | verify_effect_draws.py；verify_session.py |
-| T040-J | 进行中（J2 / J3） | 表现层代码里的流 0 随机抽取（同 T040-I 的 AddFlare）：AddParticles（类型 0 抽 33 次，类型 1–3 抽 81 次）、SimpleLabel::Initialise（除类型 1/3/8/9/10 外抽 1 次；经 AddSimpleLabel 两个重载）、UpdateCrossVisibility（路径每次变化时为路径格子重建十字标签，类型 30 / 35 各抽 1 次，需恢复 Tile::GetDamageType）、Game::Start。流 0 也决定职业卷轴出现的倒计数、代币飞行速度等，所以这些抽取改变后续游戏结果 | 计数已用原版实测（40 个随机棋盘不变）；见 REVERSE_ENGINEERING.md T040-J |
+| T040-J2 | 完成 / Claude，待复核 | Game::UpdateCrossVisibility：dr_update_cross_visibility（路径格子按 Tile::GetDamageType 设置十字可见性、十字标签 30 / 35 各抽 1 次、未选中的敌人 30），会话在 SelectionEvent / ReleaseEvent CrossVisibility 调用 | verify_cross.py；verify_session.py |
+| T040-J | 进行中（J3） | 表现层代码里的流 0 随机抽取（同 T040-I 的 AddFlare）：AddParticles（类型 0 抽 33 次，类型 1–3 抽 81 次）、SimpleLabel::Initialise（除类型 1/3/8/9/10 外抽 1 次；经 AddSimpleLabel 两个重载）、UpdateCrossVisibility（路径每次变化时为路径格子重建十字标签，类型 30 / 35 各抽 1 次，需恢复 Tile::GetDamageType）、Game::Start。流 0 也决定职业卷轴出现的倒计数、代币飞行速度等，所以这些抽取改变后续游戏结果 | 计数已用原版实测（40 个随机棋盘不变）；见 REVERSE_ENGINEERING.md T040-J |
 | T040-H | 进行中 / Claude | 技能系统：Skill::Activate（40 种类型）/ CanActivate 与约 25 个 Game 技能函数、技能输入目标；符文玩法依赖它 | 新单元测试 + 会话接线 |
 | T040-G | 完成（G0..G2b） / Claude，待复核 | 原生会话库：把测试宿主中的共享对象与钩子接线固化为 C++ 会话（新局、每帧 dr_process_frame、触摸输入、状态查询），供 iOS 层调用；用 F4 方式与原版逐帧比较 | 新 recovered_session 模块 + 测试 |
 | T040-F | 完成（F1..F4） | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |
-| T040-C3 | 待做 | ProcessInput 剩余：UpdateDimming（ProcessPretzels 已由 T040-G1 完成）；UpdateCrossVisibility 定为表现层边界 | T040_PROCESS_CALLS.json unrecovered_by_size |
+| T040-C3 | 待做 | ProcessInput 剩余：UpdateDimming（ProcessPretzels 已由 T040-G1 完成）；UpdateCrossVisibility 已由 T040-J2 完成 | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050-A | 后端完成后（用户 2026-10-20 决定先做后端） | Godot 4 试玩原型：recovered_session 经 GDExtension 装入 Godot；简单图形显示棋盘、鼠标 / 触摸连线、打怪、敌人回合、直到游戏结束；Mac 上可试玩 | 新目录（如 frontend/godot/）；用户试玩确认手感；原型明确标注，非正式画面 |
 | T050 | 待 T040-H 等规则完成 | iOS 正式版（优先）：高清画面、多语言、新手教程，玩法与原版一致；高清美术来源与原版素材授权待用户决定 | 实机 / 模拟器交互验收 |
 | T060 | 往后，但一定要做 | 安卓、PC（Windows / Mac）版本，用同一 Godot 项目导出 | 各平台实机验收 |

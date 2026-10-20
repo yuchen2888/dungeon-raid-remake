@@ -527,3 +527,33 @@ extern "C" void dr_process_pretzels(const SelectionState* s,ResourcePreviewState
     TokenQueueCounters counters=*dr_token_queue_counters(q);counters.bonus_total_165d4=level;dr_token_queue_restore(q,&counters);
     p->total_165d0=level==3?100:crossings*(level+1);
 }
+extern "C" void dr_update_cross_visibility(PathState* p,const CrossHooks* h) {
+    auto& m=*p->match;auto& s=m.stroke->selection;
+    if(!s.path_length) {for(auto& t:s.tiles)t.cross_visibility=0;return;}
+    RuleTile board[36];for(int i=0;i<36;++i)board[i]=s.tiles[i].rule;
+    const RuleGame game{p->turn,s.character,board};
+    const RuleTile* path[36];for(std::size_t k=0;k<s.path_length;++k)path[k]=&board[s.path[k]];
+    auto dies=[&](int i,std::int32_t attack) {
+        const auto& c=p->combat[i];
+        const std::int32_t hit=static_cast<std::int32_t>(static_cast<std::uint32_t>(attack)-static_cast<std::uint32_t>(c.defence));
+        return static_cast<std::uint8_t>(c.health<=std::max(hit,0));
+    };
+    auto cross_label=[&](int i,std::int32_t type,std::int32_t colour) {
+        if(h && h->event) {const CrossEvent e{CrossEventKind::Label,type,i,colour};h->event(h->context,&e);}
+        dr_random_float(&m.random,0.1f,0.2f,0);   // SimpleLabel::Initialise
+    };
+    for(std::size_t k=0;k<s.path_length;++k) {
+        const int i=s.path[k];auto& t=s.tiles[i];
+        switch(dr_damage_type(&game,path,s.path_length,k)) {
+        case 1:cross_label(i,30,38);t.cross_visibility=0;break;
+        case 2:t.cross_visibility=dies(i,s.current_damage);break;
+        case 3:cross_label(i,35,43);
+            t.cross_visibility=dies(i,static_cast<std::int32_t>(static_cast<std::uint32_t>(s.weapon_damage)+static_cast<std::uint32_t>(s.current_damage)));break;
+        default:t.cross_visibility=0;break;
+        }
+    }
+    for(int i=0;i<36;++i) {
+        auto& t=s.tiles[i];
+        if(!t.selected && t.rule.type==1 && t.rule.enemy_type==30)t.cross_visibility=dies(i,s.current_damage);
+    }
+}

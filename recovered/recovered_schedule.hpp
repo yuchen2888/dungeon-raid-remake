@@ -232,8 +232,20 @@ struct LabelHooks {
     void (*event)(void*,const LabelEvent*);
     bool (*check_end_game)(void*);   // Game::CheckEndGame (wire to dr_check_end_game)
 };
+// The cross labels of Game::UpdateCrossVisibility: Label: SimpleLabel::Initialise(type a, near tile b) with colour c
+// (a cross-label pool entry, the renderer's).
+enum class CrossEventKind : std::int32_t { Label=1 };
+struct CrossEvent { CrossEventKind kind; std::int32_t a,b,c; };
+struct CrossHooks { void* context; void (*event)(void*,const CrossEvent*); };
 }
 extern "C" {
+// Original Game::UpdateCrossVisibility 0xaa24 (on every path change and on release): without a path every tile's
+// cross visibility (Tile+0x13c, SelectionTile.cross_visibility) is cleared. Otherwise along the path by
+// Tile::GetDamageType (dr_damage_type): 0 none; 1 a cross label 30 (colour 38) and none; 2 the tile will die
+// (health <= max(current damage - defence, 0)); 3 a cross label 35 (colour 43) and the tile will die by the
+// current damage plus the weapon damage; then every unselected enemy 30 on the board is shown as above with the
+// current damage. Each cross label draws Rand(0.1, 0.2, stream 0) (SimpleLabel::Initialise).
+void dr_update_cross_visibility(dungeonraid::PathState*,const dungeonraid::CrossHooks*);
 // Original Game::Process [0x176fc,0x17cda) with [0x17d74,0x17da4): for each damage label in turn, a
 // shown label whose value is 0 fades (Process); a positive value is shown at the touch (y - 0.1 for leech
 // while the path deals damage; flame 0.06 below a leech label, spike another 0.04 below a flame label)

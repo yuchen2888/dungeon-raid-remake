@@ -51,7 +51,8 @@ struct SessionObjects {
 enum class SessionSource : std::int32_t { Selection=1, Match, Token, Motion, Resource, Path, Refill, Generation, Encounter,
     AttackFlare, AttackAnim, AttackAbsorb, AttackShield, AttackWeaken, AttackHealth, AttackFade, AttackAll, Vampires,
     Turn, EndGame, GameOver, Score, Release, BoardEffect, Frame, Label, GameFrame, NewGame,
-    Ability };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), Game::DestroyUpgrade needs the item model
+    Ability, Cross };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), Game::DestroyUpgrade needs the item model;
+                        // Cross: a CrossEvent of Game::UpdateCrossVisibility
 struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 struct SessionHost {
     void* context;

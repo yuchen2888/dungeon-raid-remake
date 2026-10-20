@@ -120,5 +120,5 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 继 AddFlare（T040-I）之后又发现三处表现代码抽取流 0：
 - Game::AddParticles 0xa914 → Particles::InitialiseFromTile(Tile*, type)：类型 0 走 InitialiseFromTile(Tile*)，类型 1/2/3 走 InitialiseAtPosition（防御 / 生命 / 攻击标签位置）。原版实测（40 个随机棋盘、随机格子）每次调用的 Rand 次数固定：类型 0 为 33 次，类型 1–3 为 81 次；随机数只影响粒子外观，但推进流 0。调用方：AttackSkull（2）、ProcessAttack（1）、ShatterDefence（2）、EndOfTurn（2）、MatchTile（1）。
 - SimpleLabel::Initialise 0x23078：标签类型 1、8、9、10 速度固定 0.1，类型 3 固定 0.08，其余类型 Rand(0.1, 0.2, 流 0) 一次。调用方：Game::AddSimpleLabel 两个重载（32 处调用）、UpdateCrossVisibility、Game::Start、Game::Process（伤害标签类型 8/9/10 与当前伤害标签类型 1，不抽取）。
-- Game::UpdateCrossVisibility 0xaa24（路径每次变化与松手时调用）：按路径格子的 Tile::GetDamageType 重建十字标签（类型 30、35 等），每个标签抽取一次。
+- Game::UpdateCrossVisibility 0xaa24（路径每次变化与松手时调用）：按路径格子的 Tile::GetDamageType 重建十字标签（类型 30、35 等），每个标签抽取一次。T040-J2 已恢复（dr_update_cross_visibility）：标签取自 Game+0x164c8 的标签池，位置为池首 + 游标 Game+0x164d4 × 0x358（SimpleLabel 大小），游标在池满时回绕；池与游标属表现层，会话不建模。
 流 0 也被游戏规则使用（职业卷轴出现倒计数 RandI(20,30,0)、代币飞行速度、攻击标签运动），所以这些抽取改变后续游戏结果。各单元测试的原版宿主一直跳过这些函数（两侧一致）。计划：J1 AddParticles 与 AddSimpleLabel 的抽取模型并在会话所有相关事件上接上；J2 UpdateCrossVisibility 与 Tile::GetDamageType；J3 Game::Start 随开局流程。

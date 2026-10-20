@@ -85,6 +85,7 @@ struct Session {
     LabelHooks label_hooks{};
     GameFrameHooks frame_hooks{};
     NewGameHooks new_game_hooks{};
+    CrossHooks cross_hooks{};
 };
 }
 namespace {
@@ -116,6 +117,7 @@ void selection_event(void* c,SelectionEvent kind,std::int32_t index,std::int32_t
     if(kind==SelectionEvent::ResourceShadows)dr_preview_resources(&s.stroke,&s.preview,&s.selection_hooks);
     else if(kind==SelectionEvent::ProcessRune)dr_process_rune(&s.stroke,&s.rune,a!=0,&s.selection_hooks);
     else if(kind==SelectionEvent::RuneMatchTile)dr_match_tile(&s.match,static_cast<std::uint32_t>(index),a,&s.match_hooks);
+    else if(kind==SelectionEvent::CrossVisibility)dr_update_cross_visibility(&s.path,&s.cross_hooks);
     else if(kind==SelectionEvent::ProcessPretzels)dr_process_pretzels(&s.stroke.selection,&s.preview,s.tokens);
 }
 void match_event(void* c,const MatchEvent* e) {
@@ -261,6 +263,7 @@ void release_event(void* c,const ReleaseEvent* e) {
     SelectionState& sel=s.stroke.selection;
     switch(e->kind) {
     case ReleaseEventKind::Label:label(s,e->a);break;
+    case ReleaseEventKind::CrossVisibility:dr_update_cross_visibility(&s.path,&s.cross_hooks);break;
     case ReleaseEventKind::MatchTiles: {   // Game::MatchTiles: the path without its fake tiles
         std::uint8_t excluded[36];std::size_t n=0;
         for(std::uint8_t i=0;i<36;++i)if(sel.fake[i])excluded[n++]=i;
@@ -362,6 +365,7 @@ void link(Session& s) {
     s.frame_hooks={c,forward_event<SessionSource::GameFrame,GameFrameEvent>,frame_input,frame_effects,frame_falling,frame_tokens,frame_pools,
                    frame_flare_fade,frame_damage_label,frame_damage_labels,frame_attack};
     s.new_game_hooks={c,forward_event<SessionSource::NewGame,NewGameEvent>,&s.generation_hooks};
+    s.cross_hooks={c,forward_event<SessionSource::Cross,CrossEvent>};
 }
 }
 extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t difficulty) {

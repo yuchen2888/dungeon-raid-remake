@@ -265,8 +265,16 @@ verify_session 的原版侧相应改为执行原函数：从匹配 / 笔画 / �
 
 会话接线：MatchEvent Particles / Label（类型 0）、路径 RoundEvent Particles / Label（AttackSkull）、TurnEvent Label / LabelRest / LabelTarget / LabelPoison / Particles、EndGame LabelPoison、EncounterEvent Label（含吸血）、ResourceEvent Label、ReleaseEvent Label、攻击的 absorb / health / weaken / all 标签与 weaken 粒子、AttackAnim AddLabel，都调用对应模型（字段 a 为类型）。verify_session 原版侧在宿主跳过这三个函数时施加同一抽取：12627 帧一致，12 局游戏结束。十字标签（UpdateCrossVisibility）留待 J2。错误副本 7 个，6 个被拒；路径标签存活（毒伤标签需装备属性、交叉成就标签需模式 1 且交叉 > 4，会话对局未出现）。
 
+## T040-J2：十字可见性（Claude，2026-10-20）
+
+原生 `dr_update_cross_visibility(PathState*, const CrossHooks*)`（schedule 模块）：没有路径时清空所有格子的十字可见性（Tile+0x13c）；否则沿路径按 Tile::GetDamageType（dr_damage_type）：0 不显示；1 十字标签 30（颜色 38），不显示；2 生命 <= max(当前伤害 − 防御, 0) 时显示（会被打死）；3 十字标签 35（颜色 43），按当前伤害 + 武器伤害判断；最后棋盘上未选中的敌人 30 按当前伤害判断。每个十字标签抽 Rand(0.1, 0.2, 流 0) 一次。CrossEvent Label（类型、格子、颜色）交给渲染层。
+
+验证 `recovered/verify_cross.py`：原函数从入口执行（GetDamageType、SimpleLabel::Initialise 为原代码；标签存储、RegenerateLabel、SjLj 桩跳过，SetColour 记录颜色），1500 组（其中 154 组没有路径）、3188 个十字标签（类型 30 与 35）后可见性、种子、标签一致。错误副本 7 个（标签类型、颜色、抽取、武器伤害、生死判断、未选中敌人、无路径清空）全部 exit 1。
+
+会话接线：SelectionEvent::CrossVisibility（路径变化）与 ReleaseEventKind::CrossVisibility（松手）调用 dr_update_cross_visibility，标签作为 SessionSource::Cross 事件转发。verify_session 原版侧不再跳过 UpdateCrossVisibility，让原函数执行（标签池指向临时页，返回时恢复）：12419 帧一致；两处会话调用各删去的错误副本均 exit 1。
+
 ## 后续
 
-- ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
+- ProcessInput 剩余边界：UpdateDimming、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
 - T040-D：Game::Process 中的游戏部分调度（ProcessEffects、ShieldShatter、标签动画对生命/音效/CheckEndGame 的作用、ProcessAttack 调用条件），界面部分为表现层边界。
 - 物品模型：Item 构造（Initialise / GenerateName / GenerateStats / MakeStats）仍为边界，完整新局需要它才能得到起始物品属性。
