@@ -69,6 +69,7 @@
 | T040-I | 完成 / Claude，待复核 | Game::AddFlare 的游戏状态（Rand(0,360,流 0) + 闪光数）：dr_add_flare，会话所有 Flare 事件接上 | verify_add_flare.py；verify_session.py；见 T040_SCHEDULE |
 | T040-H2 | 完成 / Claude，待复核 | 棋盘技能第一批：Upgrade、FreezeSkulls、ConvertTiles、CreateManaPotions、CreateExplosivePotions、CreateArrows、CreateMagicSword | verify_skill_board.py；16 个错误副本被拒；T040_SKILLS.md |
 | T040-H3 | 完成 / Claude，待复核 | 棋盘技能第二批：DemoteSpecialEnemy、PromoteNormalEnemy、KillSpecialEnemy、GrabTiles、ShatterDefence、ExplodeArmour | verify_skill_board2.py；17 个错误副本被拒；T040_SKILLS.md |
+| T040-H4 | 完成 / Claude，待复核 | 棋盘技能第三批：CheckShockAwe、CollectBoard、CollectRandomRow / Block、CollectEdgeTiles、ConvertColumnToSwords、Teleport、Earthquake、KillSkullsNextToCoins、CreateChain；22 个技能函数全部恢复 | verify_skill_board3.py；20 个错误副本被拒、1 个等价 |
 | T040-H | 进行中 / Claude | 技能系统：Skill::Activate（40 种类型）/ CanActivate 与约 25 个 Game 技能函数、技能输入目标；符文玩法依赖它 | 新单元测试 + 会话接线 |
 | T040-G | 完成（G0..G2b） / Claude，待复核 | 原生会话库：把测试宿主中的共享对象与钩子接线固化为 C++ 会话（新局、每帧 dr_process_frame、触摸输入、状态查询），供 iOS 层调用；用 F4 方式与原版逐帧比较 | 新 recovered_session 模块 + 测试 |
 | T040-F | 完成（F1..F4） | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |

@@ -428,3 +428,8 @@
 
 - 新 verify_skill_board2：DemoteSpecialEnemy、PromoteNormalEnemy、KillSpecialEnemy、GrabTiles、ShatterDefence、ExplodeArmour 原函数各 100 组一致；错误副本 17 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：70 步通过。运行目录 `.relay/runs/20261020T181115.250924Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-H4：棋盘技能第三批（Claude）
+
+- 新 verify_skill_board3：CheckShockAwe、CollectBoard、CollectRandomRow / Block、CollectEdgeTiles、ConvertColumnToSwords、Teleport、Earthquake、KillSkullsNextToCoins、CreateChain 原函数各 100 组一致；错误副本 21 个，20 个 exit 1，1 个等价。
+- `./scripts/relay.sh verify --full` → exit 0：71 步通过。运行目录 `.relay/runs/20261020T182950.113104Z`，inputs_unchanged true。

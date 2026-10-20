@@ -263,3 +263,114 @@ extern "C" void dr_explode_armour(SkillState* s,const SkillHooks* h) {
     }
     after_matches(s,h);reset_flare_timers(s);
 }
+namespace {
+int at(int x,int y) {return y*6+x;}
+void match(SkillState* s,int i,std::int32_t reward,const SkillHooks* h) {dr_match_tile(s->path->match,static_cast<std::uint32_t>(i),reward,h->match);}
+// The collect skills' reward: 5, but 7 for a potion with flag_233.
+std::int32_t collect_reward(const SkillState* s,int i) {
+    return board(s).tiles[i].rule.type==0 && s->path->match->preview->potions[i].flag_233 ? 7:5;
+}
+}
+extern "C" void dr_check_shock_awe(const SkillState* s,const SkillHooks* h) {
+    const auto& b=s->flags->b165b8;
+    if(b[1] && b[2] && b[3] && b[4])emit(h,SkillEventKind::Achievement,63,0x42c80000);
+}
+extern "C" void dr_collect_board(SkillState* s,const SkillHooks* h) {
+    s->flags->b165b8[4]=1;dr_check_shock_awe(s,h);s->generation->inhibit_force_coins=1;
+    clear_matched_counts(s);s->path->match->sound_13ec4=0;
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);if(special(board(s).tiles[i].rule))continue;
+        match(s,i,5,h);flare(h,i,1,rgba(240,150,10,255));
+    }
+    after_matches(s,h);reset_flare_timers(s);s->generation->inhibit_force_coins=0;
+}
+extern "C" void dr_collect_random_row(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    auto& f=*s->flags;f.b165b8[1]=1;dr_check_shock_awe(s,h);
+    if(f.b15561) {f.b15561=0;f.b15562=0;dr_collect_board(s,h);return;}
+    f.b15562=1;
+    const std::int32_t row=pick_random(s,6,gh);
+    clear_matched_counts(s);s->path->match->sound_13ec4=0;
+    std::int32_t skulls=0;
+    for(int x=0;x<6;++x) {
+        const int i=at(x,row);if(special(board(s).tiles[i].rule))continue;
+        match(s,i,collect_reward(s,i),h);
+        if(board(s).tiles[i].rule.type==1)++skulls;
+        flare(h,i,1,rgba(255,255,0,255));
+    }
+    after_matches(s,h);reset_flare_timers(s);
+    if(skulls==6)emit(h,SkillEventKind::Achievement,60,0x42c80000);
+}
+extern "C" void dr_collect_random_block(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    s->flags->b165b8[2]=1;dr_check_shock_awe(s,h);
+    auto between=[&] {   // RandI(1, 4, stream 5)
+        const std::int32_t v=dr_random_int(&s->path->match->random,1,4,5);tile_event(gh,GenerationEventKind::Random,-1,1,4,5,v);return v;
+    };
+    const std::int32_t cy=between(),cx=between();
+    clear_matched_counts(s);s->path->match->sound_13ec4=0;
+    for(int x=cx-1;x<=cx+1;++x)for(int y=cy-1;y<=cy+1;++y) {
+        const int i=at(x,y);if(special(board(s).tiles[i].rule))continue;
+        match(s,i,collect_reward(s,i),h);flare(h,i,1,rgba(240,150,10,255));
+    }
+    after_matches(s,h);reset_flare_timers(s);
+}
+extern "C" void dr_collect_edge_tiles(SkillState* s,const SkillHooks* h) {
+    s->flags->b165b8[3]=1;dr_check_shock_awe(s,h);
+    clear_matched_counts(s);s->path->match->sound_13ec4=0;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        if(x!=0 && x!=5 && y!=0 && y!=5)continue;
+        const int i=at(x,y);if(special(board(s).tiles[i].rule))continue;
+        match(s,i,5,h);flare(h,i,1,rgba(255,255,0,255));
+    }
+    after_matches(s,h);reset_flare_timers(s);
+}
+extern "C" void dr_convert_column_to_swords(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    auto& f=*s->flags;
+    if(f.b15562) {f.b15562=0;f.b15561=0;dr_collect_board(s,h);return;}
+    f.b15561=1;
+    const std::int32_t x=pick_random(s,6,gh);
+    for(int y=0;y<6;++y) {
+        const int i=at(x,y);if(special(board(s).tiles[i].rule))continue;
+        dr_set_tile_type(s->generation,static_cast<std::uint32_t>(i),4,s->path->turn,s->path->match->spawn_enabled_14ae0,gh);
+        flare(h,i,1,rgba(240,150,10,255));
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_teleport(SkillState* s,const SkillHooks* h) {
+    clear_matched_counts(s);
+    for(int k=0;k<36;++k) {const int i=column_major(k);board(s).tiles[i].rule.matched=1;flare(h,i,1,rgba(0,100,255,255));}
+    std::int32_t specials=0;for(const auto& t:board(s).tiles)specials+=special(t.rule);
+    if(specials>0)emit(h,SkillEventKind::Achievement,65,0x3f800000);
+    s->generation->filter_enabled=1;emit(h,SkillEventKind::MoveMatchedTiles);s->generation->filter_enabled=0;
+    for(auto& c:s->path->combat)c.attack_flag=0;
+    reset_flare_timers(s);
+}
+extern "C" void dr_earthquake(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const std::int32_t x2=pick_random(s,6,gh),y2=pick_random(s,6,gh);
+        emit(h,SkillEventKind::SwapTiles,x,y,x2,y2);flare(h,at(x,y),1,rgba(115,60,20,255));
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_kill_skulls_next_to_coins(SkillState* s,const SkillHooks* h) {
+    clear_matched_counts(s);s->path->match->sound_13ec4=0;
+    for(int x=0;x<6;++x)for(int y=0;y<6;++y) {
+        const int i=at(x,y);if(!plain_skull(board(s).tiles[i].rule))continue;
+        bool gold=false;
+        for(int nx=x-1;nx<=x+1 && !gold;++nx)for(int ny=y-1;ny<=y+1;++ny) {
+            if(nx==x && ny==y)continue;
+            if(nx<0 || nx>5 || ny<0 || ny>5)continue;
+            if(board(s).tiles[at(nx,ny)].rule.type==2) {gold=true;break;}
+        }
+        if(!gold)continue;
+        match(s,i,5,h);flare(h,i,1,rgba(240,150,10,255));
+    }
+    after_matches(s,h);reset_flare_timers(s);
+}
+extern "C" void dr_create_chain(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    for(int attempt=0;attempt<10;++attempt) {
+        const std::int32_t x=pick_random(s,6,gh),y=pick_random(s,6,gh);
+        const int i=at(x,y);if(special(board(s).tiles[i].rule))continue;
+        emit(h,SkillEventKind::SetSpecialType,0,i);flare(h,i,1,rgba(100,100,255,255));break;
+    }
+    reset_flare_timers(s);
+}

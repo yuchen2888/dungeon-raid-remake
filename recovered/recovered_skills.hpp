@@ -32,10 +32,11 @@ enum class SkillAction : std::int32_t { FreezeSkulls=1, GrabTiles, ShatterDefenc
 // Particles: Game::AddParticles(tile b, type a). Text: Tile::UpdateText(a, c, d) on tile b. Label:
 // Game::AddSimpleLabel(type a, tile b's resting position, number c, colour d, scale 0.5). EnemyUV:
 // Tile::UpdateEnemyUV on tile b. MoveMatchedTiles: Game::MoveMatchedTiles (wire to dr_move_matched_tiles).
-// JumpDown: Game::JumpDown(tile b) (wire to dr_jump_down). Tile appearance (Quad::SetUV / SetColour of
+// JumpDown: Game::JumpDown(tile b) (wire to dr_jump_down). SwapTiles: Game::SwapTiles(a, b, c, d) (wire to
+// dr_swap_tiles). SetSpecialType: Tile::SetSpecialType(tile b, a) (wire to dr_set_special_type). Tile appearance (Quad::SetUV / SetColour of
 // Tile::Make*) and RandI go to the GenerationHooks as UV / Colour / Random events.
 enum class SkillEventKind : std::int32_t { Sound=1, Achievement, ArrowColour, PositionSkill, Flare, Freeze, Menu,
-    Particles, Text, Label, EnemyUV, MoveMatchedTiles, JumpDown };
+    Particles, Text, Label, EnemyUV, MoveMatchedTiles, JumpDown, SwapTiles, SetSpecialType };
 struct SkillEvent { SkillEventKind kind; std::int32_t a,b,c,d; };
 struct SkillHooks {
     void* context;
@@ -98,6 +99,44 @@ void dr_shatter_defence(dungeonraid::SkillState*,const dungeonraid::SkillHooks*)
 // (240,150,10,255), a label 2 with twice the armour (colour 11) and AttackSkull(tile, twice the armour, no effects);
 // MoveMatchedTiles; without Game+0x1554c every tile's attack flag is cleared.
 void dr_explode_armour(dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
+// H4. Original Game::CheckShockAwe 0xbdf4: Game+0x165b9..0x165bc (TurnFlags.b165b8[1..4], set by the four
+// collect skills) all set: achievement 63 (100.0).
+void dr_check_shock_awe(const dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
+// Original Game::CollectBoard 0x11c3c: b165b8[4] set, CheckShockAwe, inhibit_force_coins (+0x15563) set; the five
+// matched counters and Game+0x13ec4 cleared; every tile but special enemies MatchTile(5) with a flare
+// (240,150,10,255); MoveMatchedTiles; attack flags without Game+0x1554c; flare timers; inhibit_force_coins cleared.
+void dr_collect_board(dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
+// Original Game::CollectRandomRow 0x11ea8: b165b8[1] set, CheckShockAwe; after ConvertColumnToSwords
+// (b15561) both b15561 and b15562 are cleared and CollectBoard runs instead. Otherwise b15562 set, a row
+// RandI(0,5,5), counters cleared; along the row every tile but special enemies is MatchTile'd (5; 7 for a potion
+// with flag_233) with a yellow flare (255,255,0,255); MoveMatchedTiles, attack flags, flare timers; six skulls
+// in the row: achievement 60.
+void dr_collect_random_row(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::CollectRandomBlock 0x11748: b165b8[2] set, CheckShockAwe; centre y = RandI(1,4,5), x =
+// RandI(1,4,5); counters cleared; the 3x3 block (column-major) as in CollectRandomRow with flares (240,150,10,255);
+// MoveMatchedTiles, attack flags, flare timers.
+void dr_collect_random_block(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::CollectEdgeTiles 0x11ac4: b165b8[3] set, CheckShockAwe; counters cleared; every edge tile but
+// special enemies MatchTile(5) with a yellow flare; MoveMatchedTiles, attack flags, flare timers.
+void dr_collect_edge_tiles(dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
+// Original Game::ConvertColumnToSwords 0x11da0: after CollectRandomRow (b15562) both flags are cleared and
+// CollectBoard runs instead. Otherwise b15561 set, a column RandI(0,5,5): every tile but special enemies becomes
+// a sword (SetType 4) with a flare (240,150,10,255); flare timers.
+void dr_convert_column_to_swords(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::Teleport 0x1133c: counters cleared; every tile (column-major) matched with a flare
+// (0,100,255,255); special enemies on the board: achievement 65 (1.0); MoveMatchedTiles with filter_enabled set
+// around it; every tile's attack flag cleared; flare timers.
+void dr_teleport(dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
+// Original Game::Earthquake 0xb780: column-major, every tile SwapTiles(x, y, RandI(0,5,5), RandI(0,5,5)) and a
+// flare (115,60,20,255) at (x, y); flare timers.
+void dr_earthquake(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::KillSkullsNextToCoins 0x11908: counters and Game+0x13ec4 cleared; column-major, every plain skull
+// with gold among its eight neighbours is MatchTile'd (5) with a flare (240,150,10,255); MoveMatchedTiles, attack
+// flags, flare timers.
+void dr_kill_skulls_next_to_coins(dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
+// Original Game::CreateChain 0xa618: up to ten tries of (x, y) = (RandI(0,5,5), RandI(0,5,5)) until the tile is
+// not a special enemy; it becomes special 0 (Tile::SetSpecialType) with a flare (100,100,255,255); flare timers.
+void dr_create_chain(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
 // Original Game::RemoveSkill 0x9114 for the skill in slot: the later skills move up one slot (each
 // PositionSkill), the removed one goes to the last slot and skill_count drops by one; an unequipped slot
 // (outside 0..skill_count-1) changes nothing.

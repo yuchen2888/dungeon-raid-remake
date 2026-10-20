@@ -83,7 +83,25 @@ SkillHooks 增加 match（MatchTile）与 path（AttackSkull）钩子指针；Sk
 
 验证 `recovered/verify_skill_board2.py`：原函数从入口执行；函数自身的调用（AddFlare、AddParticles、UpdateText、AddSimpleLabel、UpdateEnemyUV、MoveMatchedTiles、JumpDown）记录并跳过，自身的 RandI 为原代码并记为生成单元的 Random 事件；MatchTile 在匹配宿主下、AttackSkull 在路径宿主下、Tile::Promote 在生成宿主下以原代码执行。600 组（每个函数 100 组）的技能事件、生成 / 棋盘 / 战斗状态与事件、匹配与路径状态与事件、随机种子、闪光计时、Game+0x13ec4 一致。错误副本 17 个全部 exit 1。两处由测试发现并改正：ExplodeArmour 用两倍护甲（初稿漏看 lsls #1）；敌人状态需在用例中随机化，Demote 清零敌人状态的错误副本才会被拒。
 
+## H4 第三批：CheckShockAwe、CollectBoard、CollectRandomRow、CollectRandomBlock、CollectEdgeTiles、ConvertColumnToSwords、Teleport、Earthquake、KillSkullsNextToCoins、CreateChain（Claude，2026-10-20）
+
+| 原版 | 原生 | 行为 |
+| --- | --- | --- |
+| Game::CheckShockAwe 0xbdf4 | dr_check_shock_awe | b165b8[1..4]（四个收集技能各置一个）都为 1：成就 63（100.0） |
+| Game::CollectBoard 0x11c3c | dr_collect_board | b165b8[4] 置 1、CheckShockAwe、inhibit_force_coins（+0x15563）置 1；计数与 Game+0x13ec4 清零；按列除特殊敌人外全部 MatchTile(5) 加闪光（240,150,10,255）；MoveMatchedTiles、攻击标志、闪光计时；inhibit_force_coins 清零 |
+| Game::CollectRandomRow 0x11ea8 | dr_collect_random_row | b165b8[1]、CheckShockAwe；若刚用过 ConvertColumnToSwords（b15561）则两个标志清零并改为 CollectBoard；否则 b15562 置 1，行 RandI(0,5,5)，沿该行除特殊敌人外 MatchTile（5；flag_233 药水为 7）加黄色闪光（255,255,0,255）；MoveMatchedTiles、攻击标志、闪光计时；该行 6 个骷髅时成就 60 |
+| Game::CollectRandomBlock 0x11748 | dr_collect_random_block | b165b8[2]、CheckShockAwe；中心 y = RandI(1,4,5)、x = RandI(1,4,5)；3×3 块（按列）同上，闪光（240,150,10,255） |
+| Game::CollectEdgeTiles 0x11ac4 | dr_collect_edge_tiles | b165b8[3]、CheckShockAwe；边缘格除特殊敌人外 MatchTile(5) 加黄色闪光 |
+| Game::ConvertColumnToSwords 0x11da0 | dr_convert_column_to_swords | 若刚用过 CollectRandomRow（b15562）则两个标志清零并改为 CollectBoard；否则 b15561 置 1，列 RandI(0,5,5)，除特殊敌人外 SetType(4)（剑）加闪光（240,150,10,255）；闪光计时 |
+| Game::Teleport 0x1133c | dr_teleport | 计数清零；按列所有格子标记匹配加闪光（0,100,255,255）；棋盘有特殊敌人时成就 65（1.0）；filter_enabled 置 1 期间 MoveMatchedTiles；所有攻击标志清零（不看 Game+0x1554c）；闪光计时 |
+| Game::Earthquake 0xb780 | dr_earthquake | 按列每格 SwapTiles(x, y, RandI(0,5,5), RandI(0,5,5)) 加闪光（115,60,20,255）；闪光计时 |
+| Game::KillSkullsNextToCoins 0x11908 | dr_kill_skulls_next_to_coins | 计数与 Game+0x13ec4 清零；按列，八邻域内有金币的普通骷髅 MatchTile(5) 加闪光（240,150,10,255）；MoveMatchedTiles、攻击标志、闪光计时 |
+| Game::CreateChain 0xa618 | dr_create_chain | 最多 10 次随机 (RandI(0,5,5), RandI(0,5,5)) 直到不是特殊敌人：Tile::SetSpecialType(0) 加闪光（100,100,255,255）；闪光计时 |
+
+新事件 SwapTiles、SetSpecialType（会话接 dr_swap_tiles / dr_set_special_type）。验证 `recovered/verify_skill_board3.py`：同 verify_skill_board2 的方法（这些函数互相调用，"自身的调用"包括它们之间的调用；Tile::SetType 时打开生成宿主），并造整行骷髅、整行五个骷髅、几乎全是特殊敌人的棋盘。1000 组（每个函数 100 组）一致；错误副本 21 个，20 个 exit 1，1 个等价（去掉"跳过自身"的判断：被检查的格子是骷髅，不会被当成金币）。
+
+至此 Skill::Activate 用到的 22 个棋盘技能函数全部恢复。
+
 ## 后续
 
-- H4：其余 9 个棋盘技能函数（Teleport、CollectRandomRow、Earthquake、CollectRandomBlock、ConvertColumnToSwords、KillSkullsNextToCoins、CollectEdgeTiles、CreateChain、CollectBoard）。
 - H6：Interface::ProcessInput 的技能按钮（CanActivate、冷却、输入目标 Game+0x58ac）、Skill::Deactivate、Game::SetSkill，以及会话接线。
