@@ -39,3 +39,7 @@ AGENTS.md 是真源，CLAUDE.md / GEMINI.md 用 `@AGENTS.md` 导入。三种启�
 游戏分两层：规则核心（"大脑"，C++，recovered/，现有工作）与界面层（"前端"：画面、动画、音效、触摸、菜单）。界面层采用 Godot 4（免费开源 MIT、无授权费与抽成；为游戏设计，2D 动画 / 特效 / 屏幕适配现成；一套项目导出 iOS、安卓、Windows、Mac、Linux、网页；本身是 C++，可经 GDExtension 直接装入 recovered_session）。比较过 Flutter（谷歌，Dart；适合 App 型界面，做游戏需 Flame 插件，C++ 经 FFI）、苹果原生 SwiftUI / SpriteKit（只限苹果设备）、Unity（功能强但偏重，收费规则有变动风险）。规则核心与界面分离，选型不影响已完成的规则还原。
 
 顺序（用户同意）：先做 Godot 试玩原型（简单图形，接现有 recovered_session，可连线打怪直到游戏结束），确认手感与工具后，再继续 T040-H 技能系统、物品模型、FoldoutMenu，最后做高清画面、多语言、教程与 iOS 正式版。
+
+## 2026-10-20：先完成后端（用户决定）
+
+用户决定先把规则核心（后端）做完（T040-H 技能、物品模型、FoldoutMenu 等），Godot 试玩原型（T050-A）放到其后。前端选型 Godot 不变。ROADMAP 时间按实际速度修正为 iOS 测试版约 3～4 周。
