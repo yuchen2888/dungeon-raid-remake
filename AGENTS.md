@@ -4,7 +4,7 @@
 
 ## 开始工作
 
-1. 读取本文件、docs/PROJECT_STATE.md、docs/TASKS.md、docs/ARCHITECTURE.md、docs/DECISIONS.md（产品方向与已同意的推荐）、docs/用户沟通记录.md。
+1. 读取本文件、docs/PROJECT_STATE.md、docs/TASKS.md、docs/ARCHITECTURE.md、docs/DECISIONS.md（产品方向与已同意的推荐）、docs/ROADMAP.md（里程碑与计划）、docs/用户沟通记录.md。
 2. 执行 `./scripts/relay.sh check`，检查当前分支、最近提交、暂存及未暂存差异、未跟踪文件、活动任务、最近验证。
 3. 存在修改时先读 `git diff`、`git diff --cached` 和相关未跟踪文件；区分继承修改和本轮修改。未提交不等于可丢弃。
 4. 写代码前执行 `./scripts/relay.sh begin <codex|claude|gemini> <任务编号>`。同一工作目录一次只能有一个写入者。锁是协作约定，不是操作系统写入隔离。
