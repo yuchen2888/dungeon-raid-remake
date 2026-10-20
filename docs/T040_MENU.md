@@ -1,6 +1,6 @@
 # T040-K：升级 / 商店 / 装备升级菜单（FoldoutMenu）
 
-状态：分析中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
+状态：K1 完成，K2 起进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
 
 ## 触发
 
@@ -62,6 +62,14 @@ CharacterClass::GetSkillPool 0x111ad4：职业+4 为 0 时 = 0..39 中 Game::IsS
 - 商店：Game::SetItem(选中物品)（返回的旧物品存回选项）、Game::UpdateStats；卷轴槽 == 选中槽时 Skill::Activate(卷轴技能)，职业+? == 3 时成就 0x31。
 - 升级：Game::SetSkill(第一选择)、Game::SetSkill(第二选择)（返回值存回选项）。
 - 装备升级：Item::AddUpgrade(物品, 升级)、Game::UpdateStats。
+
+## K1：升级菜单的选项（完成）
+
+新模块 recovered_menu：`dr_menu_open_level`（Initialise 类型 0）、`dr_skill_option`（Skill::Initialise(SkillType, Skill*)）、`dr_stat_option`（Skill::Initialise(StatType) 与 SetStatChance）、`dr_class_skill_pool`（GetSkillPool）、`dr_skill_unlocked`（IsSkillUnlocked）、`dr_skill_base_cooldown` 与职业基础技能表 `dr_class_base_skills`（用原版 CharacterClass::Initialise 实测取出）。SkillRecord 表示一个 Skill 对象的游戏字段（装备中的技能或菜单选项）；选项的 active 字节保留对象原有值（原版的选项对象会与装备中的对象互换、循环使用）。
+
+验证 `recovered/verify_menu_level.py`：原 FoldoutMenu::Initialise(0) 从入口执行（GetSkillPool、IsSkillUnlocked、两个 Skill::Initialise、SetStatChance、RandI 为原代码；std::set<int> 由测试宿主模拟；四边形、标签、文字、提示、SjLj 桩跳过；音效记录），1500 组一致：技能选项 2 个 1364 组、1 个 84 组、0 个 52 组，40 种技能与 8 种属性选项都出现。错误副本 20 个，19 个 exit 1；1 个等价（record 模式 0 时第一次选到新技能后重建候选池去掉“f 为假”条件：此时已装备技能都已从池中去掉、“全部已满”为真，已装备 3 个时只有 1 个技能选项，重建的池不再被使用）。
+
+注意：Game+0xbe1c / be24 / be2c / be34（属性的物品部分）在原生侧有两个镜像——MatchState.bonus_chance_extra（匹配时读取）与 PlayerStats.chance_*（UpdateStats 写入）；会话接入物品属性时需统一为一个所有者。
 
 ## 计划
 

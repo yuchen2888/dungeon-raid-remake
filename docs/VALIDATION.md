@@ -457,3 +457,9 @@
 - 测试发现并改正会话缺口：门槛的输入目标（Game+0x58ac）就是按下的技能槽，原先会话恒为 −1。
 - 错误副本 12 个（只跑技能阶段）全部 exit 1；其中“跳下”和“输入就绪”两个在第一版测试中存活，补上升级敌人局与回合中按键后被拒，并用最终版测试复跑确认。
 - `./scripts/relay.sh verify --full` → exit 0：74 步通过。运行目录 `.relay/runs/20261020T205157.879922Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-K1：升级菜单的选项（Claude）
+
+- 新 verify_menu_level：原 FoldoutMenu::Initialise(0) 从入口执行，1500 组一致（技能选项 2 个 1364 组、1 个 84 组、0 个 52 组；40 种技能与 8 种属性选项都出现）。
+- 错误副本 20 个：19 个 exit 1，1 个等价（见 T040_MENU.md）。
+- `./scripts/relay.sh verify --full` → exit 0：75 步通过。运行目录 `.relay/runs/20261020T220517.680518Z`，inputs_unchanged true。
