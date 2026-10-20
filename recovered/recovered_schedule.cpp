@@ -468,3 +468,22 @@ extern "C" FrameRoute dr_process_frame(GameFrame* f,float dt,const GameFrameHook
     consume(t);
     return route;
 }
+extern "C" InputRoute dr_process_input(InputState* in,const InputHooks* h) {
+    PathState& p=*in->path;StrokeState& stroke=*p.match->stroke;
+    switch(dr_input_gate(&p,in->damage,in->rune,in->gate_inputs,h->schedule)) {
+    case InputGate::Blocked: return InputRoute::Blocked;
+    case InputGate::AttackStarted: return InputRoute::AttackStarted;
+    case InputGate::Idle: return InputRoute::Idle;
+    case InputGate::Dispatch: break;
+    }
+    const std::int32_t phase=in->gate_inputs->touch_phase;
+    if(phase==3) {dr_cancel_stroke(&stroke,h->selection);return InputRoute::Cancel;}
+    if(phase==2) {
+        dr_prepare_release(&stroke,h->selection);
+        if(dr_release_path(in->release,in->release_inputs,h->release)!=ReleaseRoute::ClassScroll)return InputRoute::Release;
+        return dr_release_class_scroll(&p,in->scroll,h->release)?InputRoute::ScrollEnded:InputRoute::Scroll;
+    }
+    if(!stroke.selection.path_length) {dr_begin_stroke(&stroke,h->selection);return InputRoute::Begin;}
+    dr_update_stroke(&stroke,h->selection);
+    return InputRoute::Update;
+}

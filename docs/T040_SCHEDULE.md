@@ -143,6 +143,16 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 至此 Game::Process、ProcessInput 的游戏逻辑与 InitNewGame 都有原生实现；剩余为表现层边界（界面、标签、粒子）、UpdateCrossVisibility / UpdateDimming / ProcessPretzels、物品模型（Item 构造）与存档（SerialiseState，暂缓）。
 
+## T040-C3a：ProcessInput 整函数组合（Claude，2026-10-20）
+
+`recovered_schedule` 新增 `dr_process_input`（Game::ProcessInput 0x16638 整函数）：门槛 dr_input_gate；分派时触摸阶段 3 取消笔画（dr_cancel_stroke），阶段 2 松手（dr_prepare_release、dr_release_path，职业卷轴再 dr_release_class_scroll，其 CheckEndGame 结束游戏时返回 ScrollEnded），其他阶段在路径为空时开始笔画（dr_begin_stroke），否则更新（dr_update_stroke）。返回 InputRoute（9 种）。这是 dr_process_frame 的 input 步骤所需的整函数实现。
+
+验证 `recovered/verify_process_input.py`：原版 ProcessInput 从入口执行到返回，各触摸阶段与门槛状态；与链式测试一样，ProcessRune 与 ProcessResourceShadows 以原代码执行（原生经笔画回调调用 dr_process_rune / dr_preview_resources），松手代码自身的调用按 verify_release 记录，其余边界同 verify_stroke。1500 组，9 种去向全部出现（blocked 209、attack_started 220、idle 316、begin 156、update 172、cancel 125、release 242、scroll 38、scroll_ended 22）。比较选择快照（路径、fake、选择字段、棋盘标志、选择事件）、松手状态与事件、门槛状态与 EndOfTurn 事件。
+
+测试注意：verify_input_gate 的 Native.load 会用新的 RuneState 替换链中 verify_rune 的状态；本测试按原版写入顺序恢复（用例 rune 配置 + 门槛的高亮计数）。verify_release 的 load 改为允许空路径（其自身用例不受影响）。
+
+错误副本 6 个全部 exit 1：阶段 2 取消、阶段 4 也松手、总是开始笔画、松手不做前缀、跳过卷轴、Idle 也分派。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

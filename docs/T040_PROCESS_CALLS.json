@@ -1829,6 +1829,15 @@
       "original_bytes_sha256": "50096438335670e1d9334e7bb9f70a490ed0a0a5b5f5f454ab522aaa0c1b47e4"
     },
     {
+      "function": "__ZN4Game12ProcessInputEv",
+      "start": "0x16638",
+      "end_exclusive": "0x1717c",
+      "native": "dr_process_input (schedule; gate, stroke, release, scroll units composed)",
+      "verify": "recovered/verify_process_input.py",
+      "task": "T040-C3a",
+      "original_bytes_sha256": "12c2406308ac94493b04e34e69278104fea53ba82cdfa00cbe36dfcc720a6579"
+    },
+    {
       "function": "__ZN4Game7ProcessEv",
       "start": "0x173c8",
       "end_exclusive": "0x17400",

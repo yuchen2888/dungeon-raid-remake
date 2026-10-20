@@ -51,6 +51,8 @@ SEGMENTS=[
          native='dr_process_flare_fade + dr_process_damage_label (recovered_schedule)',verify='recovered/verify_frame_parts.py',task='T040-D2b'),
     dict(function='__ZN4Game7ProcessEv',start='0x1717c',end_exclusive='0x17db8',
          native='dr_process_frame (schedule; verified steps through GameFrameHooks)',verify='recovered/verify_frame.py',task='T040-D3'),
+    dict(function='__ZN4Game12ProcessInputEv',start='0x16638',end_exclusive='0x1717c',
+         native='dr_process_input (schedule; gate, stroke, release, scroll units composed)',verify='recovered/verify_process_input.py',task='T040-C3a'),
     dict(function='__ZN4Game7ProcessEv',start='0x173c8',end_exclusive='0x17400',native='moving-list subsection (recovered_refill)',
          verify='recovered/verify_refill_integration.py',task='earlier'),
     dict(function='__ZN4Game7ProcessEv',start='0x1744c',end_exclusive='0x174da',extra=['0x17d56..0x17d62'],

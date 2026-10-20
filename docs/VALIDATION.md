@@ -360,3 +360,8 @@
 - 新 verify_frame：原版 Game::Process 从入口到返回，已验证步骤在段起点跳过并记录；1500 帧，12 种去向全部出现；错误副本 14 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、55 个 verify 脚本共 58 步通过。运行目录 `.relay/runs/20261020T054446.763372Z`，输入指纹 `f7e1e7b4…d1c60784`，inputs_unchanged true。
 - `scripts/t040_process_audit.py --check` matches true（Process 未恢复目标 2 个：list::size / erase，均为下落步骤内部）。
+
+## 2026-10-20 T040-C3a：ProcessInput 整函数组合（Claude）
+
+- 新 verify_process_input：原版 ProcessInput 从入口到返回（原 ProcessRune / ProcessResourceShadows），1500 组、9 种去向全部出现；错误副本 6 个全部 exit 1。verify_release 改为允许空路径后仍 800 组通过。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、56 个 verify 脚本共 59 步通过。运行目录 `.relay/runs/20261020T081208.472317Z`，inputs_unchanged true。

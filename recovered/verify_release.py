@@ -129,7 +129,7 @@ class Original(GateOriginal):
         for k,a in FLIGHTS.items():self.u.mem_write(G+a,struct.pack('<5f',*r['flights'][k]))
         self.u.mem_write(G+0x164a7,bytes([r['prev_164a7']]));self.u.mem_write(G+0x165b8,bytes([r['b165b8']]))
         self.u.mem_write(G+0x1554c,bytes([r['flag_1554c']]));self.write(G+0x102d0,r['help_flags'])
-        self.write(G+0xbe90,0x1517e00);self.case_effect=r['effect'];self.first_tile=c['path'][0]
+        self.write(G+0xbe90,0x1517e00);self.case_effect=r['effect'];self.first_tile=c['path'][0] if c['path'] else -1
         self.write(G+0x10,2);self.write(G+0xb8a8,0);self.write(G+0x58ac,-1);self.u.mem_write(G+0x5e14,b'\1')
         self.write(G+0xb3f4,len(c['fake']));sc=r['scroll'];self.case_end_game=sc['end_game']
         for i,(type_,base,level) in enumerate(sc['classes']):

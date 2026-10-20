@@ -164,6 +164,23 @@ enum class FrameEventKind : std::int32_t { FlareAlpha=1, Process, Initialise, Po
     WeaponDamageHelp, ProcessInput };
 struct FrameEvent { FrameEventKind kind; std::int32_t a,b,c; float x,y; };
 struct FrameHooks { void* context; void (*event)(void*,const FrameEvent*); };
+// The whole of Game::ProcessInput. The caller keeps gate_inputs->touch_phase equal to the touch phase
+// (Game+0x10) and the stroke's touch position current.
+struct InputState {
+    PathState* path;                    // ->match->stroke: the selection
+    AttackDamageState* damage;          // attack phase
+    RuneState* rune;
+    const InputGateInputs* gate_inputs;
+    ReleaseState* release;
+    const ReleaseInputs* release_inputs;
+    ClassScrollState* scroll;
+};
+struct InputHooks {
+    const ScheduleHooks* schedule;      // EndOfTurn
+    const SelectionHooks* selection;    // stroke begin / update / cancel and the release prefix
+    const ReleaseHooks* release;
+};
+enum class InputRoute : std::int32_t { Blocked=0, AttackStarted, Idle, Begin, Update, Cancel, Release, Scroll, ScrollEnded };
 // Screens and in-game menus that take over Game::Process (menu-owned bytes).
 struct FrameScreens {
     std::uint8_t help_102a4, unlock_165a0, main_menu_c400, score_ef6c, name_12c09, intro_c3f0;
@@ -247,6 +264,11 @@ void dr_process_flare_fade(dungeonraid::FrameState*,float dt,const dungeonraid::
 // is shown and, when ShowHelpWeaponDmg clears help flag 0x400 that was set before, the stroke is cancelled
 // (current damage 0, touch phase 3, ProcessInput). label_active: SimpleLabel active byte (renderer).
 void dr_process_damage_label(dungeonraid::FrameState*,std::uint8_t label_active,float dt,const dungeonraid::FrameHooks*);
+// Original Game::ProcessInput 0x16638 as a whole: the gate (dr_input_gate); a dispatched touch in phase
+// 3 cancels the stroke (dr_cancel_stroke), in phase 2 releases it (dr_prepare_release, dr_release_path and
+// for a class scroll dr_release_class_scroll; ScrollEnded when its CheckEndGame ended the game), any other
+// phase begins a stroke when the path is empty (dr_begin_stroke) or updates it (dr_update_stroke).
+dungeonraid::InputRoute dr_process_input(dungeonraid::InputState*,const dungeonraid::InputHooks*);
 // Original Game::Process 0x1717c, the frame schedule: time, queues reset; the first active screen
 // (game over -- then the score screen once its state is 3 --, help, unlock, main menu or name entry,
 // intro, score) consumes a released or cancelled touch (phase 2/3 -> 0) and runs alone. With an in-game
