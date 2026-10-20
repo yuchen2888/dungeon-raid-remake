@@ -249,6 +249,14 @@ Game::ProcessPretzels 0xd03c（400 字节）在笔画更新中调用（Selection
 
 verify_session 的原版侧相应改为执行原函数：从匹配 / 笔画 / 资源 / 遭遇 / 生成宿主的跳过表中去掉 SetSpecialType、Shapeshift、ProcessPretzels、Healing、CheckEndGame、InialiseShieldShatter；SetSpecialType 期间打开生成宿主（SetType 的表现调用按生成宿主记录），ProcessPretzels 期间打开路径宿主（std::set 模拟），任何调用方的 CheckEndGame 期间打开结束宿主；Shapeshift 的 UpdateSkills 与 InialiseShieldShatter 的碎块 alpha 为表现调用，跳过。携带中局阶段增至 15 局并按 5 种变体造用例：种族 9（击杀特殊敌人 → Shapeshift）、种族 4、XP 99 且生命 3 / 上限 400（升级 → Healing 真正回血）、记录模式 1（ProcessPretzels）、生成倒计数 1（职业卷轴 → SetSpecialType）、种族 5（生成 12 号敌人 → InialiseShieldShatter）；测试要求前四种事件在对局中出现。结果：新局 9 局 9472 帧 + 携带 15 局 43 回合 3903 帧，共 13375 帧一致，14 局游戏结束；ProcessPretzels 27 次、SetSpecialType 3、Shapeshift 24、Healing 4、资源单元 CheckEndGame 3。Stab 的 CheckEndGame 与 ShieldShatter 本次对局未出现（概率性，未覆盖）。错误副本 7 个（去掉每一条新接线）：ProcessPretzels、SetSpecialType、Shapeshift、Healing 被拒；遭遇单元 CheckEndGame、ShieldShatter 存活（未出现）；资源单元 CheckEndGame 存活（出现 3 次，推断当时生命 > 0、检查不改状态；致死的情形未覆盖）。
 
+## T040-I：Game::AddFlare 的游戏状态（Claude，2026-10-20）
+
+整理技能函数时发现：Game::AddFlare 0x9f94（46 个调用点：MatchTile、AttackSkull、InitialiseFlares、EndOfTurn、敌人能力、Resurrect、JumpDown、技能）不只是表现——它用 Rand(0, 360, 流 0) 抽取闪光的旋转角，并把闪光数 Game+0xbd8c 加 1。流 0 也是棋盘生成等用的随机流；闪光数在 Process 里淡出前一直阻塞输入。此前各单元测试的原版宿主都跳过 AddFlare（攻击宿主只模拟计数 +1），两侧一致但都缺这次随机抽取。
+
+原生 `dr_add_flare(int32_t* flare_count, RandomState*)`（recovered_attack_shield）：返回旋转角，计数 + 1；闪光四边形（按类型的 UV、位置、尺寸 0.08、颜色，列表满时扩容）属表现。验证 `recovered/verify_add_flare.py`：原函数从入口执行（vector 存储、Quad 构造 / SetUV / SetColour、SjLj 桩跳过，Rand 为原代码），150 组 607 次连续添加，随机种子、计数、旋转角一致；错误副本 4 个（流 1、上限 359、不计数、不抽随机）全部 exit 1。
+
+会话接线：MatchEvent Flare、路径 RoundEvent Flare（AttackSkull）、TurnEvent Flare / FlareRest / FlareTarget、EncounterEvent Flare（JumpDown）、AttackFlare Flare（InitialiseFlares）都调用 dr_add_flare（原先攻击处只把计数 + 1）。verify_session 的原版侧在宿主跳过 AddFlare 时施加同一状态变化（随机抽取；攻击宿主已计数时不重复计数）。错误副本 5 个：匹配、回合、攻击、路径 4 个被拒；遭遇（JumpDown）存活，对局中未出现。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

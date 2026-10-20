@@ -337,3 +337,8 @@ extern "C" void dr_process_attack(AttackDamageState* s,PathState* p,AttackAnimat
     }
     dr_process_attack_fade(s,overlay_alpha,dt,a->counterattack!=0,h->fade);         // [0x14ae4,0x14b56)
 }
+extern "C" float dr_add_flare(std::int32_t* flare_count,RandomState* random) {
+    const float rotation=dr_random_float(random,0.0f,360.0f,0);
+    *flare_count=static_cast<std::int32_t>(static_cast<std::uint32_t>(*flare_count)+1u);
+    return rotation;
+}

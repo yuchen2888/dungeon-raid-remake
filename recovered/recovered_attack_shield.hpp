@@ -100,6 +100,11 @@ struct AttackProcessHooks {
 };
 }
 extern "C" {
+// Original Game::AddFlare 0x9f94, its game state: the flare's rotation Rand(0, 360, stream 0) (returned) and
+// the flare count (Game+0xbd8c) + 1, which keeps input blocked until the flares fade. The flare quad itself
+// (UV by type, position, size 0.08, colour; the list grows when full) is presentation: the caller passes
+// type, position and colour to the renderer with the rotation.
+float dr_add_flare(std::int32_t* flare_count,dungeonraid::RandomState*);
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
 // Returns min(incoming_damage, armour), the R10 input of shield wear below.
 // Stores incoming_damage-armour back (may be negative, as original); when

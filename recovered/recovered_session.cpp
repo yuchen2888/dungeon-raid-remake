@@ -92,6 +92,8 @@ Session& self(void* c) {return *static_cast<Session*>(c);}
 void forward(Session& s,SessionSource source,const void* e) {if(s.host.event)s.host.event(s.host.context,source,e);}
 template<SessionSource source,class Event> void forward_event(void* c,const Event* e) {forward(self(c),source,e);}
 
+// Game::AddFlare: every unit's Flare event is one call (dr_add_flare: rotation from stream 0, count + 1).
+void add_flare(Session& s) {dr_add_flare(&s.animation.flare_count,&s.match.random);}
 bool check_end_game(Session& s) {return dr_check_end_game(&s.resources,&s.end,&s.end_hooks);}
 void move_matched_tiles(Session& s) {dr_move_matched_tiles(&s.refill,&s.refill_hooks);}
 bool attack_skull(Session& s,std::int32_t tile,std::int32_t amount,bool effects) {
@@ -116,6 +118,7 @@ void selection_event(void* c,SelectionEvent kind,std::int32_t index,std::int32_t
 void match_event(void* c,const MatchEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Match,e);
     switch(e->kind) {
+    case MatchEventKind::Flare:add_flare(s);break;
     case MatchEventKind::Token:dr_enqueue_token(s.tokens,static_cast<std::uint32_t>(e->tile),e->a,e->b!=0,e->c,&s.token_hooks);break;
     case MatchEventKind::SetSpecialType:dr_set_special_type(&s.generation,static_cast<std::uint32_t>(e->tile),e->a,&s.generation_hooks);break;
     case MatchEventKind::Shapeshift:dr_shapeshift(&s.resources,&s.resource_hooks);break;
@@ -145,10 +148,12 @@ void resource_event(void* c,const ResourceEvent* e) {
 void encounter_event(void* c,const EncounterEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Encounter,e);
     if(e->kind==EncounterEventKind::CheckEndGame)check_end_game(s);
+    else if(e->kind==EncounterEventKind::Flare)add_flare(s);
 }
 void path_event(void* c,const RoundEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Path,e);
     if(e->kind==BattleEvent::MoveMatchedTiles)move_matched_tiles(s);   // Game::MoveMatchedTiles at its place inside MatchTiles
+    else if(e->kind==BattleEvent::Flare)add_flare(s);                 // AttackSkull's flare
 }
 void refill_event(void* c,RefillEventKind kind,std::int32_t i,std::int32_t j) {
     Session& s=self(c);const SessionSmallEvent e{static_cast<std::int32_t>(kind),i,j,0};forward(s,SessionSource::Refill,&e);
@@ -168,7 +173,7 @@ void generation_event(void* c,const GenerationEvent* e) {
 // ProcessAttack
 void flare_event(void* c,const AttackFlareEvent* e) {
     Session& s=self(c);forward(s,SessionSource::AttackFlare,e);
-    if(e->kind==AttackFlareEventKind::Flare)++s.animation.flare_count;   // Game::AddFlare appends to the flare list
+    if(e->kind==AttackFlareEventKind::Flare)add_flare(s);   // InitialiseFlares' AddFlare
 }
 void counterattack(void* c) {Session& s=self(c);dr_do_counterattack(&s.path,&s.all_hooks);}
 void health_event(void* c,const AttackHealthEvent* e) {
@@ -178,6 +183,10 @@ void health_event(void* c,const AttackHealthEvent* e) {
 bool all_attack_skull(void* c,std::int32_t tile,std::int32_t amount,bool effects) {return attack_skull(self(c),tile,amount,effects);}
 void all_move(void* c) {move_matched_tiles(self(c));}
 // EndOfTurn
+void turn_event(void* c,const TurnEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::Turn,e);
+    if(e->kind==TurnEventKind::Flare || e->kind==TurnEventKind::FlareRest || e->kind==TurnEventKind::FlareTarget)add_flare(s);
+}
 void turn_match_tile(void* c,std::int32_t tile,std::int32_t reward) {
     Session& s=self(c);dr_match_tile(&s.match,static_cast<std::uint32_t>(tile),reward,&s.match_hooks);
 }
@@ -305,7 +314,7 @@ void link(Session& s) {
     s.fade_hooks={c,forward_event<SessionSource::AttackFade,AttackFadeEvent>};
     s.process_hooks={&s.flare_hooks,&s.anim_hooks,&s.absorb_hooks,&s.shield_hooks,&s.weaken_hooks,&s.all_hooks,&s.health_hooks,&s.fade_hooks};
     s.vampire_hooks={c,forward_event<SessionSource::Vampires,EncounterEvent>,nullptr};
-    s.turn_hooks={c,forward_event<SessionSource::Turn,TurnEvent>,turn_match_tile,all_attack_skull,turn_check_end_game,all_move,turn_ability,
+    s.turn_hooks={c,turn_event,turn_match_tile,all_attack_skull,turn_check_end_game,all_move,turn_ability,
                   turn_swap,push_token,token_target,token_start};
     s.end_hooks={c,forward_event<SessionSource::EndGame,TurnEvent>,game_over};
     s.over_hooks={c,over_event,add_score};

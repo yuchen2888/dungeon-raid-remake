@@ -22,6 +22,7 @@ import ctypes as C
 import json
 import random
 import re
+import struct
 import verify_original
 from verify_new_game_play import Original as NewGameOriginal, Native as NewGameNative, case
 from verify_game_frames import Original as FramesOriginal, Native as FramesNative
@@ -32,6 +33,7 @@ from verify_motion import Motion, target as motion_target
 from verify_abilities import TARGET_POINT
 from verify_tokens import Counters
 from verify_resources import INTS as RESOURCE_INTS
+from verify_match import RandomState
 
 GAMES,TURNS,LONG_TURNS=9,12,40
 CARRIED_GAMES,CARRIED_TURNS=15,5
@@ -62,6 +64,9 @@ SOURCE_GENERATION,SOURCE_NEW_GAME=8,28
 SCREEN_INIT=0x307f8   # GameOverScreen::Initialise
 SPECIAL,SHAPESHIFT,SHAPESHIFT_END,HEALING,PRETZELS,CHECK_END=0x3f43c,0x918c,0x91c4,0x12e68,0xd03c,0x10b18
 SHATTER_INIT,SHATTER_INIT_END=0x9810,0x9882
+ADD_FLARE,FLARE_COUNT,SEEDS=0x9f94,0xbd8c,0x1eac20
+RANDOM=C.CDLL(str(HERE/'recovered_random_native.dylib'));RANDOM.dr_random_float.argtypes=[C.POINTER(RandomState),C.c_float,C.c_float,C.c_uint32]
+RANDOM.dr_random_float.restype=C.c_float
 class OriginalMixin:
     """The F4 original, where the functions the session wires itself run as original code instead of the unit
     harnesses' adapters: SetSpecialType (with the generation harness on), Shapeshift, Healing, ProcessPretzels
@@ -89,6 +94,13 @@ class OriginalMixin:
         elif address==CHECK_END and not self.recording:self.until_return(u,'recording')
         elif address==self.update_skills and SHAPESHIFT<lr<SHAPESHIFT_END:u.reg_write(self.PC,lr|1);return
         elif address==self.quad_alpha and SHATTER_INIT<lr<SHATTER_INIT_END:u.reg_write(self.PC,lr|1);return
+        if address==ADD_FLARE:   # the harnesses adapt Game::AddFlare; its game state (verify_add_flare.py) is applied here
+            G=self.GAME;count=self.read(G+FLARE_COUNT);result=super().hook(u,address,size,context)
+            if (u.reg_read(self.PC)&~1)!=ADD_FLARE:
+                seeds=RandomState((C.c_uint32*6)(*struct.unpack('<6I',u.mem_read(SEEDS,24))))
+                RANDOM.dr_random_float(C.byref(seeds),0.0,360.0,0);u.mem_write(SEEDS,struct.pack('<6I',*seeds.seeds))
+                if self.read(G+FLARE_COUNT)==count:self.write(G+FLARE_COUNT,count+1)   # the attack harness already counts
+            return result
         if address==SCREEN_INIT and self.recording:   # recorded and skipped by the harness; its game state is written here
             u.mem_write(self.GAME+0xcac4,b'\x01');self.write(self.GAME+0xcc1c,0)
         return super().hook(u,address,size,context)

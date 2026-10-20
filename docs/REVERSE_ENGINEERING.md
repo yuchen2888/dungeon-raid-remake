@@ -110,3 +110,7 @@ T020-E：verify_attack_vampires.py 让扣血段中的 ProcessVampires 在原版�
 ## T020-O：完整 ProcessAttack（Claude，2026-10-19）
 
 `dr_process_attack` 按原控制流组合 T020-A..N。verify_process_attack.py 每帧从原版入口 0x14118 调用整函数，与原生在完整共享状态上逐帧比较：48 次完整攻击（阶段 1→8）、1985 帧，所有玩法被调函数均为原函数。测试替身只有平台 powf 与 AddFlare 的追加计数模型（两侧一致）。ProcessAttack 每帧逻辑的恢复至此完成（待复核）；阶段 8 后的调度、EndOfTurn、输入重开属于 T030/T040。
+
+## T040-I：AddFlare 不是纯表现（Claude，2026-10-20，更正）
+
+此前各测试把 Game::AddFlare 0x9f94 当作表现边界（T020-O 只模拟"追加并计数"）。实际 0xa0c8..0xa0d0 调用 Rand(0.0, 360.0, 流 0)（闪光旋转，写 quad+0x6c），0xa0fa..0xa0fe 计数 Game+0xbd8c + 1。流 0 与棋盘生成共用，所以每个闪光都改变后续随机结果；计数阻塞输入直到淡出。原生 dr_add_flare 与 verify_add_flare.py 见 T040_SCHEDULE.md T040-I；会话已在全部闪光事件上调用。各单元测试仍按原样跳过 AddFlare（两侧一致），整局对照由 verify_session 覆盖。

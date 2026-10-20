@@ -412,3 +412,9 @@
 
 - 新 verify_skills：原函数从入口执行，1200 组棋盘：CanActivate 49200 次（每组 41 个类型）、Activate 900 次、RemoveSkill 300 次一致；错误副本 21 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、64 个 verify 脚本共 67 步通过。运行目录 `.relay/runs/20261020T155609.374442Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-I：AddFlare 的游戏状态（Claude）
+
+- 新 verify_add_flare：原 AddFlare 从入口执行，607 次连续添加的随机种子、闪光数、旋转角一致；错误副本 4 个全部 exit 1。
+- verify_session（会话所有闪光事件接 dr_add_flare，原版侧施加同一状态）：11909 帧一致；会话接线错误副本 5 个，4 个 exit 1，遭遇单元 JumpDown 闪光 1 个存活（对局中未出现）。
+- `./scripts/relay.sh verify --full` → exit 0：68 步通过。运行目录 `.relay/runs/20261020T173704.809670Z`，inputs_unchanged true。
