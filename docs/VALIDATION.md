@@ -354,3 +354,9 @@
 
 - 新 verify_frame_parts：两段段差分，300 组 726 帧，66 次回合计数清零、10 次帮助取消笔画；错误副本 18 个全部 exit 1（"不清两端"最初存活，随机化初值后被拒）。verify_new_game 随字段改名（particles_b53c / labels_b54c）仍 200 组通过。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、54 个 verify 脚本共 57 步通过。运行目录 `.relay/runs/20261020T052536.934629Z`，inputs_unchanged true。
+
+## 2026-10-19 T040-D3：Game::Process 整帧调度（Claude）
+
+- 新 verify_frame：原版 Game::Process 从入口到返回，已验证步骤在段起点跳过并记录；1500 帧，12 种去向全部出现；错误副本 14 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、55 个 verify 脚本共 58 步通过。运行目录 `.relay/runs/20261020T054446.763372Z`，输入指纹 `f7e1e7b4…d1c60784`，inputs_unchanged true。
+- `scripts/t040_process_audit.py --check` matches true（Process 未恢复目标 2 个：list::size / erase，均为下落步骤内部）。

@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T040-C）。当前阶段：ProcessAttack 每帧逻辑已恢复并整函数差分通过（T020，待复核）；开始 T030 EndOfTurn；Gemini 尚未接入。
+更新：2026-10-19（America/Los_Angeles）。维护者：Claude（T040-D3）。当前阶段：ProcessAttack（T020）、EndOfTurn（T030，除存档）、回合调度（T040：ProcessInput 门槛与松手/卷轴、InitNewGame、Game::Process 各段与整帧调度）均已原生恢复并与原版差分，待复核；下一步原生整局验收（T040-F）；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 23 个 `recovered_*.cpp` 模块、18 个头文件、49 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 23 个 `recovered_*.cpp` 模块、18 个头文件、55 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -48,6 +48,7 @@
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
 - T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 - T040-C2a：stats 模块恢复 Item::IncreaseStat（dr_item_increase_stat），松手的种族 6 升级事件接此函数。
+- T040-D3：schedule 模块恢复 Game::Process 整帧调度（dr_process_frame，各已验证步骤经 GameFrameHooks 接线）。
 - T040-D2b：schedule 模块恢复 Process 回合计数清零、攻击闪光淡出（结束闪光使输入门槛放行）、当前伤害标签与帮助 8 取消笔画。
 - T040-D2a：schedule 模块恢复 Process 棋盘效果段（首局帮助随机、盾牌碎裂进度、Tile::ProcessEffects 毒效果）与 InialiseShieldShatter；0xbf88 归 ShieldShatterState。
 - T040-D1：schedule 模块恢复 Game::Process 伤害标签段（dr_process_damage_labels：吸血/火焰/尖刺标签显示与飞行，到达时回血或扣血并 CheckEndGame）。
@@ -104,6 +105,6 @@
 
 ## 尚未完成及下一步
 
-ProcessAttack（T020）与 EndOfTurn（T030，含 CheckEndGame、全部敌人能力、UpdateStats）已有原生恢复并经原版整函数差分；输入阶段门槛、新局初始化、存档（SerialiseState）及整个 Game::Process 尚未恢复，仍未形成完整可玩循环；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
+ProcessAttack（T020）、EndOfTurn（T030，含 CheckEndGame、全部敌人能力、UpdateStats）、回合调度（T040：ProcessInput 门槛/松手/卷轴、InitNewGame、Game::Process 各段与整帧调度 dr_process_frame）已有原生恢复并经原版差分；但尚未把它们接成一个原生整局并与原版逐帧比较（T040-F），物品构造（Item 模型）与存档（SerialiseState）仍为边界，因此仍不能声称完整可玩；现代 iOS UI、高清、多语言和教程未验收。现有 IPA/宿主为兼容路线，不能当作新源码游戏。
 
-T020 已完成（待复核）。T030 进行中：已完成 T030-A..N4b：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过；ActivateAbility 的 20 个能力全部恢复（DestroyUpgrade 经 TurnHooks.ability(28) 接 dr_destroy_upgrade）；新 stats 模块恢复 UpdateStats。剩余边界只有 SerialiseState（存档格式，0x91c4，896 字节，另需 Tile/Item/Skill/HelpMenu/CharacterClass 的 Serialise 与更完整的物品模型）。存档（T030-N5）按用户指示暂缓。T040 进行中：A/B/C/C2a/C2b 已完成（门槛、松手 MatchPath、职业卷轴与尾段、IncreaseStat）；剩余 ProcessInput 边界见 T040-C3；T040-E（InitNewGame）与 T040-D1（Process 伤害标签段）已完成；下一步 Game::Process 整帧调度（T040-D3：界面门槛、ProcessInput 两处调用条件、ProcessAttack 与 Interface::Process、触摸阶段复位，把已恢复各段串起来），或物品模型（Item 构造）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。
+T020 已完成（待复核）。T030 进行中：已完成 T030-A..N4b：CheckEndGame 完整恢复；Game::EndOfTurn 整函数已组合恢复并与原版整函数差分通过；ActivateAbility 的 20 个能力全部恢复（DestroyUpgrade 经 TurnHooks.ability(28) 接 dr_destroy_upgrade）；新 stats 模块恢复 UpdateStats。剩余边界只有 SerialiseState（存档格式，0x91c4，896 字节，另需 Tile/Item/Skill/HelpMenu/CharacterClass 的 Serialise 与更完整的物品模型）。存档（T030-N5）按用户指示暂缓。T040 进行中：A/B/C/C2a/C2b 已完成（门槛、松手 MatchPath、职业卷轴与尾段、IncreaseStat）；剩余 ProcessInput 边界见 T040-C3；T040-E（InitNewGame）与 T040-D1（Process 伤害标签段）已完成；Process 整帧调度（T040-D3）已完成；下一步 T040-F：把 dr_init_new_game、dr_process_frame 与各步骤接成原生整局，与原版逐帧比较若干回合；或物品模型（Item 构造）。沿用 T020 的段差分方法与全链测试类。建议下一位工具先复核 T020-B..O 与 T030-A..N4b。额度耗尽后由用户停止当前工具，再用同一目录让下一 AI 接手。简明操作见 用户操作.md。

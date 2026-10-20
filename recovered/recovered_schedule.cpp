@@ -422,3 +422,49 @@ extern "C" void dr_process_damage_label(FrameState* f,std::uint8_t label_active,
     f->touch->phase=3;
     emit(h,FrameEventKind::ProcessInput);
 }
+namespace {
+void emit(const GameFrameHooks* h,GameFrameEventKind kind,std::int32_t a=0,std::int32_t b=0) {
+    const GameFrameEvent e{kind,a,b};h->event(h->context,&e);
+}
+void consume(TouchState& t) {if(static_cast<std::uint32_t>(t.phase-2)<=1u)t.phase=0;}
+FrameRoute screen(const GameFrameHooks* h,TouchState& t,FrameRoute route) {
+    consume(t);emit(h,GameFrameEventKind::Screen,static_cast<std::int32_t>(route));return route;
+}
+}
+extern "C" FrameRoute dr_process_frame(GameFrame* f,float dt,const GameFrameHooks* h) {
+    (void)dt;
+    TouchState& t=*f->touch;const FrameScreens& s=*f->screens;
+    emit(h,GameFrameEventKind::UpdateTime);emit(h,GameFrameEventKind::CalculateFPS);
+    emit(h,GameFrameEventKind::QueuesReset);
+    if(f->end->game_over_screen) {
+        screen(h,t,FrameRoute::GameOver);
+        if(s.game_over_state_cc1c==3) {
+            const bool record=f->stroke->record_14aed;
+            emit(h,GameFrameEventKind::ScoreShow,record?f->stroke->mode_14ae8:f->match->spawn_enabled_14ae0,record);
+        }
+        return FrameRoute::GameOver;
+    }
+    if(s.help_102a4)return screen(h,t,FrameRoute::Help);
+    if(s.unlock_165a0)return screen(h,t,FrameRoute::Unlock);
+    if(s.main_menu_c400 && !s.score_ef6c)return screen(h,t,s.name_12c09?FrameRoute::Name:FrameRoute::MainMenu);
+    if(s.name_12c09)return screen(h,t,FrameRoute::Name);
+    if(s.intro_c3f0)return screen(h,t,FrameRoute::Intro);
+    if(s.score_ef6c)return screen(h,t,FrameRoute::Score);
+    FrameRoute route=FrameRoute::Done;
+    if(s.menus[0] || s.menus[1] || s.menus[2])route=FrameRoute::Menu;
+    else {
+        h->input(h->context);
+        if(s.menus[0] || s.menus[1] || s.menus[2])return FrameRoute::MenuAfterInput;
+        h->effects(h->context);
+        h->falling(h->context);
+        if(!h->tokens(h->context))return FrameRoute::TokensExit;
+        h->pools(h->context);
+        h->flare_fade(h->context);
+        h->damage_label(h->context);
+        if(h->damage_labels(h->context))return FrameRoute::Ended;
+        h->attack(h->context);
+    }
+    emit(h,GameFrameEventKind::InterfaceProcess,f->path->input_ready);
+    consume(t);
+    return route;
+}

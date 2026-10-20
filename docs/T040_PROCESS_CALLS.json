@@ -13,7 +13,7 @@
           "target": "__ZN4Game10UpdateTimeEv",
           "target_address": "0x9d74",
           "size": 60,
-          "category": "unrecovered"
+          "category": "T040:platform time event of dr_process_frame"
         },
         {
           "site": "0x17192",
@@ -21,7 +21,7 @@
           "target": "__ZN4Game12CalculateFPSEv",
           "target_address": "0x9cec",
           "size": 136,
-          "category": "unrecovered"
+          "category": "T040:platform time event of dr_process_frame"
         },
         {
           "site": "0x171c4",
@@ -624,14 +624,6 @@
         {
           "symbol": "__ZNSt4listIP4TileSaIS1_EE5eraseESt14_List_iteratorIS1_E",
           "size": 24
-        },
-        {
-          "symbol": "__ZN4Game10UpdateTimeEv",
-          "size": 60
-        },
-        {
-          "symbol": "__ZN4Game12CalculateFPSEv",
-          "size": 136
         }
       ]
     },
@@ -1826,6 +1818,15 @@
       "verify": "recovered/verify_frame_parts.py",
       "task": "T040-D2b",
       "original_bytes_sha256": "8ee9dd726b74a3d5a895ba915437c80930a7376eb8b58dab8d4f70202a0b2aad"
+    },
+    {
+      "function": "__ZN4Game7ProcessEv",
+      "start": "0x1717c",
+      "end_exclusive": "0x17db8",
+      "native": "dr_process_frame (schedule; verified steps through GameFrameHooks)",
+      "verify": "recovered/verify_frame.py",
+      "task": "T040-D3",
+      "original_bytes_sha256": "50096438335670e1d9334e7bb9f70a490ed0a0a5b5f5f454ab522aaa0c1b47e4"
     },
     {
       "function": "__ZN4Game7ProcessEv",

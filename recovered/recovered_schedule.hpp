@@ -164,6 +164,46 @@ enum class FrameEventKind : std::int32_t { FlareAlpha=1, Process, Initialise, Po
     WeaponDamageHelp, ProcessInput };
 struct FrameEvent { FrameEventKind kind; std::int32_t a,b,c; float x,y; };
 struct FrameHooks { void* context; void (*event)(void*,const FrameEvent*); };
+// Screens and in-game menus that take over Game::Process (menu-owned bytes).
+struct FrameScreens {
+    std::uint8_t help_102a4, unlock_165a0, main_menu_c400, score_ef6c, name_12c09, intro_c3f0;
+    std::int32_t game_over_state_cc1c;   // GameOverScreen state; 3: show the score screen
+    std::uint8_t menus[3];               // Game+0x59f4 / 0x5b0c / 0x5b9c (as in dr_process_reward_tokens)
+};
+struct GameFrame {
+    TouchState* touch;
+    EndGameState* end;            // game_over_screen (Game+0xcac4)
+    FrameScreens* screens;
+    const StrokeState* stroke;    // record_14aed, mode_14ae8
+    const MatchState* match;      // spawn_enabled_14ae0: the difficulty given to the score screen
+    const PathState* path;        // input_ready (Interface::Process)
+};
+// QueuesReset: the frame's sound and achievement queues are emptied (Game+0x13ea8/0x13eac/0x13ebc/0x13ec0).
+// UpdateTime / CalculateFPS: platform time. Screen: a=screen (FrameRoute value) Process(dt). ScoreShow:
+// ScoreScreen::Show(a=mode or difficulty, b=record, show). InterfaceProcess: Interface::Process(dt, a=input_ready).
+enum class FrameRoute : std::int32_t { Done=0, GameOver, Help, Unlock, MainMenu, Name, Intro, Score, Menu, MenuAfterInput,
+    TokensExit, Ended };
+enum class GameFrameEventKind : std::int32_t { QueuesReset=1, UpdateTime, CalculateFPS, Screen, ScoreShow, InterfaceProcess };
+struct GameFrameEvent { GameFrameEventKind kind; std::int32_t a,b; };
+// Each step is a verified unit, wired by the embedding: input (dr_input_gate and the touch dispatch: stroke,
+// release, scroll), effects (dr_process_board_effects), falling (falling tiles: Tile::Process / refill, or
+// with none dr_reset_round_counters), tokens (dr_process_reward_tokens; false = left the frame), pools
+// (Particles / SimpleLabel pools, presentation), flare_fade (dr_process_flare_fade), damage_label
+// (dr_process_damage_label), damage_labels (dr_process_damage_labels; true = CheckEndGame ended the game),
+// attack (dr_process_attack).
+struct GameFrameHooks {
+    void* context;
+    void (*event)(void*,const GameFrameEvent*);
+    void (*input)(void*);
+    void (*effects)(void*);
+    void (*falling)(void*);
+    bool (*tokens)(void*);
+    void (*pools)(void*);
+    void (*flare_fade)(void*);
+    void (*damage_label)(void*);
+    bool (*damage_labels)(void*);
+    void (*attack)(void*);
+};
 // Label index 0 leech, 1 flame, 2 spike. Process: SimpleLabel::Process(dt) (fade, a=dt bits). Initialise:
 // SimpleLabel::Initialise(a=type 8/9/10, (x, y), b=number, scale 1). Position: SetPosition((x, y)). Number:
 // SetNumber(a). Alpha: SetAlpha(a). Scale: label scale (SimpleLabel+0x33c) = a float bits. HealthBar: a=value.
@@ -207,6 +247,14 @@ void dr_process_flare_fade(dungeonraid::FrameState*,float dt,const dungeonraid::
 // is shown and, when ShowHelpWeaponDmg clears help flag 0x400 that was set before, the stroke is cancelled
 // (current damage 0, touch phase 3, ProcessInput). label_active: SimpleLabel active byte (renderer).
 void dr_process_damage_label(dungeonraid::FrameState*,std::uint8_t label_active,float dt,const dungeonraid::FrameHooks*);
+// Original Game::Process 0x1717c, the frame schedule: time, queues reset; the first active screen
+// (game over -- then the score screen once its state is 3 --, help, unlock, main menu or name entry,
+// intro, score) consumes a released or cancelled touch (phase 2/3 -> 0) and runs alone. With an in-game
+// menu open only Interface::Process runs. Otherwise input; a menu opened by it ends the frame
+// (Game+0x59f4: at once; 0x5b0c / 0x5b9c also); then effects, falling, tokens (may leave), pools, flare
+// fade, damage label, damage labels (may end the game), attack, Interface::Process and the touch
+// consumption. Returns which way the frame went.
+dungeonraid::FrameRoute dr_process_frame(dungeonraid::GameFrame*,float dt,const dungeonraid::GameFrameHooks*);
 // Original Game::CalculateTilePositions 0xb264: vertical offset 0.015625 in record mode (else 0);
 // tile y*6+x rests at ((x+0.5)*pitch+0.003125, (y+0.5)*pitch+0.246875+offset), its centre is
 // placed there with size pitch (half pitch), SetSize and InitialiseLabels events.

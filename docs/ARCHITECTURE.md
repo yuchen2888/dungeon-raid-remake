@@ -12,7 +12,7 @@
 | 补位生成 | refill、generation、encounters | 下落补位、生成/晋升数值、SwapTiles/JumpDown/Stab；非完整敌人阶段 |
 | 敌人阶段 | attack_shield | ProcessAttack 每帧逻辑（dr_process_attack，T020），复用 ResourceState / MatchState / 规则及随机模块 |
 | 回合结束 | turn | Game::EndOfTurn 整函数（dr_end_of_turn）、CheckEndGame 与结束结算、Tile::ActivateAbility 及 19 个敌人能力；DestroyUpgrade 与 SerialiseState 仍为边界（T030） |
-| 回合调度 | schedule | ProcessInput 门槛（dr_input_gate）与 CountAttackers：何时开始敌人攻击、何时调用 EndOfTurn、何时分派触摸；松手后的 MatchPath 分支、AddRevengeHealth、伤害标签起飞、职业卷轴与公共尾段（dr_release_path / dr_release_class_scroll / dr_release_clear）；新局初始化（dr_init_new_game、dr_calculate_tile_positions）；Process 伤害标签段（dr_process_damage_labels）、棋盘效果段（dr_process_board_effects）、回合计数清零 / 闪光淡出 / 当前伤害标签（T040） |
+| 回合调度 | schedule | ProcessInput 门槛（dr_input_gate）与 CountAttackers：何时开始敌人攻击、何时调用 EndOfTurn、何时分派触摸；松手后的 MatchPath 分支、AddRevengeHealth、伤害标签起飞、职业卷轴与公共尾段（dr_release_path / dr_release_class_scroll / dr_release_clear）；新局初始化（dr_init_new_game、dr_calculate_tile_positions）；Process 伤害标签段（dr_process_damage_labels）、棋盘效果段（dr_process_board_effects）、回合计数清零 / 闪光淡出 / 当前伤害标签；整帧调度 dr_process_frame（T040） |
 | 玩家属性 | stats | Game::UpdateStats（dr_update_stats）：由装备物品与技能重算属性，产生 ProcessAttack 的攻击几率/削弱/全体伤害与回复量（T030-N4a） |
 | 职业档案 | progression | 职业进度、编解码、升级/成就；非完整局面存档 |
 

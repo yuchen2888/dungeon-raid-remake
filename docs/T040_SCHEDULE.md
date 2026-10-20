@@ -131,6 +131,18 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 错误副本 18 个全部 exit 1：忽略下落数、忽略路径、只看回合总数、不清两端、不清奖励数组、阶段 5 也跳过、尺寸增速 1、透明度速率 3、透明度到 0 不结束闪光、≤0 即结束、闪光数 0 也处理、负伤害也淡出、偏移 0.1、不看计数骷髅、不看先前帮助标志、取消判断改在 WeaponDmg 之前读标志、取消用阶段 2、取消不清伤害。其中"不清两端"最初存活（两端初值恒为 0），随机化后被拒。
 
+## T040-D3：Game::Process 整帧调度（Claude，2026-10-19）
+
+`recovered_schedule` 新增 `dr_process_frame`（Game::Process 0x1717c 整函数的调度骨架）。各个已分别验证的步骤经 GameFrameHooks 调用，由嵌入方接线：input（dr_input_gate 与触摸分派：笔画、松手、卷轴）、effects（dr_process_board_effects）、falling（下落格 Tile::Process / refill，没有下落格时 dr_reset_round_counters）、tokens（dr_process_reward_tokens，false 表示离开本帧）、pools（粒子/标签池，表现层）、flare_fade、damage_label、damage_labels（true 表示 CheckEndGame 结束游戏）、attack（dr_process_attack）。
+
+调度顺序：UpdateTime、CalculateFPS（平台时间事件），清空本帧音效/成就队列（Game+0x13ea8/0x13eac/0x13ebc/0x13ec0，QueuesReset 事件）。界面门槛按序：结算画面（EndGameState.game_over_screen；状态 Game+0xcc1c 为 3 时显示分数画面：记录模式用 mode，否则用难度 MatchState.spawn_enabled_14ae0——该字段实为难度）、帮助、解锁、主菜单（分数画面未开时；名字输入开着则名字输入）、名字输入、开场、分数画面；命中者把松手/取消的触摸（阶段 2/3）置 0 并单独运行。游戏内菜单（Game+0x59f4/0x5b0c/0x5b9c）开着时只运行 Interface::Process。否则 input；input 打开菜单则立即结束本帧；然后 effects、falling、tokens（可离开）、pools、flare_fade、damage_label、damage_labels（可结束）、attack，最后 Interface::Process(dt, input_ready) 并消耗触摸。返回 FrameRoute（12 种去向）。
+
+验证 `recovered/verify_frame.py`：原版 Game::Process 从入口执行到返回，各步骤在其段起点跳过并记录（可离开/可结束的步骤按用例跳到 0x17da4），ProcessInput、ProcessAttack、各界面 Process、ScoreScreen::Show、Interface::Process、UpdateTime、CalculateFPS 记录；结束后队列计数必须为 0。1500 帧，12 种去向全部出现（Done 440、GameOver 151、Help 113、Unlock 97、MainMenu 69、Name 96、Intro 91、Score 74、Menu 145、MenuAfterInput 130、TokensExit 48、Ended 46）。
+
+错误副本 14 个全部 exit 1：触摸消耗范围 1..3、分数画面状态 ≥2、分数画面总用 mode、帮助与解锁顺序对调、主菜单不看分数画面、主菜单不看名字输入、开场与分数顺序对调、只看两个菜单、输入后只看第一个菜单、忽略代币离开、忽略游戏结束、闪光与伤害标签顺序对调、结束时不消耗触摸、队列清空先于时间。
+
+至此 Game::Process、ProcessInput 的游戏逻辑与 InitNewGame 都有原生实现；剩余为表现层边界（界面、标签、粒子）、UpdateCrossVisibility / UpdateDimming / ProcessPretzels、物品模型（Item 构造）与存档（SerialiseState，暂缓）。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
