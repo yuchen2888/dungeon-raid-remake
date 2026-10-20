@@ -55,6 +55,12 @@ void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回�
 3. Interface 目标位置（GetTarget / GetSpecialTarget）：代币飞行目标是界面布局常量；当前测试由宿主给出。
 4. ProcessPretzels 已恢复（T040-G1，dr_process_pretzels），会话中接 SelectionHooks 的 ProcessPretzels 事件。UpdateDimming（116 字节）待判定；UpdateCrossVisibility 为表现层。
 5. SerialiseState / SerialiseClasses：存档（用户暂缓）。
+6. 技能系统（2026-10-20 发现，未恢复）：Skill::Activate 0x2ad40（按 40 种技能类型分派，调用约 25 个 Game 技能函数：Earthquake、Teleport、Upgrade、CreateArrows、CreateChain、CreateMagicSword、CreateManaPotions、CreateExplosivePotions、ConvertTiles、ConvertColumnToSwords、GrabTiles、CollectBoard / CollectRandomRow / CollectRandomBlock / CollectEdgeTiles、KillSpecialEnemy、KillSkullsNextToCoins、PromoteNormalEnemy、DemoteSpecialEnemy、FreezeSkulls、ShatterDefence、ExplodeArmour、RemoveSkill 等）、Skill::CanActivate、技能冷却与输入目标（Game+0x58ac）。RuneState.enabled_16491 只由技能启用（已恢复代码中没有置 1 的路径），所以符文玩法在新局对局中走不到。是游戏规则，需单独任务（建议 T040-H）。
+
+## 进度
+
+- T040-G2a 完成：recovered_session（实际接口见 recovered_session.hpp：dr_session_create / destroy / objects / link / set_falling / set_motions / new_game / frame / input_route），verify_session 从新局逐帧对照原版。表现事件目前以"来源 + 原事件结构"转交宿主，尚未做成统一的 dr_render_event 队列；界面开关通过 dr_session_objects 返回的 FrameScreens 直接写。
+- 下一步 T040-G2b：接上 G0 / G1 与单元内 CheckEndGame、ShieldShatter（见 T040_SCHEDULE.md G2a 末尾）。
 
 ## 实施顺序建议
 

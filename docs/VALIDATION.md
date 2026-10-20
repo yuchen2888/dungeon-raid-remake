@@ -395,3 +395,9 @@
 
 - 新 verify_pretzels：原 Game::ProcessPretzels 从入口执行（std::set 由路径宿主模拟），1500 组，含编织路径，等级 0–3 全覆盖（0:1074、1:223、2:188、3:15）。错误副本 14 个：10 个 exit 1；键改用 max x、步长 5、x/y 互换、交叉后删除 4 个存活，均为等价变异（理由见 T040_SCHEDULE.md）。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、62 个 verify 脚本共 65 步通过。运行目录 `.relay/runs/20261020T100355.172210Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-G2a：原生会话库（Claude）
+
+- 新 verify_session：一个 recovered_session 会话（Python 不参与接线）对原版逐帧：新局 9 局 153 回合 9472 帧（6 局游戏结束），携带中局状态 10 局 28 回合 2437 帧（5 局游戏结束），共 11909 帧一致。
+- 会话接线错误副本 33 个：24 个 exit 1，9 个存活（符文两项因技能未恢复不可达；其余 7 项对局中未出现，见 T040_SCHEDULE.md）。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、63 个 verify 脚本共 66 步通过。运行目录 `.relay/runs/20261020T131153.837885Z`，inputs_unchanged true。
