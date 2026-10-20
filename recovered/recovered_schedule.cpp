@@ -1,6 +1,7 @@
 #include "recovered_schedule.hpp"
 #include <algorithm>
 #include <cstring>
+#include <vector>
 using namespace dungeonraid;
 extern "C" std::int32_t dr_count_attackers(const PathState* p) {
     const auto& board=p->match->stroke->selection;
@@ -118,4 +119,43 @@ extern "C" ReleaseRoute dr_release_path(ReleaseState* r,const ReleaseInputs* in,
     else fly(r->flights->leech,m.random,in->leech_label);
     dr_release_clear(&s,h);
     return route;
+}
+namespace {
+void level_achievement(void* context,std::int32_t id,float value) {
+    emit(static_cast<const ReleaseHooks*>(context),ReleaseEventKind::Achievement,-1,id,bits(value));
+}
+void level_up(ClassScrollState* sc,std::size_t index,const ReleaseHooks* h) {
+    const ProgressionHooks ph{const_cast<ReleaseHooks*>(h),level_achievement};
+    dr_class_level_up(sc->classes,10,index,sc->difficulty,&ph);
+}
+}
+extern "C" bool dr_release_class_scroll(PathState* p,ClassScrollState* sc,const ReleaseHooks* h) {
+    MatchState& m=*p->match;SelectionState& s=m.stroke->selection;
+    ClassProfile& active=sc->classes[sc->current];
+    bool unlock=true;
+    if(active.level<=9 && active.class_type!=0)unlock=dr_random_int(&m.random,0,1,5)==0;
+    bool done=false;
+    if(unlock) {
+        std::vector<std::int32_t> locked;
+        for(std::int32_t i=0;i<=9;++i)if(!sc->classes[i].level)locked.push_back(i);
+        if(!locked.empty()) {
+            const std::int32_t chosen=locked[dr_random_int(&m.random,0,static_cast<std::int32_t>(locked.size())-1,5)];
+            level_up(sc,chosen,h);
+            emit(h,ReleaseEventKind::UnlockMenu,-1,chosen,1);
+            done=true;
+        }
+    }
+    if(!done && active.level<=9) {
+        level_up(sc,sc->current,h);
+        emit(h,ReleaseEventKind::UnlockMenu,-1,active.class_type,active.level);
+    }
+    m.class_level=active.level;
+    for(int i=1;i<=9;++i)m.unlocked[i-1]=sc->classes[i].level;
+    emit(h,ReleaseEventKind::MatchTile,s.path[0],7);
+    emit(h,ReleaseEventKind::MoveMatchedTiles,-1);
+    if(h->check_end_game(h->context))return true;
+    emit(h,ReleaseEventKind::SerialiseState,-1);
+    emit(h,ReleaseEventKind::SerialiseClasses,-1);
+    dr_release_clear(&s,h);
+    return false;
 }

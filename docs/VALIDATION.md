@@ -322,3 +322,9 @@
 - verify_stats 新增 300 组 IncreaseStat 比较（共 1000 组），原版 IncreaseStat / GetStatUpgrade 为原代码，MakeStats 记录；293 组属性改变。错误副本：不触底、改用 Downgrade、不发 ItemText，均 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：53 步通过。运行目录 `.relay/runs/20261020T034043.158475Z`，inputs_unchanged true。
 - `scripts/t040_process_audit.py --check` matches true（ProcessInput 未恢复目标 15 个）。
+
+## 2026-10-19 T040-C2b：职业卷轴分支（Claude）
+
+- verify_release 增至 800 组（卷轴 329 组）：原版 CharacterClass::LevelUp / UnlockAchievement / CheckIfAllClassesMaxed / RandI 为原代码，std::vector<int> 模拟；卷轴全部分支（RandI 选择、解锁、无可解锁、当前职业升级、等级 10 跳过、CheckEndGame 结束/继续、等级成就、全满级成就 28）到达。错误副本 10 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：53 步通过。运行目录 `.relay/runs/20261020T035159.428619Z`，输入指纹 `da8e72d7…a3f8bbbf`，inputs_unchanged true。
+- `scripts/t040_process_audit.py --check` matches true。

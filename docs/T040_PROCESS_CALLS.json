@@ -1788,6 +1788,19 @@
     },
     {
       "function": "__ZN4Game12ProcessInputEv",
+      "start": "0x16c1c",
+      "end_exclusive": "0x16d88",
+      "extra": [
+        "0x170b4..0x170ca",
+        "0x170de..0x170e6"
+      ],
+      "native": "dr_release_class_scroll (recovered_schedule)",
+      "verify": "recovered/verify_release.py",
+      "task": "T040-C2b",
+      "original_bytes_sha256": "55f94630a0df9873572dc9bfb8b9339b7ab82c5b54583628991fdccc4d7d984c"
+    },
+    {
+      "function": "__ZN4Game12ProcessInputEv",
       "start": "0x16d88",
       "end_exclusive": "0x16e10",
       "native": "dr_release_clear (recovered_schedule)",

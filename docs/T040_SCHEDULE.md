@@ -63,8 +63,21 @@ stats 模块新增 `dr_item_increase_stat`（原版 Item::IncreaseStat 0x29d58�
 
 验证：verify_stats 新增 300 组，原版 IncreaseStat 与 GetStatUpgrade 为原代码，MakeStats 记录；随机物品与类型（偏向 11、2、10、14、17）及负值触底。错误副本：不触底、改用 Downgrade、不发 ItemText，均 exit 1。
 
+## T040-C2b：职业卷轴分支 [0x16c1c,0x16d88)（Claude，2026-10-19）
+
+`recovered_schedule` 新增 `dr_release_class_scroll`（dr_release_path 返回 ClassScroll 之后调用）：
+
+1. 当前职业（Game+0x15564 + 索引×388，索引 Game+0x1648c）等级 ≤9 且职业类型非 0：RandI(0,1,流 5) 为 0 时走"解锁"，否则升当前职业；其余情况直接走"解锁"。
+2. 解锁：收集 10 个职业中等级为 0 的索引（std::vector<int>）；非空时 RandI(0,n−1,5) 选一个，CharacterClass::LevelUp（已恢复的 dr_class_level_up，含 UnlockAchievement 与 CheckIfAllClassesMaxed）并 UnlockMenu::Show(索引, 1)。为空则转去升当前职业。
+3. 升当前职业：等级 ≤9 时 LevelUp 并 UnlockMenu::Show(类型, 新等级)；等级 10 跳过。
+4. 卷轴格 MatchTile(格, 奖励 7)、MoveMatchedTiles、CheckEndGame：为真时原版直接离开 ProcessInput（不走尾段），原生返回 true；否则 SerialiseState、SerialiseClasses（存档边界）和 dr_release_clear。
+
+ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），ReleaseEventKind 增加 UnlockMenu、MatchTile（接 dr_match_tile）、MoveMatchedTiles、SerialiseState、SerialiseClasses。职业档案为 ClassProfile[10]（progression 模块）；MatchState.class_level / unlocked[] 是同一批职业记录的视图（当前职业等级、职业 1..9 等级），函数结束时同步。升级成就经 progression 的 achievement 回调转成 ReleaseEvent Achievement；其难度门槛（QueueAchievement 内部）由 ClassScrollState.difficulty 给出，测试取非 0。
+
+验证：verify_release 增至 800 组（另 300 组强制卷轴），原版 CharacterClass::LevelUp / UnlockAchievement / CheckIfAllClassesMaxed / RandI 为原代码，std::vector<int> 在测试中模拟（无分配器），CharacterClass+0 写入 Game 指针。卷轴 329 组；分支：RandI 选择、解锁搜索、解锁升级、无可解锁、当前职业升级、等级 10 跳过、CheckEndGame 结束与继续、等级 >4 成就、全职业满级成就 28 均到达。错误副本 10 个（类型 0 也可选、等级阈值 ≤8、RandI 结果反转、可解锁条件 <10、从职业 1 开始搜索、UnlockMenu 传类型、等级 10 仍升级、忽略 CheckEndGame、奖励 5、不同步 MatchState 视图）全部 exit 1。
+
 ## 后续
 
-- T040-C2：职业卷轴分支 [0x16c1c,0x16d88)（升级 / UnlockMenu、MatchTile、MoveMatchedTiles、CheckEndGame、SerialiseState）；Item::IncreaseStat（stats 模块，对称于 ReduceStat）；UpdateCrossVisibility（1032 字节）、UpdateDimming、ProcessPretzels 等仍为边界，见登记 unrecovered_by_size。
+- ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
 - T040-D：Game::Process 中的游戏部分调度（ProcessEffects、ShieldShatter、标签动画对生命/音效/CheckEndGame 的作用、ProcessAttack 调用条件），界面部分为表现层边界。
 - T040-E：InitNewGame（CalculateTilePositions、物品构造、特长判断）。

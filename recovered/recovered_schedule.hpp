@@ -49,11 +49,25 @@ struct ReleaseState {
 // Tile::UpdateText(a, b, c). IncreaseStat: Item::IncreaseStat(a) on the item at Game+0xbe90 (wire to
 // dr_item_increase_stat).
 // UpdateStats: Game::UpdateStats (wire to dr_update_stats). HealthBar: a=value.
-// CrossVisibility: Game::UpdateCrossVisibility (still a boundary).
+// CrossVisibility: Game::UpdateCrossVisibility (still a boundary). UnlockMenu: UnlockMenu::Show(a=class
+// type, b=level). MatchTile: Game::MatchTile(tile, a=reward) (wire to dr_match_tile). MoveMatchedTiles
+// (wire to the refill). SerialiseState / SerialiseClasses: persistence (boundaries).
 enum class ReleaseEventKind : std::int32_t { Sound=1, Help, MatchTiles, Achievement, Label, Text, IncreaseStat,
-    UpdateStats, HealthBar, CrossVisibility };
+    UpdateStats, HealthBar, CrossVisibility, UnlockMenu, MatchTile, MoveMatchedTiles, SerialiseState, SerialiseClasses };
 struct ReleaseEvent { ReleaseEventKind kind; std::int32_t tile,a,b,c,d; float x,y; };
-struct ReleaseHooks { void* context; void (*event)(void*,const ReleaseEvent*); };
+struct ReleaseHooks {
+    void* context;
+    void (*event)(void*,const ReleaseEvent*);
+    bool (*check_end_game)(void*);   // Game::CheckEndGame (wire to dr_check_end_game)
+};
+// The class roster (10 CharacterClass records at Game+0x15564, 388 bytes each) and the active class
+// (Game+0x1648c). MatchState.class_type / class_level / unlocked[] are views of the same records
+// (active class type and level, levels of classes 1..9); dr_release_class_scroll keeps them equal.
+struct ClassScrollState {
+    ClassProfile* classes;
+    std::size_t current;
+    std::int32_t difficulty;   // Game::QueueAchievement gate (dr_class_level_up)
+};
 }
 extern "C" {
 // Original Game::CountAttackers 0x8fb0: enemies (type 1) without attack flag, not frozen, with
@@ -77,10 +91,19 @@ void dr_add_revenge_health(dungeonraid::PathState*,const dungeonraid::ReleaseHoo
 // all-enemies refill achievement 74, flame/spike label flights, revenge health and the race-6
 // armour upgrade (kill_count_15548 > 14), healing from killed attack (prev_164a7), the leech
 // label flight (or current_leech = 0 without a counted skull). Otherwise current_leech = 0 and a
-// one-tile class scroll returns ClassScroll before any further change (that branch is a later
-// unit). Every other route ends with dr_release_clear.
+// one-tile class scroll returns ClassScroll before any further change (continue with
+// dr_release_class_scroll). Every other route ends with dr_release_clear.
 dungeonraid::ReleaseRoute dr_release_path(dungeonraid::ReleaseState*,const dungeonraid::ReleaseInputs*,
     const dungeonraid::ReleaseHooks*);
+// Original ProcessInput class scroll [0x16c1c,0x16d88) (after dr_release_path returned ClassScroll):
+// when the active class is below level 10 and not class type 0, RandI(0,1,stream 5) chooses between
+// levelling it up and unlocking; unlocking levels up a random (RandI(0,n-1,5)) class still at level 0
+// and shows UnlockMenu(index, 1); with none left (or after the choice) the active class, if below 10,
+// levels up and shows UnlockMenu(type, level). CharacterClass::LevelUp is dr_class_level_up. Then the
+// scroll tile is matched (reward 7), MoveMatchedTiles, CheckEndGame: true returns true at once (the
+// original leaves ProcessInput without the tail); otherwise SerialiseState, SerialiseClasses and
+// dr_release_clear.
+bool dr_release_class_scroll(dungeonraid::PathState*,dungeonraid::ClassScrollState*,const dungeonraid::ReleaseHooks*);
 // ProcessInput common release tail [0x16d88,0x16e10): the path and fake set are emptied,
 // current damage cleared, flame/spike damage cleared unless their label is still moving, then
 // UpdateCrossVisibility.

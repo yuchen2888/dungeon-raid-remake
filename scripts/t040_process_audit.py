@@ -28,6 +28,8 @@ SEGMENTS=[
          verify='recovered/verify_input_gate.py',task='T040-B'),
     dict(function='__ZN4Game12ProcessInputEv',start='0x16890',end_exclusive='0x16c1c',native='dr_release_path (recovered_schedule)',
          verify='recovered/verify_release.py',task='T040-C'),
+    dict(function='__ZN4Game12ProcessInputEv',start='0x16c1c',end_exclusive='0x16d88',extra=['0x170b4..0x170ca','0x170de..0x170e6'],
+         native='dr_release_class_scroll (recovered_schedule)',verify='recovered/verify_release.py',task='T040-C2b'),
     dict(function='__ZN4Game12ProcessInputEv',start='0x16d88',end_exclusive='0x16e10',native='dr_release_clear (recovered_schedule)',
          verify='recovered/verify_release.py',task='T040-C'),
     dict(function='__ZN4Game7ProcessEv',start='0x173c8',end_exclusive='0x17400',native='moving-list subsection (recovered_refill)',
