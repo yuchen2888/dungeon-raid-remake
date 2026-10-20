@@ -401,3 +401,9 @@
 - 新 verify_session：一个 recovered_session 会话（Python 不参与接线）对原版逐帧：新局 9 局 153 回合 9472 帧（6 局游戏结束），携带中局状态 10 局 28 回合 2437 帧（5 局游戏结束），共 11909 帧一致。
 - 会话接线错误副本 33 个：24 个 exit 1，9 个存活（符文两项因技能未恢复不可达；其余 7 项对局中未出现，见 T040_SCHEDULE.md）。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、63 个 verify 脚本共 66 步通过。运行目录 `.relay/runs/20261020T131153.837885Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-G2b：会话接上 G0 / G1 与单元内结束检查（Claude）
+
+- verify_session 扩展：原版执行 SetSpecialType、Shapeshift、Healing、ProcessPretzels、单元内 CheckEndGame、InialiseShieldShatter；新局 9 局 9472 帧 + 携带中局 15 局 3903 帧，共 13375 帧一致，14 局游戏结束；ProcessPretzels 27、SetSpecialType 3、Shapeshift 24、Healing 4、资源单元 CheckEndGame 3 次。
+- 新接线错误副本 7 个：ProcessPretzels、SetSpecialType、Shapeshift、Healing 4 个 exit 1；资源 / 遭遇单元 CheckEndGame、ShieldShatter 3 个存活（对局中未出现致死或该事件）。
+- `./scripts/relay.sh verify --full` → exit 0：66 步通过。运行目录 `.relay/runs/20261020T140225.158238Z`，inputs_unchanged true（前一次 20261020T134010.725844Z 66 步全过但运行中改了文档，判 invalid-inputs-changed）。

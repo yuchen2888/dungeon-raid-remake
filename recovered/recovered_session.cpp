@@ -111,10 +111,16 @@ void selection_event(void* c,SelectionEvent kind,std::int32_t index,std::int32_t
     if(kind==SelectionEvent::ResourceShadows)dr_preview_resources(&s.stroke,&s.preview,&s.selection_hooks);
     else if(kind==SelectionEvent::ProcessRune)dr_process_rune(&s.stroke,&s.rune,a!=0,&s.selection_hooks);
     else if(kind==SelectionEvent::RuneMatchTile)dr_match_tile(&s.match,static_cast<std::uint32_t>(index),a,&s.match_hooks);
+    else if(kind==SelectionEvent::ProcessPretzels)dr_process_pretzels(&s.stroke.selection,&s.preview,s.tokens);
 }
 void match_event(void* c,const MatchEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Match,e);
-    if(e->kind==MatchEventKind::Token)dr_enqueue_token(s.tokens,static_cast<std::uint32_t>(e->tile),e->a,e->b!=0,e->c,&s.token_hooks);
+    switch(e->kind) {
+    case MatchEventKind::Token:dr_enqueue_token(s.tokens,static_cast<std::uint32_t>(e->tile),e->a,e->b!=0,e->c,&s.token_hooks);break;
+    case MatchEventKind::SetSpecialType:dr_set_special_type(&s.generation,static_cast<std::uint32_t>(e->tile),e->a,&s.generation_hooks);break;
+    case MatchEventKind::Shapeshift:dr_shapeshift(&s.resources,&s.resource_hooks);break;
+    default:break;
+    }
 }
 // A token request becomes a flying token in its slot (Token::InitialiseFromTile).
 void token_event(void* c,const TokenEvent* e) {
@@ -130,6 +136,16 @@ void motion_event(void* c,MotionEventKind kind,std::int32_t index) {
 }
 void motion_target(void* c,std::int32_t kind,std::int32_t index,Point* out) {Session& s=self(c);s.host.target(s.host.context,kind,index,out);}
 std::int32_t choose_special(void* c,TokenMotion* t) {Session& s=self(c);return s.host.choose_special(s.host.context,t);}
+// The resource and encounter units call Game::Healing and Game::CheckEndGame (their result is not used there).
+void resource_event(void* c,const ResourceEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::Resource,e);
+    if(e->kind==ResourceEventKind::Healing)dr_healing(&s.resources,&s.resource_hooks);
+    else if(e->kind==ResourceEventKind::CheckEndGame)check_end_game(s);
+}
+void encounter_event(void* c,const EncounterEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::Encounter,e);
+    if(e->kind==EncounterEventKind::CheckEndGame)check_end_game(s);
+}
 void path_event(void* c,const RoundEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Path,e);
     if(e->kind==BattleEvent::MoveMatchedTiles)move_matched_tiles(s);   // Game::MoveMatchedTiles at its place inside MatchTiles
@@ -147,6 +163,7 @@ void refill_event(void* c,RefillEventKind kind,std::int32_t i,std::int32_t j) {
 void generation_event(void* c,const GenerationEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Generation,e);
     if(e->kind==GenerationEventKind::JumpDown)dr_jump_down(&s.generation,static_cast<std::uint32_t>(e->tile),&s.encounter_hooks);
+    else if(e->kind==GenerationEventKind::ShieldShatter)dr_initialise_shield_shatter(&s.shatter,&s.effect_hooks);
 }
 // ProcessAttack
 void flare_event(void* c,const AttackFlareEvent* e) {
@@ -273,11 +290,11 @@ void link(Session& s) {
     s.match_hooks={c,match_event};
     s.token_hooks={c,token_event};
     s.motion_hooks={c,motion_event,motion_target,choose_special};
-    s.resource_hooks={c,forward_event<SessionSource::Resource,ResourceEvent>};
+    s.resource_hooks={c,resource_event};
     s.path_hooks={c,path_event,&s.match_hooks,&s.token_hooks};
     s.refill_hooks={c,refill_event};
     s.generation_hooks={c,generation_event};
-    s.encounter_hooks={c,forward_event<SessionSource::Encounter,EncounterEvent>,&s.refill_hooks};
+    s.encounter_hooks={c,encounter_event,&s.refill_hooks};
     s.flare_hooks={c,flare_event};
     s.anim_hooks={c,forward_event<SessionSource::AttackAnim,AttackAnimEvent>,counterattack};
     s.absorb_hooks={c,forward_event<SessionSource::AttackAbsorb,AttackAbsorbEvent>};

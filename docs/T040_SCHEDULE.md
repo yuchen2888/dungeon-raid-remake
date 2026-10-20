@@ -243,6 +243,12 @@ Game::ProcessPretzels 0xd03c（400 字节）在笔画更新中调用（Selection
 
 仍为适配器 / 边界（T040-G2b 与之后）：G0 三个函数与 G1 ProcessPretzels 在会话中尚未接（F 系列原版宿主在入口跳过它们）；资源 / 遭遇单元里的 CheckEndGame 事件、ShieldShatter 生成事件只转交宿主；物品构造、UpdateStats、IncreaseStat 与 DestroyUpgrade（ability 28，作为 SessionSource::Ability 转交）需要物品模型。
 
+## T040-G2b：会话接上 G0 / G1 与单元内的结束检查（Claude，2026-10-20）
+
+会话新接线：SelectionEvent ProcessPretzels → dr_process_pretzels；MatchEvent SetSpecialType → dr_set_special_type，Shapeshift → dr_shapeshift；ResourceEvent Healing → dr_healing，CheckEndGame → dr_check_end_game（资源单元里结果不用）；EncounterEvent CheckEndGame（Stab）→ dr_check_end_game；GenerationEvent ShieldShatter → dr_initialise_shield_shatter。F 系列中这些仍是"用例决定"的适配器（原版宿主在入口跳过）。
+
+verify_session 的原版侧相应改为执行原函数：从匹配 / 笔画 / 资源 / 遭遇 / 生成宿主的跳过表中去掉 SetSpecialType、Shapeshift、ProcessPretzels、Healing、CheckEndGame、InialiseShieldShatter；SetSpecialType 期间打开生成宿主（SetType 的表现调用按生成宿主记录），ProcessPretzels 期间打开路径宿主（std::set 模拟），任何调用方的 CheckEndGame 期间打开结束宿主；Shapeshift 的 UpdateSkills 与 InialiseShieldShatter 的碎块 alpha 为表现调用，跳过。携带中局阶段增至 15 局并按 5 种变体造用例：种族 9（击杀特殊敌人 → Shapeshift）、种族 4、XP 99 且生命 3 / 上限 400（升级 → Healing 真正回血）、记录模式 1（ProcessPretzels）、生成倒计数 1（职业卷轴 → SetSpecialType）、种族 5（生成 12 号敌人 → InialiseShieldShatter）；测试要求前四种事件在对局中出现。结果：新局 9 局 9472 帧 + 携带 15 局 43 回合 3903 帧，共 13375 帧一致，14 局游戏结束；ProcessPretzels 27 次、SetSpecialType 3、Shapeshift 24、Healing 4、资源单元 CheckEndGame 3。Stab 的 CheckEndGame 与 ShieldShatter 本次对局未出现（概率性，未覆盖）。错误副本 7 个（去掉每一条新接线）：ProcessPretzels、SetSpecialType、Shapeshift、Healing 被拒；遭遇单元 CheckEndGame、ShieldShatter 存活（未出现）；资源单元 CheckEndGame 存活（出现 3 次，推断当时生命 > 0、检查不改状态；致死的情形未覆盖）。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

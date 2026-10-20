@@ -60,7 +60,7 @@ void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回�
 ## 进度
 
 - T040-G2a 完成：recovered_session（实际接口见 recovered_session.hpp：dr_session_create / destroy / objects / link / set_falling / set_motions / new_game / frame / input_route），verify_session 从新局逐帧对照原版。表现事件目前以"来源 + 原事件结构"转交宿主，尚未做成统一的 dr_render_event 队列；界面开关通过 dr_session_objects 返回的 FrameScreens 直接写。
-- 下一步 T040-G2b：接上 G0 / G1 与单元内 CheckEndGame、ShieldShatter（见 T040_SCHEDULE.md G2a 末尾）。
+- T040-G2b 完成：G0 / G1 与资源、遭遇单元内 CheckEndGame、ShieldShatter 已接（T040_SCHEDULE.md）。会话仍转交宿主的规则边界：物品构造 / UpdateStats / IncreaseStat / DestroyUpgrade（物品模型）、ShowMenu（FoldoutMenu）、技能（T040-H）。
 
 ## 实施顺序建议
 

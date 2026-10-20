@@ -9,7 +9,9 @@ the play. The harness reads the state from the session's memory. Two phases:
   Game::Process every frame; some games weakened (they end early), some strengthened (long games);
 - carried mid-game states as verify_game_frames.py (T040-F3): random boards with every enemy type, flags,
   poison and abilities, a few turns each.
-The original side is the F4 / F3 harness.
+The original side is the F4 / F3 harness, except that the functions the session wires itself from unit events
+(SetSpecialType, Shapeshift, Healing, ProcessPretzels, CheckEndGame in the units, InialiseShieldShatter) run as
+original code instead of the unit harnesses' adapters (OriginalMixin); carried-state variants make them occur.
 
 Compared after the start and after every frame: the game state of verify_game_frames.py plus the stroke's
 resource counts (Game+0x164b0), without the event
@@ -19,6 +21,7 @@ the flare / quad alpha mirrors (presentation the renderer keeps from those event
 import ctypes as C
 import json
 import random
+import re
 import verify_original
 from verify_new_game_play import Original as NewGameOriginal, Native as NewGameNative, case
 from verify_game_frames import Original as FramesOriginal, Native as FramesNative
@@ -31,7 +34,19 @@ from verify_tokens import Counters
 from verify_resources import INTS as RESOURCE_INTS
 
 GAMES,TURNS,LONG_TURNS=9,12,40
-CARRIED_GAMES,CARRIED_TURNS=10,5
+CARRIED_GAMES,CARRIED_TURNS=15,5
+# carried-state variants that reach the functions the session wires from unit events (and checks below)
+def variant(c,game):
+    kind=game%5
+    if kind==0:c['game']['race']=9                                         # killing a special enemy: Shapeshift
+    elif kind==1:c['game']['race']=4;c['resources'].update(xp=99,ui_xp=99,health=3,ui_health=3,health_max=400)  # level up: Healing (raises low health)
+    elif kind==2:c['record']=1;c['mode']=1                                  # record mode 1: ProcessPretzels
+    elif kind==3:c['match'].update(spawn_enabled_14ae0=max(1,c['match']['spawn_enabled_14ae0']),spawn_remaining_15558=1,spawn_count_1555c=0)  # class scroll: SetSpecialType
+    else:c['game']['race']=5                                                 # mortal enemy 12 generated: InialiseShieldShatter
+    return c
+# (unit, event kind) the session acts on, required to occur: Selection ProcessPretzels, Match SetSpecialType / Shapeshift,
+# Resource Healing (the Stab / thrown-skull CheckEndGame and ShieldShatter depend on chance: see events_by_unit_kind)
+REQUIRED={(1,15),(2,8),(2,9),(5,11)}
 NAMES=('stroke','preview','match','rune','tokens','resources','path','refill','generation','damage','animation','overlay_alpha',
        'attack_inputs','skills','turn_flags','finish','end','activated','end_of_turn','flights','release_inputs','classes','scroll',
        'player','extra','shatter','touch','screens','input_target','current_label_active','motions')
@@ -45,8 +60,35 @@ class Host(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT),('targe
 SOURCE_GENERATION,SOURCE_NEW_GAME=8,28
 
 SCREEN_INIT=0x307f8   # GameOverScreen::Initialise
+SPECIAL,SHAPESHIFT,SHAPESHIFT_END,HEALING,PRETZELS,CHECK_END=0x3f43c,0x918c,0x91c4,0x12e68,0xd03c,0x10b18
+SHATTER_INIT,SHATTER_INIT_END=0x9810,0x9882
 class OriginalMixin:
+    """The F4 original, where the functions the session wires itself run as original code instead of the unit
+    harnesses' adapters: SetSpecialType (with the generation harness on), Shapeshift, Healing, ProcessPretzels
+    (std::set modelled by the path harness), CheckEndGame from the resource and encounter units (end-of-game
+    harness on) and InialiseShieldShatter. Their presentation calls are skipped (UpdateSkills, chunk alphas)."""
+    def __init__(self):
+        super().__init__()
+        self.match_calls={k:v for k,v in self.match_calls.items() if k not in (SPECIAL,SHAPESHIFT)}
+        self.extra={k:v for k,v in self.extra.items() if k!=PRETZELS}
+        self.resource_calls={k:v for k,v in self.resource_calls.items() if v not in ('end','healing')}
+        self.enc_calls={k:v for k,v in self.enc_calls.items() if v!='end'}
+        self.gen_calls={k:v for k,v in self.gen_calls.items() if v!='shatter'}
+        text=(HERE.parent/'armv7-disassembly.txt').read_text()
+        addr=lambda sym:int(re.search(r'^'+re.escape(sym)+r':\n\s*([0-9a-f]+):',text,re.M)[1],16)
+        self.update_skills=addr('__ZN9Interface12UpdateSkillsEv');self.quad_alpha=addr('__ZN4Quad8SetAlphaEh');self.returns={}
+        assert addr('__ZN4Game15ProcessPretzelsEv')==PRETZELS and addr('__ZN4Game12CheckEndGameEv')==CHECK_END
+    def until_return(self,u,flag,value=True):
+        lr=u.reg_read(self.LR)&~1;old=getattr(self,flag,False);setattr(self,flag,value)
+        self.returns.setdefault(lr,[]).append(lambda:setattr(self,flag,old))
     def hook(self,u,address,size,context):
+        for undo in self.returns.pop(address,[]):undo()
+        lr=u.reg_read(self.LR)&~1
+        if address==SPECIAL:self.until_return(u,'gen_active')
+        elif address==PRETZELS:self.int_sets={};self.until_return(u,'path_active')
+        elif address==CHECK_END and not self.recording:self.until_return(u,'recording')
+        elif address==self.update_skills and SHAPESHIFT<lr<SHAPESHIFT_END:u.reg_write(self.PC,lr|1);return
+        elif address==self.quad_alpha and SHATTER_INIT<lr<SHATTER_INIT_END:u.reg_write(self.PC,lr|1);return
         if address==SCREEN_INIT and self.recording:   # recorded and skipped by the harness; its game state is written here
             u.mem_write(self.GAME+0xcac4,b'\x01');self.write(self.GAME+0xcc1c,0)
         return super().hook(u,address,size,context)
@@ -177,14 +219,15 @@ def main():
     phases['new_games']=dict(games=GAMES,turns=turns,frames=frames,ended=ended);sources.update(new.sources)
     old,new=CarriedSessionOriginal(),CarriedSession()
     for game in range(CARRIED_GAMES):
-        c=turn_case(rng);old.load(c);new.load(c)
-        if game%2==0:set_health(old,new,5000,5000)   # most carried boards end the game within a turn
+        c=variant(turn_case(rng),game);old.load(c);new.load(c)
+        if game%2==0 and game%5!=1:set_health(old,new,5000,5000)   # most carried boards end the game within a turn
         compare('load',old.game_state(),new.game_state(),game=game)
         play(old,new,GAMES+game,CARRIED_TURNS)
     phases['carried']=dict(games=CARRIED_GAMES,turns=turns-phases['new_games']['turns'],frames=frames-phases['new_games']['frames'],
                            ended=ended-phases['new_games']['ended'])
     for k,v in new.sources.items():sources[k]=sources.get(k,0)+v
     assert phases['new_games']['ended'] and phases['carried']['ended'],phases
+    assert REQUIRED<=set(sources),REQUIRED-set(sources)
     report=dict(status='passed',phases=phases,turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
