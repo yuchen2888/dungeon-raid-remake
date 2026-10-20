@@ -1,0 +1,64 @@
+# T040-G 原生会话库计划（Claude，2026-10-20）
+
+目标：把整合测试 F1–F4 中由 Python 测试宿主完成的"共享对象 + 钩子接线"固化为一个 C++ 会话（建议新模块 `recovered_session`），对 iOS 层只暴露少量接口；用 F4 的方式（原版 InitNewGame + 每帧真实 Game::Process）与会话逐帧比较。会话不执行任何原版指令。
+
+## 接口草案
+
+```
+dr_session* dr_session_create(const dr_session_config*);      // 职业档案、难度、记录模式/模式
+void dr_session_new_game(dr_session*, uint32_t seed);           // dr_init_new_game
+FrameRoute dr_session_frame(dr_session*, float dt, int32_t touch_phase, float x, float y);   // dr_process_frame
+const dr_session_view* dr_session_view(const dr_session*);      // 棋盘、选择、资源、标签飞行、代币、攻击动画等只读视图
+size_t dr_session_drain_events(dr_session*, dr_render_event* out, size_t max);   // 表现事件队列（音效、标签、粒子、闪光、帮助、界面值……）
+void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回报：菜单/帮助/结算等是否打开（FrameScreens）
+```
+
+## 必须共享的单一对象（F1–F4 实测）
+
+| Game 字段 | 原生对象 | 说明 |
+| --- | --- | --- |
+| 攻击阶段 Game+0xb8a8 | AttackDamageState | 门槛与 ProcessAttack 共用 |
+| RuneState（0x16491、高亮计数、分配数） | RuneState | 门槛、EndOfTurn、ProcessRune 共用 |
+| Game+0xbfba | AttackAnimation.counterattack | EndOfTurnState.counterattack 指向它 |
+| 代币待处理数 Game+0xb52c | TokenQueue 计数 | AddToken 与 Process 代币循环同一个数 |
+| TurnFlags / TurnFinishFlags / EndGameState | 各一个 | 松手、EndOfTurn、结算、新局共用 |
+| 闪光数 Game+0xbd8c | AttackAnimation.flare_count | 门槛读取、闪光淡出写 |
+| 盾牌碎裂 Game+0xbf88/0xbf8c | ShieldShatterState | 生成事件启动、Process 推进、新局清零 |
+| SimpleLabel 活动字节 | NewGameExtra.label_active | 伤害标签段读取（渲染层维护） |
+| 当前触摸 Game+0x10/0x14 | TouchState | 整帧调度与 SelectionState.touch 同步 |
+
+## 钩子接线（参考：各单元测试 Native 类中的回调）
+
+| 钩子 | 事件 | 会话动作 |
+| --- | --- | --- |
+| SelectionHooks | ProcessRune | dr_process_rune（commit 参数） |
+| SelectionHooks | ResourceShadows | dr_preview_resources |
+| SelectionHooks | RuneMatchTile | dr_match_tile |
+| MatchHooks | Token | dr_enqueue_token → TokenHooks Initialise → dr_initialise_token（新代币运动） |
+| MatchHooks | SetSpecialType / Shapeshift | dr_set_special_type / dr_shapeshift（G0） |
+| ReleaseHooks | MatchTiles | dr_commit_path |
+| PathHooks | MoveMatchedTiles | dr_move_matched_tiles |
+| RefillHooks | Swap / AppendMoving / Randomise / Stab | 交换 GeneratedTile 附加数据并跟随 activated[]；加入下落列表；dr_randomise_tile；dr_stab |
+| GenerationHooks | JumpDown / ShieldShatter | dr_jump_down；dr_initialise_shield_shatter |
+| ResourceHooks | Healing / CheckEndGame / Menu | dr_healing（G0）；dr_check_end_game；界面层打开菜单 |
+| ScheduleHooks | EndOfTurn | dr_end_of_turn |
+| TurnHooks | match_tile / attack_skull / check_end_game / move_matched_tiles / ability(28) / swap / push_token / token_target / token_start | 对应原生函数（见 verify_end_of_turn / verify_abilities） |
+| 攻击 ProcessHooks | counterattack / AttackSkull / MoveMatchedTiles / 吸血 | dr_do_counterattack、dr_path_attack_skull、dr_move_matched_tiles、dr_process_vampires |
+| GameFrameHooks | input / effects / falling / tokens / pools / flare_fade / damage_label / damage_labels / attack | 见 T040-F3 |
+| 其余事件 | 音效、标签、粒子、闪光、帮助、界面值、文字、UV、颜色、成就 | 进入表现事件队列 |
+
+## 仍需恢复或决定的部分（会话之外）
+
+1. 物品模型：Item::Initialise / GenerateStats（1920 字节）/ GenerateName / MakeStats（文字，3028 字节）/ AddUpgrade，ItemUpgrade::GetRandomStat / IsUpgradeAllowed / Initialise。起始物品属性与升级都依赖它（当前测试用零属性）。
+2. FoldoutMenu：Initialise(MenuType)（4140 字节，生成升级/商店/技能选项）与 ProcessInput（选择后应用到物品/属性/技能）——含游戏规则，不只是界面。
+3. Interface 目标位置（GetTarget / GetSpecialTarget）：代币飞行目标是界面布局常量；当前测试由宿主给出。
+4. ProcessPretzels（0xd03c，400 字节，笔画更新中调用，目前是 SelectionEvent 边界）：按路径格子坐标建集合计数，阈值 4 / 9 / 14 决定奖励加成总数（Game+0x165d4，TokenQueueCounters.bonus_total）——是游戏规则，应先恢复（建议 T040-G1）。UpdateDimming（116 字节）待判定；UpdateCrossVisibility 为表现层。
+5. SerialiseState / SerialiseClasses：存档（用户暂缓）。
+
+## 实施顺序建议
+
+1. 会话骨架：分配并互相连接全部状态，接线上表钩子，表现事件入队；先跑"空帧"（无触摸）与 F1 等价的敌人半回合。
+2. 接入触摸：用 dr_process_input 走笔画/松手；对照 F2。
+3. 新局：dr_init_new_game；对照 F4（物品仍零属性）。
+4. 测试：ctypes 调用会话接口，`dr_session_view` 返回各状态指针，复用现有状态读取函数，与原版 F4 宿主逐帧比较；每一步保持 verify --full 通过并提交。
+5. 之后：物品模型、FoldoutMenu、界面目标，再进入 T050 iOS 界面。
