@@ -65,6 +65,9 @@ SCREEN_INIT=0x307f8   # GameOverScreen::Initialise
 SPECIAL,SHAPESHIFT,SHAPESHIFT_END,HEALING,PRETZELS,CHECK_END=0x3f43c,0x918c,0x91c4,0x12e68,0xd03c,0x10b18
 SHATTER_INIT,SHATTER_INIT_END=0x9810,0x9882
 ADD_FLARE,FLARE_COUNT,SEEDS=0x9f94,0xbd8c,0x1eac20
+ADD_PARTICLES,ADD_LABEL,ADD_TILE_LABEL=0xa914,0xae2c,0xb130
+EFFECTS=C.CDLL(str(HERE/'recovered_attack_shield_native.dylib'))
+for _f in (EFFECTS.dr_add_particles,EFFECTS.dr_add_simple_label):_f.argtypes=[C.POINTER(RandomState),I32];_f.restype=None
 RANDOM=C.CDLL(str(HERE/'recovered_random_native.dylib'));RANDOM.dr_random_float.argtypes=[C.POINTER(RandomState),C.c_float,C.c_float,C.c_uint32]
 RANDOM.dr_random_float.restype=C.c_float
 class OriginalMixin:
@@ -100,6 +103,14 @@ class OriginalMixin:
                 seeds=RandomState((C.c_uint32*6)(*struct.unpack('<6I',u.mem_read(SEEDS,24))))
                 RANDOM.dr_random_float(C.byref(seeds),0.0,360.0,0);u.mem_write(SEEDS,struct.pack('<6I',*seeds.seeds))
                 if self.read(G+FLARE_COUNT)==count:self.write(G+FLARE_COUNT,count+1)   # the attack harness already counts
+            return result
+        if address in (ADD_PARTICLES,ADD_LABEL,ADD_TILE_LABEL):   # adapted by the harnesses; their stream-0 draws (verify_effect_draws.py)
+            r=[u.reg_read(v) for v in self.regs];result=super().hook(u,address,size,context)
+            if (u.reg_read(self.PC)&~1)!=address:
+                seeds=RandomState((C.c_uint32*6)(*struct.unpack('<6I',u.mem_read(SEEDS,24))))
+                if address==ADD_PARTICLES:EFFECTS.dr_add_particles(C.byref(seeds),C.c_int32(r[2]).value)
+                else:EFFECTS.dr_add_simple_label(C.byref(seeds),C.c_int32(r[1]).value if address==ADD_LABEL else 0)
+                u.mem_write(SEEDS,struct.pack('<6I',*seeds.seeds))
             return result
         if address==SCREEN_INIT and self.recording:   # recorded and skipped by the harness; its game state is written here
             u.mem_write(self.GAME+0xcac4,b'\x01');self.write(self.GAME+0xcc1c,0)

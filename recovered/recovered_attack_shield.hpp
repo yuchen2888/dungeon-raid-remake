@@ -105,6 +105,14 @@ extern "C" {
 // (UV by type, position, size 0.08, colour; the list grows when full) is presentation: the caller passes
 // type, position and colour to the renderer with the rotation.
 float dr_add_flare(std::int32_t* flare_count,dungeonraid::RandomState*);
+// Original Game::AddParticles 0xa914 (Particles::InitialiseFromTile), its game state: the particles' random
+// spread draws Rand(..., stream 0) 33 times for particle type 0 (from the tile), 81 times for types 1..3 (at the
+// tile's defence / health / attack label), none for other types. The particles are presentation.
+void dr_add_particles(dungeonraid::RandomState*,std::int32_t type);
+// Original SimpleLabel::Initialise 0x23078 (Game::AddSimpleLabel, both overloads -- the tile overload uses label
+// type 0): label types 1, 8, 9, 10 (speed 0.1) and 3 (0.08) draw nothing, any other type Rand(0.1, 0.2, stream 0)
+// once. The label is presentation.
+void dr_add_simple_label(dungeonraid::RandomState*,std::int32_t type);
 // ProcessAttack subsection [0x14790,0x147e4), phase-5 armour absorption only.
 // Returns min(incoming_damage, armour), the R10 input of shield wear below.
 // Stores incoming_damage-armour back (may be negative, as original); when

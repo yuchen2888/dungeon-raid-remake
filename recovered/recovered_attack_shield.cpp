@@ -342,3 +342,11 @@ extern "C" float dr_add_flare(std::int32_t* flare_count,RandomState* random) {
     *flare_count=static_cast<std::int32_t>(static_cast<std::uint32_t>(*flare_count)+1u);
     return rotation;
 }
+extern "C" void dr_add_particles(RandomState* random,std::int32_t type) {
+    const int draws=type==0?33:type>=1 && type<=3?81:0;
+    for(int i=0;i<draws;++i)dr_random_float(random,0.0f,1.0f,0);
+}
+extern "C" void dr_add_simple_label(RandomState* random,std::int32_t type) {
+    if(type==1 || type==3 || type==8 || type==9 || type==10)return;
+    dr_random_float(random,0.1f,0.2f,0);
+}

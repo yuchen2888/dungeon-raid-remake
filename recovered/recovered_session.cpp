@@ -94,6 +94,9 @@ template<SessionSource source,class Event> void forward_event(void* c,const Even
 
 // Game::AddFlare: every unit's Flare event is one call (dr_add_flare: rotation from stream 0, count + 1).
 void add_flare(Session& s) {dr_add_flare(&s.animation.flare_count,&s.match.random);}
+// Game::AddParticles / Game::AddSimpleLabel: their random draws on stream 0 (dr_add_particles / dr_add_simple_label).
+void particles(Session& s,std::int32_t type) {dr_add_particles(&s.match.random,type);}
+void label(Session& s,std::int32_t type) {dr_add_simple_label(&s.match.random,type);}
 bool check_end_game(Session& s) {return dr_check_end_game(&s.resources,&s.end,&s.end_hooks);}
 void move_matched_tiles(Session& s) {dr_move_matched_tiles(&s.refill,&s.refill_hooks);}
 bool attack_skull(Session& s,std::int32_t tile,std::int32_t amount,bool effects) {
@@ -119,6 +122,8 @@ void match_event(void* c,const MatchEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Match,e);
     switch(e->kind) {
     case MatchEventKind::Flare:add_flare(s);break;
+    case MatchEventKind::Particles:particles(s,e->a);break;
+    case MatchEventKind::Label:label(s,0);break;   // AddSimpleLabel(Tile*, TileType): label type 0
     case MatchEventKind::Token:dr_enqueue_token(s.tokens,static_cast<std::uint32_t>(e->tile),e->a,e->b!=0,e->c,&s.token_hooks);break;
     case MatchEventKind::SetSpecialType:dr_set_special_type(&s.generation,static_cast<std::uint32_t>(e->tile),e->a,&s.generation_hooks);break;
     case MatchEventKind::Shapeshift:dr_shapeshift(&s.resources,&s.resource_hooks);break;
@@ -144,16 +149,20 @@ void resource_event(void* c,const ResourceEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Resource,e);
     if(e->kind==ResourceEventKind::Healing)dr_healing(&s.resources,&s.resource_hooks);
     else if(e->kind==ResourceEventKind::CheckEndGame)check_end_game(s);
+    else if(e->kind==ResourceEventKind::Label)label(s,e->a);
 }
 void encounter_event(void* c,const EncounterEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Encounter,e);
     if(e->kind==EncounterEventKind::CheckEndGame)check_end_game(s);
     else if(e->kind==EncounterEventKind::Flare)add_flare(s);
+    else if(e->kind==EncounterEventKind::Label)label(s,e->a);
 }
 void path_event(void* c,const RoundEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Path,e);
     if(e->kind==BattleEvent::MoveMatchedTiles)move_matched_tiles(s);   // Game::MoveMatchedTiles at its place inside MatchTiles
     else if(e->kind==BattleEvent::Flare)add_flare(s);                 // AttackSkull's flare
+    else if(e->kind==BattleEvent::Particles)particles(s,e->a);
+    else if(e->kind==BattleEvent::Label)label(s,e->a);
 }
 void refill_event(void* c,RefillEventKind kind,std::int32_t i,std::int32_t j) {
     Session& s=self(c);const SessionSmallEvent e{static_cast<std::int32_t>(kind),i,j,0};forward(s,SessionSource::Refill,&e);
@@ -175,17 +184,42 @@ void flare_event(void* c,const AttackFlareEvent* e) {
     Session& s=self(c);forward(s,SessionSource::AttackFlare,e);
     if(e->kind==AttackFlareEventKind::Flare)add_flare(s);   // InitialiseFlares' AddFlare
 }
+void anim_event(void* c,const AttackAnimEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::AttackAnim,e);if(e->kind==AttackAnimEventKind::AddLabel)label(s,e->a);
+}
+void absorb_event(void* c,const AttackAbsorbEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::AttackAbsorb,e);if(e->kind==AttackAbsorbEventKind::Label)label(s,e->a);
+}
+void weaken_event(void* c,const AttackWeakenEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::AttackWeaken,e);
+    if(e->kind==AttackWeakenEventKind::Label)label(s,e->a);else if(e->kind==AttackWeakenEventKind::Particles)particles(s,e->a);
+}
+void all_event(void* c,const AttackAllEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::AttackAll,e);if(e->kind==AttackAllEventKind::Label)label(s,e->a);
+}
+void vampire_event(void* c,const EncounterEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::Vampires,e);if(e->kind==EncounterEventKind::Label)label(s,e->a);
+}
+void end_event(void* c,const TurnEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::EndGame,e);if(e->kind==TurnEventKind::LabelPoison)label(s,e->a);
+}
 void counterattack(void* c) {Session& s=self(c);dr_do_counterattack(&s.path,&s.all_hooks);}
 void health_event(void* c,const AttackHealthEvent* e) {
     Session& s=self(c);forward(s,SessionSource::AttackHealth,e);
     if(e->kind==AttackHealthEventKind::Vampires)dr_process_vampires(&s.generation,&s.vampire_hooks);
+    else if(e->kind==AttackHealthEventKind::Label)label(s,e->a);
 }
 bool all_attack_skull(void* c,std::int32_t tile,std::int32_t amount,bool effects) {return attack_skull(self(c),tile,amount,effects);}
 void all_move(void* c) {move_matched_tiles(self(c));}
 // EndOfTurn
 void turn_event(void* c,const TurnEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Turn,e);
-    if(e->kind==TurnEventKind::Flare || e->kind==TurnEventKind::FlareRest || e->kind==TurnEventKind::FlareTarget)add_flare(s);
+    switch(e->kind) {
+    case TurnEventKind::Flare:case TurnEventKind::FlareRest:case TurnEventKind::FlareTarget:add_flare(s);break;
+    case TurnEventKind::Label:case TurnEventKind::LabelRest:case TurnEventKind::LabelTarget:case TurnEventKind::LabelPoison:label(s,e->a);break;
+    case TurnEventKind::Particles:particles(s,e->a);break;
+    default:break;
+    }
 }
 void turn_match_tile(void* c,std::int32_t tile,std::int32_t reward) {
     Session& s=self(c);dr_match_tile(&s.match,static_cast<std::uint32_t>(tile),reward,&s.match_hooks);
@@ -226,6 +260,7 @@ void release_event(void* c,const ReleaseEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Release,e);
     SelectionState& sel=s.stroke.selection;
     switch(e->kind) {
+    case ReleaseEventKind::Label:label(s,e->a);break;
     case ReleaseEventKind::MatchTiles: {   // Game::MatchTiles: the path without its fake tiles
         std::uint8_t excluded[36];std::size_t n=0;
         for(std::uint8_t i=0;i<36;++i)if(sel.fake[i])excluded[n++]=i;
@@ -305,18 +340,18 @@ void link(Session& s) {
     s.generation_hooks={c,generation_event};
     s.encounter_hooks={c,encounter_event,&s.refill_hooks};
     s.flare_hooks={c,flare_event};
-    s.anim_hooks={c,forward_event<SessionSource::AttackAnim,AttackAnimEvent>,counterattack};
-    s.absorb_hooks={c,forward_event<SessionSource::AttackAbsorb,AttackAbsorbEvent>};
+    s.anim_hooks={c,anim_event,counterattack};
+    s.absorb_hooks={c,absorb_event};
     s.shield_hooks={c,forward_event<SessionSource::AttackShield,AttackShieldEvent>};
-    s.weaken_hooks={c,forward_event<SessionSource::AttackWeaken,AttackWeakenEvent>};
-    s.all_hooks={c,forward_event<SessionSource::AttackAll,AttackAllEvent>,all_attack_skull,all_move};
+    s.weaken_hooks={c,weaken_event};
+    s.all_hooks={c,all_event,all_attack_skull,all_move};
     s.health_hooks={c,health_event};
     s.fade_hooks={c,forward_event<SessionSource::AttackFade,AttackFadeEvent>};
     s.process_hooks={&s.flare_hooks,&s.anim_hooks,&s.absorb_hooks,&s.shield_hooks,&s.weaken_hooks,&s.all_hooks,&s.health_hooks,&s.fade_hooks};
-    s.vampire_hooks={c,forward_event<SessionSource::Vampires,EncounterEvent>,nullptr};
+    s.vampire_hooks={c,vampire_event,nullptr};
     s.turn_hooks={c,turn_event,turn_match_tile,all_attack_skull,turn_check_end_game,all_move,turn_ability,
                   turn_swap,push_token,token_target,token_start};
-    s.end_hooks={c,forward_event<SessionSource::EndGame,TurnEvent>,game_over};
+    s.end_hooks={c,end_event,game_over};
     s.over_hooks={c,over_event,add_score};
     s.schedule_hooks={c,end_of_turn};
     s.release_hooks={c,release_event,release_check_end_game};

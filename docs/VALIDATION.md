@@ -438,3 +438,9 @@
 
 - 新 verify_skill_input：原 Interface::ProcessInput（技能按钮部分）、Skill::CanActivate / Activate、FireBreath 从入口执行，1500 组（141 次使用技能、44 次 FireBreath）一致；错误副本 12 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：72 步通过。运行目录 `.relay/runs/20261020T184937.532655Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-J1：粒子与标签的随机抽取（Claude）
+
+- 新 verify_effect_draws：原 AddParticles、AddSimpleLabel 两个重载从入口执行，120 组 1440 次调用（粒子 595、标签 556、格子标签 289）后随机种子一致。
+- verify_session（原版侧在宿主跳过这三个函数时施加同一抽取）：12627 帧一致。会话接线错误副本 7 个：匹配粒子 / 标签、回合标签 / 粒子、攻击动画标签、松手标签 6 个 exit 1；路径标签（path_label）存活——它只来自毒伤标签（需装备属性，会话用零装备）与路径交叉成就标签（模式 1 且交叉 > 4），对局中未出现，已记录为未覆盖。
+- `./scripts/relay.sh verify --full` → exit 0：73 步通过。运行目录 `.relay/runs/20261020T191817.287018Z`，inputs_unchanged true。

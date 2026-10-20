@@ -257,6 +257,14 @@ verify_session 的原版侧相应改为执行原函数：从匹配 / 笔画 / �
 
 会话接线：MatchEvent Flare、路径 RoundEvent Flare（AttackSkull）、TurnEvent Flare / FlareRest / FlareTarget、EncounterEvent Flare（JumpDown）、AttackFlare Flare（InitialiseFlares）都调用 dr_add_flare（原先攻击处只把计数 + 1）。verify_session 的原版侧在宿主跳过 AddFlare 时施加同一状态变化（随机抽取；攻击宿主已计数时不重复计数）。错误副本 5 个：匹配、回合、攻击、路径 4 个被拒；遭遇（JumpDown）存活，对局中未出现。
 
+## T040-J1：粒子与标签的随机抽取（Claude，2026-10-20）
+
+原生 `dr_add_particles(RandomState*, type)`：类型 0 抽 33 次、类型 1–3 抽 81 次（Game::AddParticles → Particles::InitialiseFromTile / InitialiseAtPosition，40 个粒子）；`dr_add_simple_label(RandomState*, type)`：标签类型 1、3、8、9、10 不抽，其余抽一次 Rand(0.1, 0.2, 流 0)（SimpleLabel::Initialise；Game::AddSimpleLabel(Tile*, TileType) 用类型 0）。抽取的值只决定粒子 / 标签外观，推进的是流 0。
+
+验证 `recovered/verify_effect_draws.py`：三个原函数从入口执行（粒子 / 标签存储、RegenerateLabel、SetColour、格子标签位置与 SjLj 桩跳过，cosf / sinf 用宿主 libm，Particles::Initialise* 与 SimpleLabel::Initialise 为原代码），120 组共 1440 次调用后随机种子一致。
+
+会话接线：MatchEvent Particles / Label（类型 0）、路径 RoundEvent Particles / Label（AttackSkull）、TurnEvent Label / LabelRest / LabelTarget / LabelPoison / Particles、EndGame LabelPoison、EncounterEvent Label（含吸血）、ResourceEvent Label、ReleaseEvent Label、攻击的 absorb / health / weaken / all 标签与 weaken 粒子、AttackAnim AddLabel，都调用对应模型（字段 a 为类型）。verify_session 原版侧在宿主跳过这三个函数时施加同一抽取：12627 帧一致，12 局游戏结束。十字标签（UpdateCrossVisibility）留待 J2。错误副本 7 个，6 个被拒；路径标签存活（毒伤标签需装备属性、交叉成就标签需模式 1 且交叉 > 4，会话对局未出现）。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
