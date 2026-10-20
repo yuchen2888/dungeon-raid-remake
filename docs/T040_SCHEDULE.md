@@ -190,6 +190,16 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 意义：原生代码按 Game::Process 的整帧调度驱动全部已恢复单元，能与原版逐帧一致地完成多回合对局并走到游戏结束（界面关闭、无存档、起始物品为测试数据）。
 
+## T040-F4：从新局开始的整局，逐帧（Claude，2026-10-20）
+
+新整合测试 `recovered/verify_new_game_play.py`（不新增原生代码）：每局先 Game::InitNewGame（原版按 verify_new_game 运行；原生 dr_init_new_game，其 NewGameState 指向整帧调度和各单元共用的同一批原生对象），然后按 F3 方式逐帧对局（原版真实 Game::Process、原生 dr_process_frame）。起局后先比较起局事件（物品、界面、生成事件）与整局状态，再逐帧比较。
+
+6 局 60 回合 3574 帧全部一致（19 帧因奖励打开菜单提前结束本帧，两侧一致）。错误副本：起始生命上限 41、棋盘生成行列对调，均 exit 1。
+
+起局边界：time() 返回用例种子；物品构造与 UpdateStats 两侧记录（物品为测试宿主的零属性）；职业档案来自用例。宿主注意：verify_new_game 的 Native 加载会占用 `hooks` 名称（笔画的 SelectionHooks），整局测试另存其钩子并恢复 SelectionHooks。
+
+至此：从新局开始、经多回合直到游戏结束，原生恢复代码都能与原版逐帧一致（界面关闭、物品零属性、无存档）。剩余为原生会话库化（把 Python 测试宿主中的状态共享与钩子接线固化为 C++ 会话接口，供 iOS 层调用）、物品模型、界面/表现层与存档。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

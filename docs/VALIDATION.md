@@ -380,3 +380,8 @@
 
 - 新 verify_game_frames：6 局 22 回合 1603 帧，原版每帧真实 Game::Process、原生每帧 dr_process_frame（全部单元接线），状态逐帧一致；2 局以游戏结束收场。错误副本 4 个（去掉 effects、攻击提前、不消耗触摸、忽略伤害标签结束）全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、59 个 verify 脚本共 62 步通过。运行目录 `.relay/runs/20261020T091102.578528Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-F4：从新局开始的整局（Claude）
+
+- 新 verify_new_game_play：6 局 60 回合 3574 帧（起局 InitNewGame / dr_init_new_game，之后原版 Game::Process 对原生 dr_process_frame）逐帧一致。错误副本：起始生命上限、棋盘生成行列，均 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、60 个 verify 脚本共 63 步通过。运行目录 `.relay/runs/20261020T092515.944969Z`，inputs_unchanged true。
