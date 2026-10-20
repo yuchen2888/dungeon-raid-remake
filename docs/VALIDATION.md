@@ -407,3 +407,8 @@
 - verify_session 扩展：原版执行 SetSpecialType、Shapeshift、Healing、ProcessPretzels、单元内 CheckEndGame、InialiseShieldShatter；新局 9 局 9472 帧 + 携带中局 15 局 3903 帧，共 13375 帧一致，14 局游戏结束；ProcessPretzels 27、SetSpecialType 3、Shapeshift 24、Healing 4、资源单元 CheckEndGame 3 次。
 - 新接线错误副本 7 个：ProcessPretzels、SetSpecialType、Shapeshift、Healing 4 个 exit 1；资源 / 遭遇单元 CheckEndGame、ShieldShatter 3 个存活（对局中未出现致死或该事件）。
 - `./scripts/relay.sh verify --full` → exit 0：66 步通过。运行目录 `.relay/runs/20261020T140225.158238Z`，inputs_unchanged true（前一次 20261020T134010.725844Z 66 步全过但运行中改了文档，判 invalid-inputs-changed）。
+
+## 2026-10-20 T040-H1：Skill::Activate / CanActivate / RemoveSkill（Claude）
+
+- 新 verify_skills：原函数从入口执行，1200 组棋盘：CanActivate 49200 次（每组 41 个类型）、Activate 900 次、RemoveSkill 300 次一致；错误副本 21 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、64 个 verify 脚本共 67 步通过。运行目录 `.relay/runs/20261020T155609.374442Z`，inputs_unchanged true。

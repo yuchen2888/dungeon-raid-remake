@@ -65,6 +65,7 @@
 | T040-G1 | 完成 / Claude，待复核 | ProcessPretzels（dr_process_pretzels：路径斜步交叉计数→奖励等级与预览总数）；1500 组，四个等级都覆盖 | verify_pretzels.py；10 个错误副本被拒，4 个等价变异存活（见 T040_SCHEDULE） |
 | T040-G2a | 完成 / Claude，待复核 | 原生会话库 recovered_session：全部状态对象 + C++ 接线（等价 F4 的测试宿主接线）+ GameOverScreen::Initialise 的状态写入；新局 9 局 + 携带中局 10 局，181 回合 11909 帧，11 局以游戏结束收场 | verify_session.py；错误副本见 VALIDATION |
 | T040-G2b | 完成 / Claude，待复核 | 会话接上 F 系列仍为适配器的部分：G0（SetSpecialType / Shapeshift / Healing）、G1（ProcessPretzels）、单元内 CheckEndGame（资源、遭遇、松手）、ShieldShatter 事件 → dr_initialise_shield_shatter；测试中原版同时执行这些函数 | verify_session.py 扩展 |
+| T040-H1 | 完成 / Claude，待复核 | 新模块 skills：Skill::Activate（40 类型分派、标志类技能、符文启用）、Skill::CanActivate(int)、Game::RemoveSkill；棋盘技能函数暂为 SkillHooks.action 边界 | verify_skills.py；21 个错误副本被拒；T040_SKILLS.md |
 | T040-H | 进行中 / Claude | 技能系统：Skill::Activate（40 种类型）/ CanActivate 与约 25 个 Game 技能函数、技能输入目标；符文玩法依赖它 | 新单元测试 + 会话接线 |
 | T040-G | 完成（G0..G2b） / Claude，待复核 | 原生会话库：把测试宿主中的共享对象与钩子接线固化为 C++ 会话（新局、每帧 dr_process_frame、触摸输入、状态查询），供 iOS 层调用；用 F4 方式与原版逐帧比较 | 新 recovered_session 模块 + 测试 |
 | T040-F | 完成（F1..F4） | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |
