@@ -37,10 +37,10 @@ FLAGS=dict(coin=0xbfbb,next_coin=0xbfbc,counter=0xbfba,double_damage=0xbe74,doub
            rune=0x16491,arrow_hold=0x16492,guard_164a4=0x164a4,revive_second=0x164a5)
 
 class SkillState(C.Structure):_fields_=[(k,C.c_void_p) for k in ('slots','resources','path','generation','flags','finish','rune','animation','end')]
-class SkillEvent(C.Structure):_fields_=[('kind',I32),('a',I32),('b',I32),('c',I32)]
+class SkillEvent(C.Structure):_fields_=[('kind',I32),('a',I32),('b',I32),('c',I32),('d',I32)]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,C.POINTER(SkillEvent))
 ACTION=C.CFUNCTYPE(None,C.c_void_p,I32,I32,I32)
-class SkillHooks(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT),('action',ACTION)]
+class SkillHooks(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT),('action',ACTION),('match',C.c_void_p),('path',C.c_void_p)]
 
 def address(text,symbol):
     m=re.search(r'^'+re.escape(symbol)+r':\n\s*([0-9a-f]+):',text,re.M);assert m,symbol;return int(m[1],16)

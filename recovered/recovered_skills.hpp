@@ -2,6 +2,7 @@
 #include "recovered_turn.hpp"
 #include "recovered_attack_shield.hpp"
 #include "recovered_generation.hpp"
+#include "recovered_match.hpp"
 namespace dungeonraid {
 // The state player skills read and write. The equipped skills are the Skill objects of Game+0xbf90
 // (resources->skill_count of them, Game+0xbfa0); per slot their type (Skill+0x84), level (+0x88) and active
@@ -28,13 +29,20 @@ enum class SkillAction : std::int32_t { FreezeSkulls=1, GrabTiles, ShatterDefenc
 // PositionSkill: Interface::PositionSkill(a) (the skill button of slot a moves). Flare: Game::AddFlare(type a,
 // tile b's resting position, colour c = RGBA bytes) -- wire to dr_add_flare (its game state). Freeze: the
 // freeze overlay of tile b shown (Tile::SetFreezeVisibility(true) render part). Menu: Interface::ShowMenu(a).
-// Tile appearance (Quad::SetUV / SetColour of Tile::Make*) goes to the GenerationHooks as UV / Colour events.
-enum class SkillEventKind : std::int32_t { Sound=1, Achievement, ArrowColour, PositionSkill, Flare, Freeze, Menu };
-struct SkillEvent { SkillEventKind kind; std::int32_t a,b,c; };
+// Particles: Game::AddParticles(tile b, type a). Text: Tile::UpdateText(a, c, d) on tile b. Label:
+// Game::AddSimpleLabel(type a, tile b's resting position, number c, colour d, scale 0.5). EnemyUV:
+// Tile::UpdateEnemyUV on tile b. MoveMatchedTiles: Game::MoveMatchedTiles (wire to dr_move_matched_tiles).
+// JumpDown: Game::JumpDown(tile b) (wire to dr_jump_down). Tile appearance (Quad::SetUV / SetColour of
+// Tile::Make*) and RandI go to the GenerationHooks as UV / Colour / Random events.
+enum class SkillEventKind : std::int32_t { Sound=1, Achievement, ArrowColour, PositionSkill, Flare, Freeze, Menu,
+    Particles, Text, Label, EnemyUV, MoveMatchedTiles, JumpDown };
+struct SkillEvent { SkillEventKind kind; std::int32_t a,b,c,d; };
 struct SkillHooks {
     void* context;
     void (*event)(void*,const SkillEvent*);
     void (*action)(void*,SkillAction,std::int32_t a,std::int32_t b);
+    const MatchHooks* match;   // Game::MatchTile (dr_match_tile) in GrabTiles / KillSpecialEnemy
+    const PathHooks* path;     // Game::AttackSkull (dr_path_attack_skull) in ExplodeArmour
 };
 }
 extern "C" {
@@ -68,6 +76,28 @@ void dr_create_arrows(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,co
 // Original Game::CreateMagicSword 0xccc0: RandI(0, normal swords - 1, stream 5) picks one normal sword that
 // becomes a magic sword (Tile::MakeMagicSword: magic_sword, colour 150,150,255,255) with a flare (100,100,255,255).
 void dr_create_magic_sword(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::DemoteSpecialEnemy 0xa6f4: RandI(0, special enemies - 1, stream 5) picks one: enemy type 0
+// (UpdateEnemyUV), enemy state 0, flare (0,255,0,255).
+void dr_demote_special_enemy(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::PromoteNormalEnemy 0xb648: RandI(0, plain skulls - 1, stream 5) picks one, promoted with
+// Tile::Promote(turn, difficulty, true) while promotion_enabled (+0x14af4) is 0 (then 1); flare
+// (240,150,10,255); a promoted enemy 31 jumps down (Game::JumpDown).
+void dr_promote_normal_enemy(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::KillSpecialEnemy 0x11498: RandI(0, special enemies - 1, stream 5) picks one; the five
+// matched counters are cleared; MatchTile(pick, 7) and a white flare; MoveMatchedTiles; without Game+0x1554c
+// every tile's attack flag is cleared.
+void dr_kill_special_enemy(dungeonraid::SkillState*,const dungeonraid::SkillHooks*,const dungeonraid::GenerationHooks*);
+// Original Game::GrabTiles 0x12060: the five matched counters and Game+0x13ec4 cleared; every tile of the type
+// (a normal potion for type 0) is MatchTile'd with the reward; MoveMatchedTiles; without Game+0x1554c every
+// tile's attack flag is cleared (no flare timer reset).
+void dr_grab_tiles(dungeonraid::SkillState*,std::int32_t type,std::int32_t reward,const dungeonraid::SkillHooks*);
+// Original Game::ShatterDefence 0xcf4c: every plain skull with defence loses it (particles 1, UpdateText(0,1,0))
+// and with attack above 1 drops to attack 1 (particles 3, UpdateText(1,0,0)). No flare timer reset.
+void dr_shatter_defence(dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
+// Original Game::ExplodeArmour 0x115dc: the five matched counters cleared; every skull gets a flare
+// (240,150,10,255), a label 2 with twice the armour (colour 11) and AttackSkull(tile, twice the armour, no effects);
+// MoveMatchedTiles; without Game+0x1554c every tile's attack flag is cleared.
+void dr_explode_armour(dungeonraid::SkillState*,const dungeonraid::SkillHooks*);
 // Original Game::RemoveSkill 0x9114 for the skill in slot: the later skills move up one slot (each
 // PositionSkill), the removed one goes to the last slot and skill_count drops by one; an unequipped slot
 // (outside 0..skill_count-1) changes nothing.

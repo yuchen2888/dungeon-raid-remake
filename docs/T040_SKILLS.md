@@ -68,7 +68,22 @@ recovered_skills 新增（结束时都把闪光计时 MatchState shake_progress_
 
 闪光以 SkillEventKind::Flare 交出（会话接 dr_add_flare），格子外观（UV / 颜色）与随机数按生成单元的事件格式交出。验证 `recovered/verify_skill_board.py`：原函数从入口执行，生成宿主打开（SetType、RandI、IsNormalPotion、GetNormalSwordCount、Tile::Make*、SetFreezeVisibility 为原代码），AddFlare 与 ShowMenu 记录并跳过；700 组（每个函数 100 组）、2561 个闪光，事件、棋盘、战斗格、药水、生成附加数据与事件、随机种子、闪光计时、Game+0x165b8 一致。错误副本 16 个全部 exit 1（其中一个发现：ConvertTiles 是按行遍历，初稿按列被测试拒绝后改正）。
 
+## H3 第二批：DemoteSpecialEnemy、PromoteNormalEnemy、KillSpecialEnemy、GrabTiles、ShatterDefence、ExplodeArmour（Claude，2026-10-20）
+
+| 原版 | 原生 | 行为 |
+| --- | --- | --- |
+| Game::DemoteSpecialEnemy 0xa6f4 | dr_demote_special_enemy | RandI(0, 特殊敌人数−1, 流 5) 按列选一个：敌人类型 0（UpdateEnemyUV）、敌人状态 0，闪光（0,255,0,255）；闪光计时重置 |
+| Game::PromoteNormalEnemy 0xb648 | dr_promote_normal_enemy | RandI(0, 普通骷髅数−1, 流 5) 按列选一个：promotion_enabled（+0x14af4）置 0 时 Tile::Promote(回合, 难度, true)，再置 1；闪光（240,150,10,255）；升级成 31 号敌人则 JumpDown；闪光计时重置 |
+| Game::KillSpecialEnemy 0x11498 | dr_kill_special_enemy | RandI 选一个特殊敌人（RandI 在清零前）；五个匹配计数清零；MatchTile(选中, 7) 与白色闪光；MoveMatchedTiles；Game+0x1554c 为 0 时所有格子的攻击标志（Tile+0x86）清零；闪光计时重置 |
+| Game::GrabTiles 0x12060 | dr_grab_tiles | 五个匹配计数与 Game+0x13ec4 清零；按列，该类型的格子（类型 0 须为普通药水）MatchTile(格子, 奖励)；MoveMatchedTiles；同上攻击标志；不重置闪光计时 |
+| Game::ShatterDefence 0xcf4c | dr_shatter_defence | 按列，每个普通骷髅：有防御则粒子 1、防御 0、UpdateText(0,1,0)；攻击 > 1 则粒子 3、攻击 1、UpdateText(1,0,0)；不重置闪光计时 |
+| Game::ExplodeArmour 0x115dc | dr_explode_armour | 五个匹配计数清零；按列，每个骷髅：闪光（240,150,10,255）、标签 2（**护甲 × 2**，颜色 11，缩放 0.5）、AttackSkull(格子, 护甲 × 2, 无特效)；MoveMatchedTiles；同上攻击标志；闪光计时重置 |
+
+SkillHooks 增加 match（MatchTile）与 path（AttackSkull）钩子指针；SkillEvent 增加字段 d；新事件 Particles、Text、Label、EnemyUV、MoveMatchedTiles、JumpDown（后两个由会话接 dr_move_matched_tiles / dr_jump_down）。
+
+验证 `recovered/verify_skill_board2.py`：原函数从入口执行；函数自身的调用（AddFlare、AddParticles、UpdateText、AddSimpleLabel、UpdateEnemyUV、MoveMatchedTiles、JumpDown）记录并跳过，自身的 RandI 为原代码并记为生成单元的 Random 事件；MatchTile 在匹配宿主下、AttackSkull 在路径宿主下、Tile::Promote 在生成宿主下以原代码执行。600 组（每个函数 100 组）的技能事件、生成 / 棋盘 / 战斗状态与事件、匹配与路径状态与事件、随机种子、闪光计时、Game+0x13ec4 一致。错误副本 17 个全部 exit 1。两处由测试发现并改正：ExplodeArmour 用两倍护甲（初稿漏看 lsls #1）；敌人状态需在用例中随机化，Demote 清零敌人状态的错误副本才会被拒。
+
 ## 后续
 
-- H3..H5：其余 14 个棋盘技能函数（GrabTiles、ShatterDefence、Teleport、CollectRandomRow、DemoteSpecialEnemy、KillSpecialEnemy、PromoteNormalEnemy、Earthquake、ExplodeArmour、CollectRandomBlock、ConvertColumnToSwords、KillSkullsNextToCoins、CollectEdgeTiles、CreateChain、CollectBoard），每个 200～450 字节。
+- H4：其余 9 个棋盘技能函数（Teleport、CollectRandomRow、Earthquake、CollectRandomBlock、ConvertColumnToSwords、KillSkullsNextToCoins、CollectEdgeTiles、CreateChain、CollectBoard）。
 - H6：Interface::ProcessInput 的技能按钮（CanActivate、冷却、输入目标 Game+0x58ac）、Skill::Deactivate、Game::SetSkill，以及会话接线。

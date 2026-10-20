@@ -423,3 +423,8 @@
 
 - 新 verify_skill_board：Upgrade、FreezeSkulls、ConvertTiles、CreateManaPotions、CreateExplosivePotions、CreateArrows、CreateMagicSword 原函数各 100 组（共 700 组、2561 个闪光）一致；错误副本 16 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：69 步通过。运行目录 `.relay/runs/20261020T175349.088252Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-H3：棋盘技能第二批（Claude）
+
+- 新 verify_skill_board2：DemoteSpecialEnemy、PromoteNormalEnemy、KillSpecialEnemy、GrabTiles、ShatterDefence、ExplodeArmour 原函数各 100 组一致；错误副本 17 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：70 步通过。运行目录 `.relay/runs/20261020T181115.250924Z`，inputs_unchanged true。

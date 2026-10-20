@@ -1,4 +1,5 @@
 #include "recovered_skills.hpp"
+#include "recovered_path.hpp"
 #include <cstring>
 #include <utility>
 using namespace dungeonraid;
@@ -21,8 +22,8 @@ std::int32_t normal_potions(const SkillState* s) {                // Game::GetNo
 std::int32_t normal_swords(const SkillState* s) {                 // Game::GetNormalSwordCount
     std::int32_t n=0;for(const auto& t:board(s).tiles)if(t.rule.type==4 && !t.magic_sword && !t.rule.flag_231)++n;return n;
 }
-void emit(const SkillHooks* h,SkillEventKind kind,std::int32_t a=0,std::int32_t b=0,std::int32_t c=0) {
-    const SkillEvent e{kind,a,b,c};h->event(h->context,&e);
+void emit(const SkillHooks* h,SkillEventKind kind,std::int32_t a=0,std::int32_t b=0,std::int32_t c=0,std::int32_t d=0) {
+    const SkillEvent e{kind,a,b,c,d};h->event(h->context,&e);
 }
 void act(const SkillHooks* h,SkillAction action,std::int32_t a=0,std::int32_t b=0) {h->action(h->context,action,a,b);}
 constexpr std::int32_t rgba(std::uint32_t r,std::uint32_t g,std::uint32_t b,std::uint32_t a) {
@@ -183,4 +184,82 @@ extern "C" void dr_create_magic_sword(SkillState* s,const SkillHooks* h,const Ge
         flare(h,i,1,rgba(100,100,255,255));pick=-1;
     }
     reset_flare_timers(s);
+}
+namespace {
+std::int32_t pick_random(SkillState* s,std::int32_t n,const GenerationHooks* gh) {   // RandI(0, n - 1, stream 5)
+    const std::int32_t v=dr_random_int(&s->path->match->random,0,n-1,5);tile_event(gh,GenerationEventKind::Random,-1,0,n-1,5,v);return v;
+}
+bool special(const RuleTile& r) {return r.type==1 && r.enemy_type;}
+bool plain_skull(const RuleTile& r) {return r.type==1 && !r.enemy_type;}
+void clear_matched_counts(SkillState* s) {for(int i=0;i<5;++i)s->path->match->matched_counts[i]=0;}
+void after_matches(SkillState* s,const SkillHooks* h) {   // MoveMatchedTiles, then attack flags unless Game+0x1554c
+    emit(h,SkillEventKind::MoveMatchedTiles);
+    if(!s->finish->flag_1554c)for(auto& c:s->path->combat)c.attack_flag=0;
+}
+}
+extern "C" void dr_demote_special_enemy(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    std::int32_t n=0;for(const auto& t:board(s).tiles)n+=special(t.rule);
+    std::int32_t pick=pick_random(s,n,gh);
+    for(int k=0;k<36 && pick>=0;++k) {
+        const int i=column_major(k);auto& rule=board(s).tiles[i].rule;
+        if(!special(rule))continue;
+        if(pick) {--pick;continue;}
+        rule.enemy_type=0;emit(h,SkillEventKind::EnemyUV,0,i);rule.enemy_state=0;
+        flare(h,i,1,rgba(0,255,0,255));pick=-1;
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_promote_normal_enemy(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    std::int32_t n=0;for(const auto& t:board(s).tiles)n+=plain_skull(t.rule);
+    std::int32_t pick=pick_random(s,n,gh);
+    for(int k=0;k<36 && pick>=0;++k) {
+        const int i=column_major(k);const auto& rule=board(s).tiles[i].rule;
+        if(!plain_skull(rule))continue;
+        if(pick) {--pick;continue;}
+        auto& g=*s->generation;g.promotion_enabled=0;
+        dr_promote_tile(&g,static_cast<std::uint32_t>(i),s->path->turn,s->path->match->spawn_enabled_14ae0,true,gh);
+        g.promotion_enabled=1;flare(h,i,1,rgba(240,150,10,255));
+        if(board(s).tiles[i].rule.enemy_type==31)emit(h,SkillEventKind::JumpDown,0,i);
+        pick=-1;
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_kill_special_enemy(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    std::int32_t n=0;for(const auto& t:board(s).tiles)n+=special(t.rule);
+    std::int32_t pick=pick_random(s,n,gh);clear_matched_counts(s);
+    for(int k=0;k<36 && pick>=0;++k) {
+        const int i=column_major(k);
+        if(!special(board(s).tiles[i].rule))continue;
+        if(pick) {--pick;continue;}
+        dr_match_tile(s->path->match,static_cast<std::uint32_t>(i),7,h->match);flare(h,i,1,rgba(255,255,255,255));pick=-1;
+    }
+    after_matches(s,h);reset_flare_timers(s);
+}
+extern "C" void dr_grab_tiles(SkillState* s,std::int32_t type,std::int32_t reward,const SkillHooks* h) {
+    clear_matched_counts(s);s->path->match->sound_13ec4=0;
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);
+        if(board(s).tiles[i].rule.type!=type || (type==0 && !normal_potion(s,i)))continue;
+        dr_match_tile(s->path->match,static_cast<std::uint32_t>(i),reward,h->match);
+    }
+    after_matches(s,h);
+}
+extern "C" void dr_shatter_defence(SkillState* s,const SkillHooks* h) {
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);if(!plain_skull(board(s).tiles[i].rule))continue;
+        auto& c=s->path->combat[i];
+        if(c.defence>0) {emit(h,SkillEventKind::Particles,1,i);c.defence=0;emit(h,SkillEventKind::Text,0,i,1,0);}
+        if(c.attack>1) {emit(h,SkillEventKind::Particles,3,i);c.attack=1;emit(h,SkillEventKind::Text,1,i,0,0);}
+    }
+}
+extern "C" void dr_explode_armour(SkillState* s,const SkillHooks* h) {
+    clear_matched_counts(s);
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);if(board(s).tiles[i].rule.type!=1)continue;
+        flare(h,i,1,rgba(240,150,10,255));
+        auto twice=[s] {return static_cast<std::int32_t>(static_cast<std::uint32_t>(s->path->match->preview->armour_current)<<1);};
+        emit(h,SkillEventKind::Label,2,i,twice(),11);   // twice the armour, read again for the attack
+        dr_path_attack_skull(s->path,static_cast<std::uint32_t>(i),twice(),false,h->path);
+    }
+    after_matches(s,h);reset_flare_timers(s);
 }
