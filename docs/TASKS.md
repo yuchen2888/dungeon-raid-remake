@@ -54,6 +54,8 @@
 | T040-E | 完成 / Claude，待复核 | InitNewGame 整函数（dr_init_new_game）与 CalculateTilePositions；字段表来自写入追踪；200 次比较 | verify_new_game.py；错误副本被拒；物品构造仍为边界 |
 | T040-D1 | 完成 / Claude，待复核 | Game::Process 伤害标签段 [0x176fc,0x17cda)（dr_process_damage_labels：显示、飞行、到达回血/扣血、CheckEndGame）；300 组 1081 帧 | verify_damage_labels.py；错误副本被拒 |
 | T040-D2a | 完成 / Claude，待复核 | Process 棋盘效果段（dr_process_board_effects：首局帮助随机、盾牌碎裂、毒效果淡出）与 InialiseShieldShatter；250 组 620 帧 | verify_board_effects.py；错误副本被拒 |
+| T040-D2b | 完成 / Claude，待复核 | Process 回合计数清零、攻击闪光淡出、当前伤害标签与帮助 8 取消笔画（三个原生函数）；300 组 726 帧 | verify_frame_parts.py；错误副本被拒 |
+| T040-D3 | 待做 | Game::Process 整帧调度：界面门槛（GameOver/Score/Help/Unlock/Main/Name/Intro）、ProcessInput 两处调用条件、ProcessAttack、Interface::Process、触摸阶段复位；粒子/标签池为表现层 | T040_PROCESS_CALLS.json |
 | T040-C3 | 待做 | ProcessInput 剩余：ProcessPretzels、UpdateDimming；UpdateCrossVisibility 定为表现层边界 | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
@@ -122,6 +124,8 @@
 认领记录：`T030-N4a / claude / 起始 ded977a / 继承差异：无 / 目标：Game::UpdateStats / 文件：recovered/recovered_stats.*、recovered/verify_stats.py、recovered/build.sh、scripts/verify.py、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：Item::MakeStats 与 DestroyUpgrade`
 
 认领记录：`T030-N4b / claude / 起始 80e0e2e / 继承差异：无 / 目标：DestroyUpgrade / 文件：recovered/recovered_stats.*、recovered/recovered_turn.hpp、recovered/verify_stats.py、recovered/build.sh、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：SerialiseState 或 T040`
+
+认领记录：`T040-D2b / claude / 起始 6877c6f / 继承差异：无 / 目标：Process 回合计数、闪光淡出、伤害标签 / 文件：recovered/recovered_schedule.*、recovered/verify_frame_parts.py、recovered/verify_new_game.py（字段改名）、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：T040-D3`
 
 认领记录：`T040-D2a / claude / 起始 a866a5e / 继承差异：无 / 目标：Process 棋盘效果段 / 文件：recovered/recovered_schedule.*、recovered/verify_board_effects.py、recovered/verify_new_game.py（0xbf88 改归属）、scripts/、docs/ / 验收：verify --full 全部通过 + 错误副本被拒 / 下一步：T040-D2b`
 

@@ -349,3 +349,8 @@
 - 新 verify_board_effects：段差分（0x17d22 → 0x173c8），RandI / Interpolate 原代码；250 组 620 帧，另比较 InialiseShieldShatter；错误副本 17 个全部 exit 1（"碎裂结束 ≥0.99"最初存活，补边界用例后被拒）。verify_new_game 随 0xbf88 改归 ShieldShatterState 更新后仍 200 组通过。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、53 个 verify 脚本共 56 步通过。运行目录 `.relay/runs/20261020T050022.358902Z`，inputs_unchanged true。
 - `scripts/t040_process_audit.py --check` matches true（Process 未恢复目标 4 个）。
+
+## 2026-10-19 T040-D2b：回合计数清零、攻击闪光淡出、当前伤害标签（Claude）
+
+- 新 verify_frame_parts：两段段差分，300 组 726 帧，66 次回合计数清零、10 次帮助取消笔画；错误副本 18 个全部 exit 1（"不清两端"最初存活，随机化初值后被拒）。verify_new_game 随字段改名（particles_b53c / labels_b54c）仍 200 组通过。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、54 个 verify 脚本共 57 步通过。运行目录 `.relay/runs/20261020T052536.934629Z`，inputs_unchanged true。

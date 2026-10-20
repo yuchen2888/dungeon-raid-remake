@@ -1808,6 +1808,27 @@
     },
     {
       "function": "__ZN4Game7ProcessEv",
+      "start": "0x17400",
+      "end_exclusive": "0x1744c",
+      "native": "dr_reset_round_counters (recovered_schedule)",
+      "verify": "recovered/verify_frame_parts.py",
+      "task": "T040-D2b",
+      "original_bytes_sha256": "a6193c3cee2dbae2e6fe7d231cd5a28a51e3305dc6f6f4403d945630df6dd44c"
+    },
+    {
+      "function": "__ZN4Game7ProcessEv",
+      "start": "0x17570",
+      "end_exclusive": "0x176fc",
+      "extra": [
+        "0x17d64..0x17d74"
+      ],
+      "native": "dr_process_flare_fade + dr_process_damage_label (recovered_schedule)",
+      "verify": "recovered/verify_frame_parts.py",
+      "task": "T040-D2b",
+      "original_bytes_sha256": "8ee9dd726b74a3d5a895ba915437c80930a7376eb8b58dab8d4f70202a0b2aad"
+    },
+    {
+      "function": "__ZN4Game7ProcessEv",
       "start": "0x173c8",
       "end_exclusive": "0x17400",
       "native": "moving-list subsection (recovered_refill)",

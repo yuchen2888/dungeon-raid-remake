@@ -115,6 +115,22 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 错误副本 17 个全部 exit 1：帮助位 2、帮助格行列对调、帮助随机流 1、碎裂速率 3、碎裂结束 ≥0.99 与 ≥1、结束后仍画碎片、行优先遍历、毒进度速率 2、不封顶、颜色方向对调、绿色分量 77、结束时不清 clearing、不发 UpdateText、只看 active、初始化不置活动、初始化不清进度。其中"结束 ≥0.99"最初存活（无进度落在 [0.99,1] 的用例），补充进度 0.995/1.0 与 dt=0 后被拒。
 
+## T040-D2b：回合计数清零、攻击闪光淡出、当前伤害标签（Claude，2026-10-19）
+
+`recovered_schedule` 新增三个函数（共用 FrameState / FrameHooks）：
+
+| 原版 Game::Process 段 | 原生 | 行为 |
+| --- | --- | --- |
+| [0x17400,0x1744c) | dr_reset_round_counters | 下落列表与路径都为空，且回合总数（preview total_165d0）或代币奖励总数 >0 时：两者及 5 宽代币计数（含 NewGameExtra 两端）清零 |
+| [0x17570,0x17622) | dr_process_flare_fade | 攻击阶段不是 2..4 且仍有闪光：shake_progress_bd90 += 2·dt（尺寸），shake_scale_bd94 −= 3.5·dt（透明度），小于 0 时置 0 并结束闪光（NaN 不结束，与 bpl 一致）；每个闪光 SetAlpha(透明度·255) 与尺寸。闪光结束后输入门槛才放行 |
+| [0x17622,0x176fc)+[0x17d64,0x17d74) | dr_process_damage_label | 当前伤害标签（Game+0xb550）：显示且伤害为 0 时淡出；伤害 >0 时显示在触摸点上方 0.14（类型 1）；有计数骷髅时显示帮助 8、ShowHelpBaseDmg、ShowHelpWeaponDmg，若帮助标志 0x400 之前已置且被 ShowHelpWeaponDmg 清除，则取消笔画（current_damage=0、触摸阶段 3、ProcessInput） |
+
+另：NewGameExtra 的 0xb53c / 0xb54c 改名 particles_b53c / labels_b54c——它们是 Process 维护的 Particles / SimpleLabel 池活动数量（T040-E 时按偏移误称代币）。
+
+验证 `recovered/verify_frame_parts.py`：两段段差分（[0x173c8,0x1744c)，下落格由原 Tile::Process 处理；[0x17570,0x176fc)），300 组 726 帧，66 次回合计数清零、10 次帮助取消笔画；各事件类型、闪光结束/继续、阶段跳过分支均到达。帮助标志是否被 ShowHelpWeaponDmg 清除由用例决定，两侧同样应用。
+
+错误副本 18 个全部 exit 1：忽略下落数、忽略路径、只看回合总数、不清两端、不清奖励数组、阶段 5 也跳过、尺寸增速 1、透明度速率 3、透明度到 0 不结束闪光、≤0 即结束、闪光数 0 也处理、负伤害也淡出、偏移 0.1、不看计数骷髅、不看先前帮助标志、取消判断改在 WeaponDmg 之前读标志、取消用阶段 2、取消不清伤害。其中"不清两端"最初存活（两端初值恒为 0），随机化后被拒。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

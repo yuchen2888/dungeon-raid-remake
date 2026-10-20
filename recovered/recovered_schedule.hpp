@@ -78,7 +78,8 @@ struct ShieldShatterState {
 struct NewGameExtra {
     std::int32_t tokens_type0_165d8, tokens_type4_165e8;   // ends of the 5-wide token counters around
     std::int32_t bonus_type0_165ec, bonus_type4_165fc;     // TokenQueueCounters.normal[3] / bonus[3]
-    std::int32_t value_164d4, tokens_b53c, tokens_b54c;
+    std::int32_t value_164d4;
+    std::int32_t particles_b53c, labels_b54c;   // active Particles / SimpleLabel pool sizes (Game+0xb530 / 0xb540)
     std::int32_t base_bde8[4];          // Game+0xbde8/0xbdf0/0xbdf8/0xbe00 (each before PlayerStats.base_*)
     std::uint8_t label_active[4];       // SimpleLabel active bytes: leech 0xbfc0, flame 0x14afc, spike 0x14e70, 0x151e4
     std::uint8_t skill_ff[4][4];        // bytes +0x0f/+0x23/+0x37/+0x4b of the four skill objects (Game+0xbf90)
@@ -142,6 +143,27 @@ struct BoardEffectsState {
 enum class BoardEffectEventKind : std::int32_t { Help=1, ShatterInitialise, ShieldChunk, Spin, Colour, Text };
 struct BoardEffectEvent { BoardEffectEventKind kind; std::int32_t tile,a,b,c; float x,y; };
 struct BoardEffectHooks { void* context; void (*event)(void*,const BoardEffectEvent*); };
+// Other per-frame parts of Game::Process.
+struct FrameState {
+    PathState* path;              // ->match: shake_progress_bd90 / shake_scale_bd94 (flare size / alpha); selection
+    ResourcePreviewState* preview;// total_165d0
+    TokenQueue* tokens;           // bonus_total_165d4, normal / bonus counters
+    NewGameExtra* extra;          // ends of the 5-wide token counters
+    AttackAnimation* animation;   // flare_count
+    AttackDamageState* attack;    // phase
+    TurnFinishFlags* finish;      // help_flags_102d0
+    TouchState* touch;            // Game+0x10 phase / +0x14 position
+};
+// FlareAlpha: SetAlpha(flare a, b) and flare size (quad +0x64/+0x68) = shake_progress_bd90 (c bits).
+// Process / Initialise / Position / Number: the current-damage SimpleLabel (Game+0xb550): Process(a=dt
+// bits); Initialise(type 1, (x, y), b=number, scale 1); SetPosition((x, y)); SetNumber(a). Help:
+// HelpMenu::Initialise((x, y), 0.05, 0, type 8). BaseDamageHelp / WeaponDamageHelp: Interface::ShowHelpBaseDmg /
+// ShowHelpWeaponDmg (they may change help_flags_102d0). ProcessInput: Game::ProcessInput (here with touch
+// phase 3: the stroke is cancelled).
+enum class FrameEventKind : std::int32_t { FlareAlpha=1, Process, Initialise, Position, Number, Help, BaseDamageHelp,
+    WeaponDamageHelp, ProcessInput };
+struct FrameEvent { FrameEventKind kind; std::int32_t a,b,c; float x,y; };
+struct FrameHooks { void* context; void (*event)(void*,const FrameEvent*); };
 // Label index 0 leech, 1 flame, 2 spike. Process: SimpleLabel::Process(dt) (fade, a=dt bits). Initialise:
 // SimpleLabel::Initialise(a=type 8/9/10, (x, y), b=number, scale 1). Position: SetPosition((x, y)). Number:
 // SetNumber(a). Alpha: SetAlpha(a). Scale: label scale (SimpleLabel+0x33c) = a float bits. HealthBar: a=value.
@@ -174,6 +196,17 @@ void dr_initialise_shield_shatter(dungeonraid::ShieldShatterState*,const dungeon
 // between (255,255,255) and (169,76,202) (towards green while active, back while clearing), and at 1 the
 // effect ends with UpdateText(1,0,0).
 void dr_process_board_effects(dungeonraid::BoardEffectsState*,float dt,const dungeonraid::BoardEffectHooks*);
+// Original Game::Process [0x17400,0x1744c): with no falling tile and no path, a positive round total
+// (preview total_165d0) or token bonus total ends the round: both, and the 5-wide token counters, become 0.
+void dr_reset_round_counters(dungeonraid::FrameState*,std::uint32_t falling_count);
+// Original Game::Process [0x17570,0x17622): outside attack phases 2..4, remaining attack flares grow
+// (shake_progress_bd90 += 2dt) and fade (shake_scale_bd94 -= 3.5dt; below 0 it is 0 and the flares end).
+void dr_process_flare_fade(dungeonraid::FrameState*,float dt,const dungeonraid::FrameHooks*);
+// Original Game::Process [0x17622,0x176fc)+[0x17d64,0x17d74): the current-damage label fades when shown
+// with no damage; with positive damage it is shown 0.14 above the touch; with a counted skull help 8
+// is shown and, when ShowHelpWeaponDmg clears help flag 0x400 that was set before, the stroke is cancelled
+// (current damage 0, touch phase 3, ProcessInput). label_active: SimpleLabel active byte (renderer).
+void dr_process_damage_label(dungeonraid::FrameState*,std::uint8_t label_active,float dt,const dungeonraid::FrameHooks*);
 // Original Game::CalculateTilePositions 0xb264: vertical offset 0.015625 in record mode (else 0);
 // tile y*6+x rests at ((x+0.5)*pitch+0.003125, (y+0.5)*pitch+0.246875+offset), its centre is
 // placed there with size pitch (half pitch), SetSize and InitialiseLabels events.

@@ -249,7 +249,7 @@ extern "C" void dr_init_new_game(NewGameState* n,std::uint32_t time,const NewGam
     r.xp_fraction=r.gold_fraction=r.up_fraction=0;
     n->attack->phase=0;p.input_ready=1;n->shatter->active=0;r.skill_count=0;
     counters.pending=0;dr_token_queue_restore(n->tokens,&counters);
-    x.tokens_b53c=x.tokens_b54c=0;
+    x.particles_b53c=x.labels_b54c=0;
     r.level=1;r.total_xp=r.total_gold=r.total_up=0;
     n->finish->flag_1554c=0;
     for(auto& v:x.label_active)v=0;
@@ -373,4 +373,52 @@ extern "C" void dr_process_board_effects(BoardEffectsState* b,float dt,const Boa
         else {emit(h,BoardEffectEventKind::ShieldChunk,-1,0);emit(h,BoardEffectEventKind::ShieldChunk,-1,1);}
     }
     for(int x=0;x<6;++x)for(int y=0;y<6;++y)tile_effects(p,*b->generation,y*6+x,dt,h);
+}
+namespace {
+void emit(const FrameHooks* h,FrameEventKind kind,std::int32_t a=0,std::int32_t b=0,std::int32_t c=0,Point at={0,0}) {
+    const FrameEvent e{kind,a,b,c,at.x,at.y};h->event(h->context,&e);
+}
+}
+extern "C" void dr_reset_round_counters(FrameState* f,std::uint32_t falling_count) {
+    if(falling_count || f->path->match->stroke->selection.path_length)return;
+    TokenQueueCounters counters=*dr_token_queue_counters(f->tokens);
+    if(f->preview->total_165d0<=0 && counters.bonus_total_165d4<=0)return;
+    f->preview->total_165d0=0;counters.bonus_total_165d4=0;
+    f->extra->tokens_type0_165d8=f->extra->tokens_type4_165e8=0;
+    f->extra->bonus_type0_165ec=f->extra->bonus_type4_165fc=0;
+    for(auto& v:counters.normal)v=0;
+    for(auto& v:counters.bonus)v=0;
+    dr_token_queue_restore(f->tokens,&counters);
+}
+extern "C" void dr_process_flare_fade(FrameState* f,float dt,const FrameHooks* h) {
+    AttackAnimation& a=*f->animation;MatchState& m=*f->path->match;
+    if(a.flare_count<=0)return;
+    const std::int32_t phase=f->attack->phase;
+    if(phase==2 || phase==4 || phase==3)return;
+    m.shake_progress_bd90=to_bits(from_bits(m.shake_progress_bd90)+(dt+dt));
+    const float alpha=from_bits(m.shake_scale_bd94)+dt*-3.5f;
+    m.shake_scale_bd94=to_bits(alpha);
+    if(alpha<0.0f) {m.shake_scale_bd94=0;a.flare_count=0;}   // bpl: NaN keeps the flares
+    for(std::int32_t i=0;i<a.flare_count;++i) {
+        const auto value=static_cast<std::uint32_t>(from_bits(m.shake_scale_bd94)*255.0f);
+        emit(h,FrameEventKind::FlareAlpha,i,static_cast<std::int32_t>(value&0xff),static_cast<std::int32_t>(m.shake_progress_bd90));
+    }
+}
+extern "C" void dr_process_damage_label(FrameState* f,std::uint8_t label_active,float dt,const FrameHooks* h) {
+    SelectionState& s=f->path->match->stroke->selection;
+    if(label_active && s.current_damage==0) {emit(h,FrameEventKind::Process,bits(dt));return;}
+    if(s.current_damage<=0)return;
+    const Point at{f->touch->position.x,f->touch->position.y-0.14f};
+    if(!label_active) {emit(h,FrameEventKind::Initialise,1,s.current_damage,0,at);return;}
+    emit(h,FrameEventKind::Position,0,0,0,at);
+    emit(h,FrameEventKind::Number,s.current_damage);
+    if(!s.skull_counted)return;
+    emit(h,FrameEventKind::Help,8,0,0,at);
+    emit(h,FrameEventKind::BaseDamageHelp);
+    const bool pending=(f->finish->help_flags_102d0>>10)&1;
+    emit(h,FrameEventKind::WeaponDamageHelp);
+    if(!pending || (f->finish->help_flags_102d0&0x400))return;
+    s.current_damage=0;
+    f->touch->phase=3;
+    emit(h,FrameEventKind::ProcessInput);
 }

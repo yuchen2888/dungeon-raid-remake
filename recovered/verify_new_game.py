@@ -42,7 +42,7 @@ SYMBOLS={'__ZN4Game16QueueAchievementE11Achievementf':'achievement','__ZN4Quad7S
 KINDS=dict(achievement=1,size=2,labels=3,turn_label=4,skull=5,health_bar=6,xp_bar=7,up_bar=8,gold_bar=9,item=10,update_stats=11,reset=12)
 QUADS=dict(health_bar=0x4d4c,xp_bar=0x4dbc,up_bar=0x4e2c,gold_bar=0x4e9c)
 INTS=dict(turn=0xc,ui_health=0x5994,ui_ceiling=0x5998,ui_xp=0x599c,ui_up=0x59a0,ui_gold=0x59a4,ui_skull=0x59c8,phase=0xb8a8,
-          tokens_pending=0xb52c,tokens_b53c=0xb53c,tokens_b54c=0xb54c,health=0xbd98,health_max=0xbd9c,health_bonus=0xbda0,
+          tokens_pending=0xb52c,particles_b53c=0xb53c,labels_b54c=0xb54c,health=0xbd98,health_max=0xbd9c,health_bonus=0xbda0,
           armour_current=0xbda4,armour_max=0xbda8,xp=0xbdb0,up=0xbdb4,gold=0xbdb8,base_damage=0xbdc0,
           xp_fraction=0xbdd0,gold_fraction=0xbdd8,up_fraction=0xbde0,base_bde8=0xbde8,base_bdf0=0xbdf0,base_bdf8=0xbdf8,
           base_be00=0xbe00,healing_value=0xbe08,shield_value=0xbe10,chance_be18=0xbe18,chance_be20=0xbe20,chance_be28=0xbe28,
@@ -60,7 +60,7 @@ BYTES=dict(input_ready=0x5e14,cooldown=0xbe64,flag_bf88=0xbf88,filter_enabled=0x
 BYTES.update({f'double_{i}':0xbe74+i for i in range(4)});BYTES.update({f'next_be78_{i}':0xbe78+i for i in range(4)})
 class Extra(C.Structure):
     _fields_=[(k,I32) for k in ('tokens_type0_165d8','tokens_type4_165e8','bonus_type0_165ec','bonus_type4_165fc','value_164d4',
-              'tokens_b53c','tokens_b54c')]+[('base_bde8',I32*4),('label_active',U8*4),('skill_ff',(U8*4)*4)]
+              'particles_b53c','labels_b54c')]+[('base_bde8',I32*4),('label_active',U8*4),('skill_ff',(U8*4)*4)]
 class Shatter(C.Structure):_fields_=[('active',U8),('progress',C.c_float)]
 class State(C.Structure):
     _fields_=[('match',C.c_void_p),('preview',C.c_void_p),('resources',C.c_void_p),('path',C.c_void_p),('generation',C.c_void_p),
@@ -158,8 +158,8 @@ class Native(GateNative):
     def targets(self):
         r,pv,s,p,g,m,f,fin,x,pl=self.r,self.p,self.state.selection,self.path_state,self.gen,self.m,self.flags,self.finish,self.extra,self.player
         t=dict(turn=(p,'turn'),ui_health=(r,'ui_health'),ui_ceiling=(pl,'ui_health_ceiling_5998'),ui_xp=(r,'ui_xp'),ui_up=(r,'ui_up'),
-               ui_gold=(r,'ui_gold'),ui_skull=(pl,'ui_skull_59c8'),phase=(self.damage,'phase'),tokens_b53c=(x,'tokens_b53c'),
-               tokens_b54c=(x,'tokens_b54c'),health=(r,'health'),health_max=(r,'health_max'),health_bonus=(r,'health_bonus'),
+               ui_gold=(r,'ui_gold'),ui_skull=(pl,'ui_skull_59c8'),phase=(self.damage,'phase'),particles_b53c=(x,'particles_b53c'),
+               labels_b54c=(x,'labels_b54c'),health=(r,'health'),health_max=(r,'health_max'),health_bonus=(r,'health_bonus'),
                armour_current=(pv,'armour_current'),armour_max=(pv,'armour_max'),xp=(r,'xp'),up=(r,'up'),gold=(r,'gold'),
                base_damage=(s,'base_damage'),xp_fraction=(r,'xp_fraction'),gold_fraction=(r,'gold_fraction'),up_fraction=(r,'up_fraction'),
                base_bde8=(x,('base_bde8',0)),base_bdf0=(x,('base_bde8',1)),base_bdf8=(x,('base_bde8',2)),base_be00=(x,('base_bde8',3)),
@@ -187,7 +187,7 @@ class Native(GateNative):
         return t
     def get_field(self,k):
         if k=='counterattack':return self.counter.value
-        if k in ('tokens_pending','bonus_total') or k[:7] in ('tokens_','bonus_1','bonus_2','bonus_3') and k[-1] in '123' and k not in ('tokens_b53c','tokens_b54c'):
+        if k in ('tokens_pending','bonus_total') or k[:7] in ('tokens_','bonus_1','bonus_2','bonus_3') and k[-1] in '123' and k not in ('particles_b53c','labels_b54c'):
             c=self.token_counters()
             if k=='tokens_pending':return c.pending
             if k=='bonus_total':return c.bonus_total
@@ -198,7 +198,7 @@ class Native(GateNative):
         return v
     def set_field(self,k,v):
         if k=='counterattack':return
-        if k in ('tokens_pending','bonus_total') or k[:7] in ('tokens_','bonus_1','bonus_2','bonus_3') and k[-1] in '123' and k not in ('tokens_b53c','tokens_b54c'):
+        if k in ('tokens_pending','bonus_total') or k[:7] in ('tokens_','bonus_1','bonus_2','bonus_3') and k[-1] in '123' and k not in ('particles_b53c','labels_b54c'):
             return   # token counters come from the shared token loader (verify_tokens.py)
         obj,attr=self.targets()[k]
         cur=getattr(obj,attr[0])[attr[1]] if isinstance(attr,tuple) else getattr(obj,attr)
