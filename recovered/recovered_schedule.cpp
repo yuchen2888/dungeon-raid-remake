@@ -487,3 +487,28 @@ extern "C" InputRoute dr_process_input(InputState* in,const InputHooks* h) {
     dr_update_stroke(&stroke,h->selection);
     return InputRoute::Update;
 }
+extern "C" void dr_set_special_type(GenerationState* g,std::uint32_t tile,std::int32_t special,const GenerationHooks* h) {
+    dr_set_tile_type(g,tile,6,0,0,h);
+    g->refill->path->match->stroke->selection.tiles[tile].rule.special_type=special;
+    if(special!=0 && special!=1)return;
+    const GenerationEvent e{GenerationEventKind::UV,static_cast<std::int32_t>(tile),
+        special==0?0x3f000000:0x3f1a8000,0x3ee58000,0x3d540000,0x3d540000};
+    h->event(h->context,&e);
+}
+extern "C" void dr_shapeshift(ResourceState* r,const ResourceHooks* h) {
+    if(!r->skill_count)return;
+    const std::int32_t i=dr_random_int(&r->match->random,0,r->skill_count-1,5);
+    r->skill_current[i]=r->skill_max[i];
+    const ResourceEvent e{ResourceEventKind::Skills,0,0,0,0};h->event(h->context,&e);
+}
+extern "C" void dr_healing(ResourceState* r,const ResourceHooks* h) {
+    const float quarter=static_cast<float>(r->health_max+r->health_bonus)*0.25f;
+    if(!(static_cast<float>(r->health)<quarter))return;
+    const auto healed=static_cast<std::int32_t>(quarter);
+    const ResourceEvent achievement{ResourceEventKind::Achievement,50,0x40a00000,0,0};h->event(h->context,&achievement);
+    r->health=healed;
+    if(healed!=r->ui_health) {
+        r->ui_health=healed;
+        const ResourceEvent bar{ResourceEventKind::HealthBar,healed,0,0,0};h->event(h->context,&bar);
+    }
+}

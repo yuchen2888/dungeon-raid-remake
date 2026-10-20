@@ -48,6 +48,7 @@
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
 - T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 - T040-C2a：stats 模块恢复 Item::IncreaseStat（dr_item_increase_stat），松手的种族 6 升级事件接此函数。
+- T040-G0：补齐 Tile::SetSpecialType、Game::Shapeshift、Game::Healing（原先为匹配/资源单元的适配器回调）。
 - T040-F4：从新局开始（InitNewGame / dr_init_new_game）逐帧对局 60 回合与原版一致（verify_new_game_play）。
 - T040-F3：原版真实 Game::Process 与原生 dr_process_frame（全部单元接线）逐帧一致地跑多回合直到游戏结束（verify_game_frames）。
 - T040-F2：完整回合（玩家笔画与松手消除、补位、奖励、敌人攻击、EndOfTurn）携带状态逐帧与原版一致（verify_full_turn，32 回合）。

@@ -385,3 +385,8 @@
 
 - 新 verify_new_game_play：6 局 60 回合 3574 帧（起局 InitNewGame / dr_init_new_game，之后原版 Game::Process 对原生 dr_process_frame）逐帧一致。错误副本：起始生命上限、棋盘生成行列，均 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、60 个 verify 脚本共 63 步通过。运行目录 `.relay/runs/20261020T092515.944969Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-G0：SetSpecialType / Shapeshift / Healing（Claude）
+
+- 新 verify_small_units：三个原函数各自从入口执行，400 组（81 次治疗、103 次技能回满）；错误副本 8 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、61 个 verify 脚本共 64 步通过。运行目录 `.relay/runs/20261020T094415.655503Z`，inputs_unchanged true。

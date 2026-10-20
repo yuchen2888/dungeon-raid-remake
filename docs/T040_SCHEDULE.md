@@ -200,6 +200,22 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 至此：从新局开始、经多回合直到游戏结束，原生恢复代码都能与原版逐帧一致（界面关闭、物品零属性、无存档）。剩余为原生会话库化（把 Python 测试宿主中的状态共享与钩子接线固化为 C++ 会话接口，供 iOS 层调用）、物品模型、界面/表现层与存档。
 
+## T040-G0：会话前补齐的三个小函数（Claude，2026-10-20）
+
+整理原生会话的钩子接线时发现，匹配与资源单元仍把三个小的游戏函数当作回调（链式测试里以"用例决定是否改状态"的适配器处理）。现恢复：
+
+| 原版 | 原生 | 行为 | 接线 |
+| --- | --- | --- | --- |
+| Tile::SetSpecialType 0x3f43c | dr_set_special_type | Tile::SetType(6,0,0)（dr_set_tile_type）、写特殊类型；特殊 0/1 设置图集 UV（表现事件） | MatchEventKind::SetSpecialType |
+| Game::Shapeshift 0x918c | dr_shapeshift | 有技能时 RandI(0,n−1,流 5) 选一个技能，冷却回满（current = max），UpdateSkills | MatchEventKind::Shapeshift |
+| Game::Healing 0x12e68 | dr_healing | 生命低于（上限+加成）的 1/4（浮点）时提升到 1/4（截断），成就 50（5.0），界面值变化时更新血条 | ResourceEventKind::Healing |
+
+Interface::ShowMenu 0x1eb20 只是 FoldoutMenu::Initialise（其活动字节即 Game+0x59f4，整帧调度的游戏内菜单门槛），属界面边界：会话中由界面层打开菜单并设置 FrameScreens.menus[0]，直到关闭。
+
+验证 `recovered/verify_small_units.py`：三个原函数各自从入口执行（SetSpecialType 中 SetType 为原代码、生成宿主记录；Shapeshift 中 RandI 为原代码；匹配宿主原先在入口跳过这两个函数，本测试中移除该跳过），400 组（81 次治疗、103 次技能回满）。错误副本 8 个全部 exit 1。
+
+注意：F2–F4 整合测试仍沿用链式宿主的适配器（原版在入口跳过 SetSpecialType / Shapeshift / Healing，两侧一致但未执行）；在原生会话（T040-G）中应接上本节三个函数，并在整合测试中让原版执行它们。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

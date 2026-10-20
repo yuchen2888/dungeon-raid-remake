@@ -269,6 +269,17 @@ void dr_process_damage_label(dungeonraid::FrameState*,std::uint8_t label_active,
 // for a class scroll dr_release_class_scroll; ScrollEnded when its CheckEndGame ended the game), any other
 // phase begins a stroke when the path is empty (dr_begin_stroke) or updates it (dr_update_stroke).
 dungeonraid::InputRoute dr_process_input(dungeonraid::InputState*,const dungeonraid::InputHooks*);
+// Original Tile::SetSpecialType 0x3f43c (MatchEventKind::SetSpecialType): Tile::SetType(6, 0, 0)
+// (dr_set_tile_type), the special type, and for specials 0 / 1 the atlas UV (UV event: (0.5 or 0.603516,
+// 0.448242, 0.051758, 0.051758) as float bits).
+void dr_set_special_type(dungeonraid::GenerationState*,std::uint32_t tile,std::int32_t special,const dungeonraid::GenerationHooks*);
+// Original Game::Shapeshift 0x918c (MatchEventKind::Shapeshift): with skills, RandI(0, count-1, stream 5)
+// picks one whose cooldown is refilled (current = max), then UpdateSkills (Skills event).
+void dr_shapeshift(dungeonraid::ResourceState*,const dungeonraid::ResourceHooks*);
+// Original Game::Healing 0x12e68 (ResourceEventKind::Healing): health below a quarter of
+// health_max + health_bonus (as float) is raised to that quarter (truncated), achievement 50 (5.0) and the
+// health bar when the shown value changes.
+void dr_healing(dungeonraid::ResourceState*,const dungeonraid::ResourceHooks*);
 // Original Game::Process 0x1717c, the frame schedule: time, queues reset; the first active screen
 // (game over -- then the score screen once its state is 3 --, help, unlock, main menu or name entry,
 // intro, score) consumes a released or cancelled touch (phase 2/3 -> 0) and runs alone. With an in-game

@@ -26,6 +26,7 @@ EXTRA={'__ZN4Game9EndOfTurnEv':'T030:dr_end_of_turn','__ZN4Game11UpdateStatsEv':
        '__Z11InterpolateRK8GLfloat2S1_f':'T040:interpolate in dr_process_damage_labels','__Z11Interpolatefff':'T040:interpolate in dr_process_damage_labels',
        '__Z3Sqrf':'T040:inline in dr_process_damage_labels',
        '__ZN4Game20ProcessShieldShatterEv':'T040:in dr_process_board_effects',
+       '__ZN4Tile14SetSpecialTypeE15SpecialTileType':'T040:dr_set_special_type','__ZN4Game10ShapeshiftEv':'T040:dr_shapeshift','__ZN4Game7HealingEv':'T040:dr_healing',
        '__ZN4Game10UpdateTimeEv':'T040:platform time event of dr_process_frame','__ZN4Game12CalculateFPSEv':'T040:platform time event of dr_process_frame','__ZN4Tile14ProcessEffectsEf':'T040:in dr_process_board_effects',
        '__ZN4Game12ProcessInputEv':'T040:partial (dr_input_gate, stroke, release units; see recovered_segments)'}
 SEGMENTS=[
