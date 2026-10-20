@@ -370,3 +370,8 @@
 
 - 新 verify_turn_loop：8 局 32 回合 1699 帧，门槛 / EndOfTurn（原代码）/ 下落 / 代币 / 闪光淡出 / ProcessAttack 携带状态逐帧一致。错误副本：门槛不调 EndOfTurn、阶段 8 阻塞，均 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、57 个 verify 脚本共 60 步通过。运行目录 `.relay/runs/20261020T083431.442431Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-F2：完整回合整合（Claude）
+
+- 新 verify_full_turn：8 局 32 个完整回合 2160 帧（28 次消除、25 次补位、28 次敌人攻击）原版与原生逐帧一致。错误副本：MatchTiles 后才清计数、单格仍开始笔画，均 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、58 个 verify 脚本共 61 步通过。运行目录 `.relay/runs/20261020T084919.669970Z`，inputs_unchanged true。

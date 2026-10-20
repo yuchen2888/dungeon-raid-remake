@@ -168,6 +168,18 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 下一步 T040-F2：在同一携带状态上加入玩家半段（触摸笔画、松手、MatchTiles 与 MoveMatchedTiles 在松手中按原顺序执行、补位与奖励结算），形成完整回合。
 
+## T040-F2：完整回合，携带状态逐帧整合（Claude，2026-10-20）
+
+新整合测试 `recovered/verify_full_turn.py`（不新增原生代码）在 F1 的基础上加入玩家半段：每回合由测试宿主在当前棋盘上挑一条同类相邻（八方向）至少 3 格的路径，逐帧触摸（阶段 1，原版完整 ProcessInput；原生 dr_process_input），最后一帧松手（阶段 2）。松手中 Game::MatchTiles 以原代码执行（按 verify_path 记录；原生由 ReleaseHooks 的 MatchTiles 事件调用 dr_commit_path），MoveMatchedTiles 在 MatchTiles 内部按原位置以原代码执行（按 verify_encounters 记录；原生由路径钩子的 MoveMatchedTiles 事件调用 dr_move_matched_tiles）。每帧随后运行下落、奖励代币、闪光淡出与（进行中时）ProcessAttack；松手帧结束时按 Game::Process 消耗触摸。之后棋盘稳定、门槛开始敌人攻击、ProcessAttack 到阶段 8、门槛执行 EndOfTurn，与 F1 相同。
+
+8 局 32 个完整回合、2160 帧全部一致：32 次落子中 28 次消除（另有触摸时仍有下落/代币而被门槛阻塞的情况，两侧一致），25 次触发补位，28 次敌人攻击。
+
+整合时统一的原生对象（在 F1 之上）：松手状态的 TurnFlags / TurnFinishFlags 指向 EndOfTurn 使用的同一对象；EndOfTurn 的 CheckEndGame 用 EndGameState（不被松手测试的同名属性覆盖）；RuneState 唯一（enabled、allocated、高亮计数）；攻击输入与松手输入分开命名。
+
+错误副本：松手在 MatchTiles 之后才清计数、路径只有一格时仍"开始笔画"，均 exit 1。
+
+意义：至此完整回合（玩家笔画、松手消除、补位、奖励、敌人攻击、回合结束）可由原生恢复代码逐帧复现原版。尚未覆盖：dr_process_frame 的界面门槛与整帧接线在整局中的运行（目前按 Process 顺序由测试调用各步骤）、dr_init_new_game 起局、物品构造（起始物品属性）、卷轴/取消等少见输入在整局中的出现、存档。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
