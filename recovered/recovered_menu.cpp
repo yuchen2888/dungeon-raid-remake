@@ -18,9 +18,10 @@ extern "C" const std::int32_t dr_class_base_skills[10][20]={
 namespace {
 constexpr std::int32_t kBaseCooldown[40]={13,16,15,16,18,18,15,20,18,18,35,12,18,15,25,15,14,15,15,15,
                                           18,20,18,15,25,14,12,16,14,20,24,15,15,-1,14,12,25,35,18,16};
-void emit(const MenuHooks* h,MenuEventKind kind,std::int32_t a) {
-    if(h && h->event) {const MenuEvent e{kind,a};h->event(h->context,&e);}
+void emit(const MenuHooks* h,MenuEventKind kind,std::int32_t a=0,std::int32_t b=0,std::int32_t c=0) {
+    if(h && h->event) {const MenuEvent e{kind,a,b,c};h->event(h->context,&e);}
 }
+std::int32_t add(std::int32_t a,std::int32_t b) {return static_cast<std::int32_t>(static_cast<std::uint32_t>(a)+static_cast<std::uint32_t>(b));}
 bool record_mode(const MenuSources* s,std::int32_t mode) {
     const StrokeState& st=*s->resources->match->stroke;return st.record_14aed && st.mode_14ae8==mode;
 }
@@ -113,4 +114,87 @@ extern "C" void dr_menu_open_level(MenuState* menu,const MenuSources* s,const Me
         const std::int32_t stat=nth(stats,dr_random_int(&m.random,0,static_cast<std::int32_t>(stats.size())-1,3));
         stats.erase(stat);dr_stat_option(&menu->options[i],stat,&m);
     }
+}
+namespace {
+// Exchange option's skill fields with the object of slot i (Game+0xbf90 pointers: the objects move).
+void exchange(const MenuSources* s,SkillRecord* o,std::int32_t i) {
+    auto& k=*s->slots;auto& r=*s->resources;
+    std::swap(o->type,k.id[i]);std::swap(o->level,k.level[i]);std::swap(o->active,k.active[i]);
+    std::swap(o->max,r.skill_max[i]);std::swap(o->current,r.skill_current[i]);
+}
+void shorten(std::int32_t& max,std::int32_t& current) {max-=1;current=std::min(current,max);}
+bool have_perk(const MatchState& m,std::int32_t perk) {
+    if(perk==255)return false;
+    for(auto p:m.perks)if(p==perk)return true;
+    return false;
+}
+}
+extern "C" void dr_set_skill(const MenuSources* s,SkillRecord* o,const MenuHooks* h) {
+    auto& r=*s->resources;auto& m=*r.match;
+    if(o->type<=39) {
+        for(int i=0;i<r.skill_count;++i)if(s->slots->id[i]==o->type) {
+            exchange(s,o,i);emit(h,MenuEventKind::PositionSkill,i);emit(h,MenuEventKind::UpdateSkills);return;
+        }
+        if(r.skill_count>3) {emit(h,MenuEventKind::UpdateSkills);return;}
+        const std::int32_t i=r.skill_count;
+        exchange(s,o,i);emit(h,MenuEventKind::PositionSkill,i);r.skill_count=i+1;
+        if(s->player->skill_cooldown_be64)shorten(r.skill_max[i],r.skill_current[i]);
+        if(r.skill_count==4 && have_perk(m,3))shorten(r.skill_max[i],r.skill_current[i]);
+        emit(h,MenuEventKind::UpdateSkills);return;
+    }
+    auto& pv=*s->preview;
+    pv.healing_value=add(pv.healing_value,o->healing);pv.shield_value=add(pv.shield_value,o->shield);
+    // Game+0xbe18 / be20 / be28 / be30 = MatchState.bonus_chance[2] / [0] / [1] / [3]
+    const int chance_index[4]={2,0,1,3};
+    for(int k=0;k<4;++k) {auto& c=m.bonus_chance[chance_index[k]];c=std::min(add(c,o->chance[k]),100);}
+    if(!record_mode(s,1) && o->health>0) {
+        r.health_max=add(r.health_max,o->health);r.health=add(r.health,o->health);
+        const std::int32_t ceiling=add(r.health_bonus,r.health_max);
+        if(ceiling!=s->player->ui_health_ceiling_5998) {s->player->ui_health_ceiling_5998=ceiling;emit(h,MenuEventKind::HealthBar,r.ui_health);}
+        if(r.health!=r.ui_health) {r.ui_health=r.health;emit(h,MenuEventKind::HealthBar,r.health);}
+    }
+    if(o->damage>0) {
+        auto& sel=*s->selection;sel.base_damage=add(sel.base_damage,o->damage);
+        const std::int32_t skull=add(sel.base_damage,sel.bonus_base_damage);
+        if(skull!=s->player->ui_skull_59c8) {s->player->ui_skull_59c8=skull;emit(h,MenuEventKind::SkullValue);}
+    }
+    if(o->type>=40 && o->type<=43)s->stat_counts[o->type-40]=add(s->stat_counts[o->type-40],1);
+}
+extern "C" void dr_menu_input(MenuState* menu,std::int32_t phase,std::int32_t button,const MenuHooks* h) {
+    if(phase==1) {
+        if(menu->previous_phase==0) {
+            if(menu->confirm_ready && button==7) {emit(h,MenuEventKind::Sound,0);menu->confirm_pressed=1;emit(h,MenuEventKind::Confirm,1);}
+            else for(std::int32_t b=14;b<=17;++b) {
+                if(b==17 && menu->type==1)continue;
+                if(button!=b)continue;
+                const bool both_other=menu->type==0 && menu->first!=-1 && menu->second!=-1 && b!=menu->first && b!=menu->second;
+                if(!both_other)emit(h,MenuEventKind::Sound,menu->type==1?1:menu->type==0?9:menu->type==2?8:-1);
+                if(both_other) {}
+                else if(menu->first==b) {emit(h,MenuEventKind::Highlight,b,0,0);menu->first=-1;}
+                else if(menu->second==b) {emit(h,MenuEventKind::Highlight,b,1,0);menu->second=-1;}
+                else if(menu->first==-1) {menu->first=b;emit(h,MenuEventKind::Highlight,b,0,1);}
+                else if(menu->type!=0) {emit(h,MenuEventKind::Highlight,menu->first,0,0);menu->first=b;emit(h,MenuEventKind::Highlight,b,0,1);}
+                else if(menu->second==-1) {emit(h,MenuEventKind::Highlight,b,1,1);menu->second=b;}
+                break;
+            }
+            menu->confirm_ready=menu->type==0?(menu->first!=-1 && menu->second!=-1):(menu->first!=-1);
+        }
+    } else if(phase==2 && menu->confirm_pressed) {
+        if(button==7) {
+            menu->timer=0.0f;menu->opening=0;
+            if(menu->type>=0 && menu->type<=2)emit(h,MenuEventKind::Sound,menu->type==1?11:menu->type==0?12:13);
+        } else menu->confirm_pressed=0;
+        emit(h,MenuEventKind::Confirm,0);
+    }
+    if(phase!=1)emit(h,MenuEventKind::TooltipHide);
+    menu->previous_phase=phase;
+}
+extern "C" void dr_menu_process(MenuState* menu,const MenuSources* s,float dt,std::int32_t phase,std::int32_t button,const MenuHooks* h) {
+    if(menu->timer<0.0f) {dr_menu_input(menu,phase,button,h);return;}
+    menu->timer=menu->timer+dt;
+    if(menu->timer<0.3f)return;
+    menu->timer=-1.0f;
+    if(menu->opening)return;
+    *s->open=0;
+    if(menu->type==0) {dr_set_skill(s,&menu->options[menu->first-14],h);dr_set_skill(s,&menu->options[menu->second-14],h);}
 }

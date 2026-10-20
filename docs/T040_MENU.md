@@ -1,6 +1,6 @@
 # T040-K：升级 / 商店 / 装备升级菜单（FoldoutMenu）
 
-状态：K1 完成，K2 起进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
+状态：K1、K2 完成，K3 起进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
 
 ## 触发
 
@@ -70,6 +70,14 @@ CharacterClass::GetSkillPool 0x111ad4：职业+4 为 0 时 = 0..39 中 Game::IsS
 验证 `recovered/verify_menu_level.py`：原 FoldoutMenu::Initialise(0) 从入口执行（GetSkillPool、IsSkillUnlocked、两个 Skill::Initialise、SetStatChance、RandI 为原代码；std::set<int> 由测试宿主模拟；四边形、标签、文字、提示、SjLj 桩跳过；音效记录），1500 组一致：技能选项 2 个 1364 组、1 个 84 组、0 个 52 组，40 种技能与 8 种属性选项都出现。错误副本 20 个，19 个 exit 1；1 个等价（record 模式 0 时第一次选到新技能后重建候选池去掉“f 为假”条件：此时已装备技能都已从池中去掉、“全部已满”为真，已装备 3 个时只有 1 个技能选项，重建的池不再被使用）。
 
 注意：Game+0xbe1c / be24 / be2c / be34（属性的物品部分）在原生侧有两个镜像——MatchState.bonus_chance_extra（匹配时读取）与 PlayerStats.chance_*（UpdateStats 写入）；会话接入物品属性时需统一为一个所有者。
+
+## K2：升级菜单的选择与生效（完成）
+
+`dr_menu_input`（ProcessInput）、`dr_menu_process`（Process：动画计时与关闭后的生效）、`dr_set_skill`（Game::SetSkill 0x13e68）。MenuSources 增加 preview、selection、player、stat_counts（Game::SetSkill 写入的治疗 / 护盾值、基础伤害、界面生命上限与骷髅值、属性计数 Game+0xbde8..）。菜单按钮由渲染层给出（14..17 选项、7 确认、−1 无）。
+
+Game::SetSkill：技能类型（< 40）时，已装备同类型技能则与选项对象互换（PositionSkill）；否则未满 4 个时与下一槽对象互换、技能数 + 1，冷却物品（Game+0xbe64）时上限 − 1，作为第 4 个技能且有特长 3 时再 − 1（当前值不超过上限）；最后 UpdateSkills。已满 4 个且无同类型：只 UpdateSkills。属性选项（40..47）：治疗、护盾增加；四个加成几率增加且不超过 100；非 record 模式 1 时生命上限与生命增加（上限或生命变化时刷新血条）；基础伤害增加（骷髅值变化时刷新）；属性 0..3 的计数 + 1。
+
+验证 `recovered/verify_menu_flow.py`：先按 K1 打开菜单，再逐帧运行原 FoldoutMenu::Process（ProcessInput、Game::SetSkill、HavePerk 为原代码；CursorInButton / CursorInQuad 按本帧按钮回答；音效、高亮、确认按钮颜色、界面刷新记录；提示跳过）。每组先随机点按（选择、取消、点第三个、未可用时点确认、在别处松开确认），再选两个并确认、播放关闭动画直到生效。600 组、24095 帧逐帧一致（菜单状态与计时位、四个选项、按槽顺序的装备技能、各属性值、事件），新增技能 299 次。错误副本 24 个：23 个 exit 1；1 个（计数条件改为 ≤ 44）会写出 4 元素数组之外，不是有效变体，改用 ≤ 42、≥ 41 两个变体均 exit 1。
 
 ## 计划
 

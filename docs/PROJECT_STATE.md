@@ -6,7 +6,7 @@
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 26 个 `recovered_*.cpp` 模块、21 个头文件、72 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 26 个 `recovered_*.cpp` 模块、21 个头文件、73 个 verify 脚本、两个独立源码示例。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -48,7 +48,7 @@
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
 - T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 - T040-C2a：stats 模块恢复 Item::IncreaseStat（dr_item_increase_stat），松手的种族 6 升级事件接此函数。
-- T040-K1：升级菜单（升级时出现的 4 个选项）的生成规则已恢复并与原版一致；选择、生效、商店、装备升级与会话接线是 K2..K5。
+- T040-K1/K2：升级菜单完整恢复——4 个选项的生成、点选与确认、关闭后技能 / 属性生效，与原版逐帧一致；商店、装备升级与会话接线是 K3..K5。
 - T040-H6：技能接入整局会话（按技能按钮、39 种技能的效果、火焰吐息），与原版逐帧一致；技能系统完成（Upgrade 的升级菜单待物品模型）。按住技能按钮时棋盘输入暂停，这一点原先会话没有，测试发现后已改正。
 - T040-J3：Game::Start 的抽取到不了游戏（每局重设种子），无需代码。
 - T040-J2：恢复 UpdateCrossVisibility（路径上“会被打死”的十字标记及其标签抽取），会话在路径变化与松手时调用。

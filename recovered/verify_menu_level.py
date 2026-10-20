@@ -51,8 +51,9 @@ class MenuState(C.Structure):
     _fields_=[(k,I32) for k in ('type','first','second','skill_options','previous_phase')]+[('timer',C.c_float)]+\
              [(k,U8) for k in ('opening','confirm_ready','confirm_pressed')]+[('options',SkillRecord*4)]
 class MenuSources(C.Structure):
-    _fields_=[('resources',C.c_void_p),('slots',C.c_void_p),('classes',C.c_void_p),('class_index',I32),('open',C.POINTER(U8))]
-class MenuEvent(C.Structure):_fields_=[('kind',I32),('a',I32)]
+    _fields_=[('resources',C.c_void_p),('slots',C.c_void_p),('classes',C.c_void_p),('class_index',I32),('open',C.POINTER(U8)),
+              ('preview',C.c_void_p),('selection',C.c_void_p),('player',C.c_void_p),('stat_counts',C.c_void_p)]
+class MenuEvent(C.Structure):_fields_=[('kind',I32),('a',I32),('b',I32),('c',I32)]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,C.POINTER(MenuEvent))
 class MenuHooks(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT)]
 # option object fields: offset of type, level, max, current; active byte; lines; increments

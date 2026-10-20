@@ -2,6 +2,7 @@
 #include "recovered_match.hpp"
 #include "recovered_resources.hpp"
 #include "recovered_turn.hpp"
+#include "recovered_stats.hpp"
 namespace dungeonraid {
 // A Skill object's game fields, for an equipped skill or a menu option: type (Skill+0x84; 40..47 are the
 // level-up menu's stat options, StatType + 40), level +0x88, cooldown maximum / current +0x8c / +0x90,
@@ -27,17 +28,27 @@ struct MenuState {
 // What the menus read and write. resources: level (Game+0xbe4c), skill_count, cooldowns; resources->match:
 // random streams, bonus chances (Game+0xbe20 / 28 / 18 / 30 and the item parts +4), match->stroke:
 // record_14aed / mode_14ae8; slots: the equipped skills; classes: the ten class records (Game+0x15564 +
-// 388 * i), class_index Game+0x1648c; open: FrameScreens.menus[0] (FoldoutMenu+0x8).
+// 388 * i), class_index Game+0x1648c; open: FrameScreens.menus[0] (FoldoutMenu+0x8). Game::SetSkill also
+// writes preview (healing_value Game+0xbe08, shield_value 0xbe10), selection (base_damage 0xbdc0, read
+// bonus_base_damage 0xbdc4), player (ui_health_ceiling_5998, ui_skull_59c8, read skill_cooldown_be64) and
+// stat_counts (Game+0xbde8 / bdf0 / bdf8 / be00, NewGameExtra.base_bde8); perk 3 is read from match->perks.
 struct MenuSources {
     ResourceState* resources;
     SkillSlots* slots;
     const ClassProfile* classes;
     std::int32_t class_index;
     std::uint8_t* open;
+    ResourcePreviewState* preview;
+    SelectionState* selection;
+    PlayerStats* player;
+    std::int32_t* stat_counts;
 };
-// Sound: Game::QueueSound(a).
-enum class MenuEventKind : std::int32_t { Sound=1 };
-struct MenuEvent { MenuEventKind kind; std::int32_t a; };
+// Sound: Game::QueueSound(a). PositionSkill: Interface::PositionSkill(a). UpdateSkills: Interface::UpdateSkills.
+// HealthBar: Interface::UpdateHealthBar(value a). SkullValue: Interface::UpdateSkullValue. Highlight:
+// FoldoutMenu::HighlightButton(button a, selection b, on c). Confirm: the confirm button's colour (a = 1 pressed,
+// 0 normal). TooltipHide: Tooltip::Hide.
+enum class MenuEventKind : std::int32_t { Sound=1, PositionSkill, UpdateSkills, HealthBar, SkullValue, Highlight, Confirm, TooltipHide };
+struct MenuEvent { MenuEventKind kind; std::int32_t a,b,c; };
 struct MenuHooks { void* context; void (*event)(void*,const MenuEvent*); };
 }
 extern "C" {
@@ -65,4 +76,29 @@ void dr_stat_option(dungeonraid::SkillRecord* option,std::int32_t stat,const dun
 // Original FoldoutMenu::Initialise 0x24a54, the level-up menu (type 0): opens it and draws its four options
 // (two or one skills from the class pool, the rest stat options), see docs/T040_MENU.md.
 void dr_menu_open_level(dungeonraid::MenuState*,const dungeonraid::MenuSources*,const dungeonraid::MenuHooks*);
+// Original Game::SetSkill 0x13e68 with option (a Skill object of the menu). A skill (type < 40): an equipped skill
+// of that type is exchanged with option (Interface::PositionSkill); otherwise, with fewer than 4 equipped, the
+// object of the next slot is exchanged with option and skill_count grows (PositionSkill), its cooldown maximum
+// one less with the cooldown item (Game+0xbe64) and one less again as the fourth skill with perk 3, current
+// capped; then UpdateSkills. With 4 equipped and no match, UpdateSkills only. A stat option (40..47): healing and
+// shield grow, the four bonus chances grow up to 100, health maximum and health grow (not in record mode 1;
+// health bar refreshed when the ceiling or health changed), base damage grows (skull value refreshed), and stat
+// 0..3 counts one more at Game+0xbde8 / bdf0 / bdf8 / be00. The returned object (stored back in the menu) is
+// what option now holds.
+void dr_set_skill(const dungeonraid::MenuSources*,dungeonraid::SkillRecord* option,const dungeonraid::MenuHooks*);
+// Original FoldoutMenu::ProcessInput 0x239c8 at touch phase (Game+0x10) with button the menu button under the
+// touch (14..17 the options, 7 the confirm button, -1 none; the layout is the renderer's). A new touch (phase 1
+// after phase 0): on the enabled confirm button presses it (sound 0); else on an option (17 not in the shop) it
+// deselects a chosen one, chooses it first, or -- level-up menu -- second while there is none (shop / upgrade:
+// replaces the first); sounds 1 shop, 9 level-up (not when both are chosen and another is touched), 8 upgrade.
+// The confirm button is enabled with both choices (level-up) or the first. A release (phase 2) of a pressed
+// confirm button still on it starts the closing animation (sound 11 / 12 / 13 by type), elsewhere un-presses
+// it. Tooltip::Hide unless phase 1; the phase is kept.
+void dr_menu_input(dungeonraid::MenuState*,std::int32_t phase,std::int32_t button,const dungeonraid::MenuHooks*);
+// Original FoldoutMenu::Process 0x23c44 (Interface::Process while the menu is open): a negative timer
+// (open) takes input; otherwise the animation timer grows by dt and at 0.3 s the opening ends (timer -1) or the
+// closing ends: the menu closes (timer -1) and the choice applies -- level-up: Game::SetSkill on the first and
+// then the second chosen option.
+void dr_menu_process(dungeonraid::MenuState*,const dungeonraid::MenuSources*,float dt,std::int32_t phase,std::int32_t button,
+    const dungeonraid::MenuHooks*);
 }

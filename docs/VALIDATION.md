@@ -463,3 +463,9 @@
 - 新 verify_menu_level：原 FoldoutMenu::Initialise(0) 从入口执行，1500 组一致（技能选项 2 个 1364 组、1 个 84 组、0 个 52 组；40 种技能与 8 种属性选项都出现）。
 - 错误副本 20 个：19 个 exit 1，1 个等价（见 T040_MENU.md）。
 - `./scripts/relay.sh verify --full` → exit 0：75 步通过。运行目录 `.relay/runs/20261020T220517.680518Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-K2：升级菜单的选择与生效（Claude）
+
+- 新 verify_menu_flow：原 FoldoutMenu::Process / ProcessInput 与 Game::SetSkill 逐帧执行，600 组、24095 帧一致，新增技能 299 次；verify_menu_level 随 MenuSources 字段增加更新后仍 1500 组一致。
+- 错误副本 24 个：23 个 exit 1；1 个写出数组之外，以两个有效变体替代后均 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：76 步通过。运行目录 `.relay/runs/20261020T224101.261140Z`，inputs_unchanged true。
