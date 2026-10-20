@@ -469,3 +469,9 @@
 - 新 verify_menu_flow：原 FoldoutMenu::Process / ProcessInput 与 Game::SetSkill 逐帧执行，600 组、24095 帧一致，新增技能 299 次；verify_menu_level 随 MenuSources 字段增加更新后仍 1500 组一致。
 - 错误副本 24 个：23 个 exit 1；1 个写出数组之外，以两个有效变体替代后均 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：76 步通过。运行目录 `.relay/runs/20261020T224101.261140Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-K3a：物品生成（Claude）
+
+- 新 verify_items：原 Item::InitialiseNames 真实建表后，原 Item::Initialise(Item*) 与新物品三步从入口执行，1500 组一致（5 种类型，商店物品 1117、新物品 383）。
+- 错误副本 24 个：20 个 exit 1，4 个等价或本测试不可达（见 T040_MENU.md）。
+- `./scripts/relay.sh verify --full` → exit 0：77 步通过。运行目录 `.relay/runs/20261020T231024.795956Z`，inputs_unchanged true。

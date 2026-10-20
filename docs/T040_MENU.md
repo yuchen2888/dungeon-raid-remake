@@ -1,6 +1,6 @@
 # T040-K：升级 / 商店 / 装备升级菜单（FoldoutMenu）
 
-状态：K1、K2 完成，K3 起进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
+状态：K1、K2、K3a 完成，K3b 起进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
 
 ## 触发
 
@@ -78,6 +78,23 @@ CharacterClass::GetSkillPool 0x111ad4：职业+4 为 0 时 = 0..39 中 Game::IsS
 Game::SetSkill：技能类型（< 40）时，已装备同类型技能则与选项对象互换（PositionSkill）；否则未满 4 个时与下一槽对象互换、技能数 + 1，冷却物品（Game+0xbe64）时上限 − 1，作为第 4 个技能且有特长 3 时再 − 1（当前值不超过上限）；最后 UpdateSkills。已满 4 个且无同类型：只 UpdateSkills。属性选项（40..47）：治疗、护盾增加；四个加成几率增加且不超过 100；非 record 模式 1 时生命上限与生命增加（上限或生命变化时刷新血条）；基础伤害增加（骷髅值变化时刷新）；属性 0..3 的计数 + 1。
 
 验证 `recovered/verify_menu_flow.py`：先按 K1 打开菜单，再逐帧运行原 FoldoutMenu::Process（ProcessInput、Game::SetSkill、HavePerk 为原代码；CursorInButton / CursorInQuad 按本帧按钮回答；音效、高亮、确认按钮颜色、界面刷新记录；提示跳过）。每组先随机点按（选择、取消、点第三个、未可用时点确认、在别处松开确认），再选两个并确认、播放关闭动画直到生效。600 组、24095 帧逐帧一致（菜单状态与计时位、四个选项、按槽顺序的装备技能、各属性值、事件），新增技能 299 次。错误副本 24 个：23 个 exit 1；1 个（计数条件改为 ≤ 44）会写出 4 元素数组之外，不是有效变体，改用 ≤ 42、≥ 41 两个变体均 exit 1。
+
+## K3a：物品生成（完成）
+
+新模块 recovered_items：`ItemRecord`（Item 对象的游戏字段：类型 +0x80、图标 +0x84、名字前缀等级 / 前缀 +0x88 / +0x8c、名字 +0x90、属性 +0x94 共 20 项），`dr_item_make`（Item(Game*, ItemType) 与 Item::Initialise(Item*) 的规则部分）、`dr_item_initialise`、`dr_item_generate_name`、`dr_item_generate_stats`、`dr_upgrade_allowed`（ItemUpgrade::IsUpgradeAllowed）、`dr_random_item_stat`（ItemUpgrade::GetRandomStat）。图标与名字下标只决定画面与名称，但它们的随机抽取推进流 2。名字表大小用原版 Item::InitialiseNames 实测：前缀 148 个；13 组名字按图标区间 [0,20) 15、[20,40) 12、[40,50) 13、[50,60) 12、[60,80) 15、[80,160) 17、[160,240) 16、[240,320) 17、[320,340) 14、[340,360) 11、[360,370) 14、[370,380) 16、[380,400) 16。图标区间：类型 0 为 0..79，1 为 80..159，2 为 240..319，3 为 160..239，4 为 320..399。
+
+Item::GenerateStats（有原物品时，原物品的正属性按升序逐个处理，Rand 均为流 2）：
+- 类型 0：属性 0 = 原值 + 1；其他属性以 0.15 概率下降（降幅 GetStatDowngrade，最低 0）并使属性 0 再 + 1，否则保持。
+- 类型 1：属性 11 = 原值 + 1；其他属性以 0.2 概率变化：允许升级、本次尚未升级过且再以 0.5 概率时上升（升幅 GetStatUpgrade），否则下降并使属性 11 + 1。
+- 类型 2：先以 0.2 概率属性 11 = 原值 + 2 且其他属性全部保持，否则属性 11 = 原值 + 1，其他属性以 0.1 概率下降并使属性 11 + 1。
+- 类型 3：属性 11 = 原值 + 1；属性 0 以 0.7 概率下降（属性 11 + 1）；其他属性以 0.2 概率下降，再以 0.2 概率使属性 0 + 1，否则属性 11 + 1。
+- 类型 4：属性 10 = 原值 + GetStatUpgrade(10) / 2；其他属性以 0.1 概率下降并给 GetRandomStat(4) 选出的属性加一次升级；最后 record 模式 1 时必定、否则以 0.5 概率再给一个随机属性加一次升级（属性 5 为 0 时可选 5）。
+
+验证 `recovered/verify_items.py`：先让原版 Item::InitialiseNames 真实建好名字表（std::vector 的存储用测试宿主的分配器），再从入口执行 Item::Initialise(Item*)（商店物品）或新物品的三步（Initialise(ItemType)、GenerateName(0)、GenerateStats(0)），IsUpgradeAllowed、GetRandomStat、GetStatUpgrade / Downgrade、HaveFlaw / HavePerk、RandI / Rand 为原代码，std::set 由宿主模拟，MakeStats 跳过。1500 组一致（5 种物品类型、商店物品 1117 组、新物品 383 组）。错误副本 24 个：20 个 exit 1；4 个等价或本测试不可达：IsUpgradeAllowed 14 的“不超过 100”截断（两种写法在 v > 100 时都为真）、GetRandomStat 类型 1 的属性池（GenerateStats 只用类型 4，K4 装备升级会用到）、类型 4 的 /2 与 >>1（升幅只会是 0 或 10）、属性 5 的 == 0 与 <= 0（新物品属性不会为负）。前缀等级边界变体在补充 135..147 用例后被拒。
+
+## 原版怪行为：商店卷轴候选读到了 Game+0xbf90 之后的内存
+
+FoldoutMenu::Initialise(1) 0x25526：卷轴候选循环 t = 0..39 中，Rand(0,1,流 2) ≥ 0.1 时检查 *(Game + 0xbf90 + 4t) 是否为 0，非 0 则不选该类型。Game+0xbf90 只有 4 个已装备技能指针，后面依次是 skill_count（t=4）、matched_counts[0..4]（t=5..9）、字节 0xbfb8..0xbfbb（t=10）、0xbfbc..0xbfbf（t=11），t=12..39 落在“吸血”伤害标签 SimpleLabel（Game+0xbfc0：+0 激活字节、+4 类型、+8 起为顶点数据）里。所以 t=0..3 永不入选；其余取决于这些字段与标签的顶点内容（标签显示过之后大多为非零浮点）。这像是原版的越界错误，但影响卷轴出现哪种技能。恢复时须按这些字段的实际值判断；标签顶点需要 SimpleLabel 的生成模型（RegenerateLabel），在 K3b 里作为单独输入，待查明后补上。
 
 ## 计划
 
