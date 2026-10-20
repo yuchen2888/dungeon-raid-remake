@@ -418,3 +418,8 @@
 - 新 verify_add_flare：原 AddFlare 从入口执行，607 次连续添加的随机种子、闪光数、旋转角一致；错误副本 4 个全部 exit 1。
 - verify_session（会话所有闪光事件接 dr_add_flare，原版侧施加同一状态）：11909 帧一致；会话接线错误副本 5 个，4 个 exit 1，遭遇单元 JumpDown 闪光 1 个存活（对局中未出现）。
 - `./scripts/relay.sh verify --full` → exit 0：68 步通过。运行目录 `.relay/runs/20261020T173704.809670Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-H2：棋盘技能第一批（Claude）
+
+- 新 verify_skill_board：Upgrade、FreezeSkulls、ConvertTiles、CreateManaPotions、CreateExplosivePotions、CreateArrows、CreateMagicSword 原函数各 100 组（共 700 组、2561 个闪光）一致；错误副本 16 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：69 步通过。运行目录 `.relay/runs/20261020T175349.088252Z`，inputs_unchanged true。

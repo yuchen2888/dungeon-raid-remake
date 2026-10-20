@@ -52,7 +52,23 @@ Game::RemoveSkill 0x9114：找到该技能的槽，其后的技能依次前移�
 
 验证 `recovered/verify_skills.py`：原函数从入口执行（GetTileCount、GetSpecialEnemyCount、GetNormalPotionCount + IsNormalPotion、GetNormalSwordCount、RemoveSkill 为原代码；音效、成就、箭头颜色、PositionSkill 与棋盘技能函数记录并跳过），1200 组随机棋盘（缺少某些格子类型的棋盘、19 / 20 个普通骷髅的棋盘）：每组 41 个类型的 CanActivate（49200 次）、900 次 Activate（含未装备技能、一次性技能 33）、300 次 RemoveSkill，事件、动作、全部标志、装备槽与 skill_count 一致。错误副本 21 个全部 exit 1。
 
+## H2 第一批：Upgrade、FreezeSkulls、ConvertTiles、CreateManaPotions、CreateExplosivePotions、CreateArrows、CreateMagicSword（Claude，2026-10-20）
+
+recovered_skills 新增（结束时都把闪光计时 MatchState shake_progress_bd90 = 0、shake_scale_bd94 = 1.0）：
+
+| 原版 | 原生 | 行为 |
+| --- | --- | --- |
+| Game::Upgrade 0x9694 | dr_skill_upgrade | 只有 Interface::ShowMenu(2)（升级菜单，FoldoutMenu） |
+| Game::FreezeSkulls 0xa470 | dr_freeze_skulls | 按列遍历，每个骷髅（类型 1，含特殊敌人）：闪光（类型 1，颜色 100,230,255,255），Tile::SetFreezeVisibility(true)（冻结、冻结遮罩显示、燃烧清除） |
+| Game::ConvertTiles 0xa7f4 | dr_convert_tiles | **按行**遍历，类型 from 的格子（from 为 1 时跳过特殊敌人，from 为 4 时跳过箭）Tile::SetType(to, 回合, 难度) 后白色闪光；金币变骷髅（2→1）还置 Game+0x165b8（TurnFlags.b165b8[0]） |
+| Game::CreateManaPotions 0xa548 | dr_create_mana_potions | 按列，每个普通药水：闪光（100,100,255,255），Tile::MakeManaPotion |
+| Game::CreateExplosivePotions 0xa380 | dr_create_explosive_potions | 按列，每个普通药水：闪光（255,150,0,255），Tile::MakeExplosivePotion（flag_234，UV (variant×0.0517578125, 类型×0.0517578125+0.6044921875)） |
+| Game::CreateArrows 0xcdac | dr_create_arrows | 按列，每把普通剑：Tile::MakeArrow，白色闪光 |
+| Game::CreateMagicSword 0xccc0 | dr_create_magic_sword | RandI(0, 普通剑数−1, 流 5) 选一把，Tile::MakeMagicSword（magic_sword，颜色 150,150,255,255），闪光（100,100,255,255） |
+
+闪光以 SkillEventKind::Flare 交出（会话接 dr_add_flare），格子外观（UV / 颜色）与随机数按生成单元的事件格式交出。验证 `recovered/verify_skill_board.py`：原函数从入口执行，生成宿主打开（SetType、RandI、IsNormalPotion、GetNormalSwordCount、Tile::Make*、SetFreezeVisibility 为原代码），AddFlare 与 ShowMenu 记录并跳过；700 组（每个函数 100 组）、2561 个闪光，事件、棋盘、战斗格、药水、生成附加数据与事件、随机种子、闪光计时、Game+0x165b8 一致。错误副本 16 个全部 exit 1（其中一个发现：ConvertTiles 是按行遍历，初稿按列被测试拒绝后改正）。
+
 ## 后续
 
-- H2..H5：约 21 个棋盘技能函数（FreezeSkulls、GrabTiles、ShatterDefence、ConvertTiles、Teleport、CreateExplosivePotions、Upgrade、CollectRandomRow、DemoteSpecialEnemy、KillSpecialEnemy、PromoteNormalEnemy、CreateMagicSword、Earthquake、ExplodeArmour、CollectRandomBlock、CreateManaPotions、ConvertColumnToSwords、CreateArrows、KillSkullsNextToCoins、CollectEdgeTiles、CreateChain、CollectBoard），每个 200～450 字节。
+- H3..H5：其余 14 个棋盘技能函数（GrabTiles、ShatterDefence、Teleport、CollectRandomRow、DemoteSpecialEnemy、KillSpecialEnemy、PromoteNormalEnemy、Earthquake、ExplodeArmour、CollectRandomBlock、ConvertColumnToSwords、KillSkullsNextToCoins、CollectEdgeTiles、CreateChain、CollectBoard），每个 200～450 字节。
 - H6：Interface::ProcessInput 的技能按钮（CanActivate、冷却、输入目标 Game+0x58ac）、Skill::Deactivate、Game::SetSkill，以及会话接线。

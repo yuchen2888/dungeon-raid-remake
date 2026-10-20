@@ -1,4 +1,5 @@
 #include "recovered_skills.hpp"
+#include <cstring>
 #include <utility>
 using namespace dungeonraid;
 namespace {
@@ -24,6 +25,22 @@ void emit(const SkillHooks* h,SkillEventKind kind,std::int32_t a=0,std::int32_t 
     const SkillEvent e{kind,a,b,c};h->event(h->context,&e);
 }
 void act(const SkillHooks* h,SkillAction action,std::int32_t a=0,std::int32_t b=0) {h->action(h->context,action,a,b);}
+constexpr std::int32_t rgba(std::uint32_t r,std::uint32_t g,std::uint32_t b,std::uint32_t a) {
+    return static_cast<std::int32_t>(r|g<<8|b<<16|a<<24);
+}
+void flare(const SkillHooks* h,std::int32_t tile,std::int32_t type,std::int32_t colour) {emit(h,SkillEventKind::Flare,type,tile,colour);}
+void reset_flare_timers(SkillState* s) {auto& m=*s->path->match;m.shake_progress_bd90=0;m.shake_scale_bd94=0x3f800000;}
+SelectionState& board(SkillState* s) {return s->path->match->stroke->selection;}
+bool normal_potion(const SkillState* s,int i) {
+    const auto& f=s->path->match->preview->potions[i];
+    return board(s).tiles[i].rule.type==0 && !f.flag_234 && !f.flag_232 && !f.flag_233;
+}
+bool normal_sword(const SelectionTile& t) {return t.rule.type==4 && !t.magic_sword && !t.rule.flag_231;}
+void tile_event(const GenerationHooks* h,GenerationEventKind kind,int tile,std::int32_t a,std::int32_t b=0,std::int32_t c=0,std::int32_t d=0) {
+    if(h && h->event) {const GenerationEvent e{kind,tile,a,b,c,d};h->event(h->context,&e);}
+}
+std::int32_t float_bits(float f) {std::int32_t b;std::memcpy(&b,&f,4);return b;}
+constexpr int column_major(int k) {return (k%6)*6+k/6;}   // k-th tile visited: x = k / 6, y = k % 6
 // The flag skills: the flag for this turn is set, its next-turn flag is copied from Game+0x1554c.
 void flag(SkillState* s,std::uint8_t& now,std::uint8_t& next,std::uint8_t* active) {
     now=1;next=s->finish->flag_1554c;*active=1;
@@ -104,4 +121,66 @@ extern "C" void dr_remove_skill(SkillState* s,std::int32_t slot,const SkillHooks
         emit(h,SkillEventKind::PositionSkill,i);
     }
     --r.skill_count;
+}
+extern "C" void dr_skill_upgrade(const SkillHooks* h) {emit(h,SkillEventKind::Menu,2);}
+extern "C" void dr_freeze_skulls(SkillState* s,const SkillHooks* h) {
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);auto& t=board(s).tiles[i];
+        if(t.rule.type!=1)continue;
+        flare(h,i,1,rgba(100,230,255,255));
+        emit(h,SkillEventKind::Freeze,0,i);   // Tile::SetFreezeVisibility(true)
+        t.rule.flag_255=1;s->path->combat[i].overlay=1;t.flaming=0;
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_convert_tiles(SkillState* s,std::int32_t from,std::int32_t to,const SkillHooks* h,const GenerationHooks* gh) {
+    for(int i=0;i<36;++i) {   // row-major
+        const auto& rule=board(s).tiles[i].rule;
+        if(from==1 && rule.enemy_type)continue;
+        if(rule.type!=from)continue;
+        if(from==4 && rule.flag_231)continue;
+        dr_set_tile_type(s->generation,static_cast<std::uint32_t>(i),to,s->path->turn,s->path->match->spawn_enabled_14ae0,gh);
+        flare(h,i,1,rgba(255,255,255,255));
+    }
+    reset_flare_timers(s);
+    if(to==1 && from==2)s->flags->b165b8[0]=1;
+}
+extern "C" void dr_create_mana_potions(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);if(!normal_potion(s,i))continue;
+        flare(h,i,1,rgba(100,100,255,255));dr_make_mana_potion(s->generation,static_cast<std::uint32_t>(i),gh);
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_create_explosive_potions(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);if(!normal_potion(s,i))continue;
+        flare(h,i,1,rgba(255,150,0,255));
+        // Tile::MakeExplosivePotion: UV (variant * 0.0517578125, type * 0.0517578125 + 0.6044921875), flag_234
+        const float u=static_cast<float>(s->generation->tiles[i].variant)*.0517578125f;
+        const float v=static_cast<float>(board(s).tiles[i].rule.type)*.0517578125f+.6044921875f;
+        tile_event(gh,GenerationEventKind::UV,i,float_bits(u),float_bits(v),float_bits(.0517578125f),float_bits(.0517578125f));
+        s->path->match->preview->potions[i].flag_234=1;
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_create_arrows(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    for(int k=0;k<36;++k) {
+        const int i=column_major(k);if(!normal_sword(board(s).tiles[i]))continue;
+        dr_make_arrow(s->generation,static_cast<std::uint32_t>(i),gh);flare(h,i,1,rgba(255,255,255,255));
+    }
+    reset_flare_timers(s);
+}
+extern "C" void dr_create_magic_sword(SkillState* s,const SkillHooks* h,const GenerationHooks* gh) {
+    std::int32_t n=0;for(const auto& t:board(s).tiles)n+=normal_sword(t);
+    std::int32_t pick=dr_random_int(&s->path->match->random,0,n-1,5);
+    tile_event(gh,GenerationEventKind::Random,-1,0,n-1,5,pick);   // RandI as the generation unit reports it
+    for(int k=0;k<36 && pick>=0;++k) {
+        const int i=column_major(k);auto& t=board(s).tiles[i];
+        if(!normal_sword(t))continue;
+        if(pick) {--pick;continue;}
+        tile_event(gh,GenerationEventKind::Colour,i,rgba(150,150,255,255));t.magic_sword=1;   // Tile::MakeMagicSword
+        flare(h,i,1,rgba(100,100,255,255));pick=-1;
+    }
+    reset_flare_timers(s);
 }
