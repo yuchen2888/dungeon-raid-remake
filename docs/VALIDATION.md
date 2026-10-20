@@ -375,3 +375,8 @@
 
 - 新 verify_full_turn：8 局 32 个完整回合 2160 帧（28 次消除、25 次补位、28 次敌人攻击）原版与原生逐帧一致。错误副本：MatchTiles 后才清计数、单格仍开始笔画，均 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、58 个 verify 脚本共 61 步通过。运行目录 `.relay/runs/20261020T084919.669970Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-F3：原版 Game::Process 对原生 dr_process_frame（Claude）
+
+- 新 verify_game_frames：6 局 22 回合 1603 帧，原版每帧真实 Game::Process、原生每帧 dr_process_frame（全部单元接线），状态逐帧一致；2 局以游戏结束收场。错误副本 4 个（去掉 effects、攻击提前、不消耗触摸、忽略伤害标签结束）全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、59 个 verify 脚本共 62 步通过。运行目录 `.relay/runs/20261020T091102.578528Z`，inputs_unchanged true。

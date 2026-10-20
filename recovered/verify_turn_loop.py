@@ -41,7 +41,7 @@ class Original(GateOriginal,EotOriginal,AttackOriginal):
         text=(HERE.parent/'armv7-disassembly.txt').read_text()
         self.set_alpha=int(re.search(r'^__ZN4Quad8SetAlphaEh:\n\s*([0-9a-f]+):',text,re.M)[1],16)
     def hook(self,u,address,size,context):
-        if self.gating and address==EPILOGUE:u.emu_stop();return   # ProcessInput returns after the gate
+        if self.gating and address==EPILOGUE and not getattr(self,'processing',False):u.emu_stop();return   # ProcessInput returns after the gate
         lr=u.reg_read(self.LR)&~1
         if self.gating and address==END_OF_TURN and lr==END_OF_TURN_SITE+4:
             self.gate_events.append(['end_of_turn']);self.eot_ran=True

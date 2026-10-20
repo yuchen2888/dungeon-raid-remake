@@ -180,6 +180,16 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 意义：至此完整回合（玩家笔画、松手消除、补位、奖励、敌人攻击、回合结束）可由原生恢复代码逐帧复现原版。尚未覆盖：dr_process_frame 的界面门槛与整帧接线在整局中的运行（目前按 Process 顺序由测试调用各步骤）、dr_init_new_game 起局、物品构造（起始物品属性）、卷轴/取消等少见输入在整局中的出现、存档。
 
+## T040-F3：原版 Game::Process 对原生 dr_process_frame，整帧逐帧（Claude，2026-10-20）
+
+新整合测试 `recovered/verify_game_frames.py`（不新增原生代码）：与 F2 相同的携带状态与回合，但每一帧原版调用一次真实的 Game::Process（从入口到返回），原生调用一次 dr_process_frame，其 GameFrameHooks 接到各原生单元：input→dr_process_input（MatchTiles→dr_commit_path、MoveMatchedTiles→dr_move_matched_tiles、EndOfTurn→dr_end_of_turn）、effects→dr_process_board_effects、falling→下落列表（dr_process_falling_list）或 dr_reset_round_counters、tokens→dr_process_reward_tokens、flare_fade、damage_label、damage_labels（CheckEndGame→dr_check_end_game 与结算）、attack→dr_process_attack。原版 Process 内按段起止地址打开对应单元测试的拦截（门槛/松手、代币、ProcessAttack、从 Process 调用的 CheckEndGame 打开结算记录）；棋盘效果与标签段的纯表现调用、UpdateTime、CalculateFPS、Interface::Process 跳过（其事件由单元测试比较）。每帧比较游戏状态（棋盘、选择、战斗、生成/补位、代币、资源、攻击动画、门槛与回合字段、标签飞行、盾牌碎裂、结算状态与事件）以及本帧是否走到 ProcessAttack。
+
+6 局 22 回合 1603 帧全部一致；其中 2 局因尖刺/火焰标签到达扣血致死，CheckEndGame 结束游戏（含结算记录），55 帧因奖励打开菜单（代币离开）提前结束本帧，两侧一致。错误副本：去掉 effects、攻击提前到下落之前、帧末不消耗触摸、忽略伤害标签的结束，均 exit 1（最后一个最初存活，加入"本帧是否走到 ProcessAttack"比较后被拒）。
+
+宿主注意：跳过调用时写回 PC 必须带 Thumb 位（lr|1）；verify_attack_all.Native 的 `process` 与 `frame` 属性名被占用；真实 Process 不更新测试宿主的 Python 下落列表，需每帧从 Game+0xb3f8 同步。verify_turn_loop 的 ProcessInput 尾声停止改为仅在其自身门槛运行时生效。
+
+意义：原生代码按 Game::Process 的整帧调度驱动全部已恢复单元，能与原版逐帧一致地完成多回合对局并走到游戏结束（界面关闭、无存档、起始物品为测试数据）。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

@@ -59,6 +59,7 @@
 | T040-C3a | 完成 / Claude，待复核 | ProcessInput 整函数组合 dr_process_input（门槛 + 分派到笔画/取消/松手/卷轴）；1500 组、9 种去向 | verify_process_input.py；六个错误副本被拒 |
 | T040-F1 | 完成 / Claude，待复核 | 回合循环敌人半段携带状态整合：门槛→攻击→闪光→EndOfTurn→输入就绪；8 局 32 回合 1699 帧 | verify_turn_loop.py |
 | T040-F2 | 完成 / Claude，待复核 | 完整回合携带状态整合：笔画、松手（MatchTiles / MoveMatchedTiles 原位置）、补位、奖励、攻击、EndOfTurn；8 局 32 回合 2160 帧 | verify_full_turn.py |
+| T040-F3 | 完成 / Claude，待复核 | 原版真实 Game::Process 对原生 dr_process_frame（各单元接线）逐帧整合：6 局 22 回合 1603 帧，含 2 次游戏结束 | verify_game_frames.py |
 | T040-F | 进行中 | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |
 | T040-C3 | 待做 | ProcessInput 剩余：ProcessPretzels、UpdateDimming；UpdateCrossVisibility 定为表现层边界 | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
