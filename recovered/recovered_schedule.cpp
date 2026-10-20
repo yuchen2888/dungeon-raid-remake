@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <set>
 #include <vector>
 using namespace dungeonraid;
 extern "C" std::int32_t dr_count_attackers(const PathState* p) {
@@ -511,4 +512,18 @@ extern "C" void dr_healing(ResourceState* r,const ResourceHooks* h) {
         r->ui_health=healed;
         const ResourceEvent bar{ResourceEventKind::HealthBar,healed,0,0,0};h->event(h->context,&bar);
     }
+}
+extern "C" void dr_process_pretzels(const SelectionState* s,ResourcePreviewState* p,TokenQueue* q) {
+    std::set<std::int32_t> blocks;std::int32_t crossings=0,px=0,py=0;
+    for(std::size_t i=0;i<s->path_length;++i) {
+        const auto& rule=s->tiles[s->path[i]].rule;
+        if(i && rule.y!=py && rule.x!=px) {
+            const std::int32_t key=std::min(rule.x,px)+6*std::min(rule.y,py);
+            if(blocks.count(key))++crossings;else blocks.insert(key);
+        }
+        px=rule.x;py=rule.y;
+    }
+    const std::int32_t level=crossings>14?3:crossings>9?2:crossings>4?1:0;
+    TokenQueueCounters counters=*dr_token_queue_counters(q);counters.bonus_total_165d4=level;dr_token_queue_restore(q,&counters);
+    p->total_165d0=level==3?100:crossings*(level+1);
 }

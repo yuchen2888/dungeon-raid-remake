@@ -390,3 +390,8 @@
 
 - 新 verify_small_units：三个原函数各自从入口执行，400 组（81 次治疗、103 次技能回满）；错误副本 8 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、61 个 verify 脚本共 64 步通过。运行目录 `.relay/runs/20261020T094415.655503Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-G1：ProcessPretzels（Claude）
+
+- 新 verify_pretzels：原 Game::ProcessPretzels 从入口执行（std::set 由路径宿主模拟），1500 组，含编织路径，等级 0–3 全覆盖（0:1074、1:223、2:188、3:15）。错误副本 14 个：10 个 exit 1；键改用 max x、步长 5、x/y 互换、交叉后删除 4 个存活，均为等价变异（理由见 T040_SCHEDULE.md）。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、62 个 verify 脚本共 65 步通过。运行目录 `.relay/runs/20261020T100355.172210Z`，inputs_unchanged true。

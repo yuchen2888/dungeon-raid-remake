@@ -280,6 +280,12 @@ void dr_shapeshift(dungeonraid::ResourceState*,const dungeonraid::ResourceHooks*
 // health_max + health_bonus (as float) is raised to that quarter (truncated), achievement 50 (5.0) and the
 // health bar when the shown value changes.
 void dr_healing(dungeonraid::ResourceState*,const dungeonraid::ResourceHooks*);
+// Original Game::ProcessPretzels 0xd03c (SelectionEvent::ProcessPretzels, during the stroke): along the
+// path, every diagonal step names the 2x2 block it crosses (min x + 6 * min y); a step through a block
+// already crossed counts. More than 14 crossings: level 3 and preview total 100; more than 9: level 2;
+// more than 4: level 1; else 0, with total = crossings * (level + 1). The level is Game+0x165d4
+// (TokenQueueCounters.bonus_total_165d4), the total ResourcePreviewState.total_165d0.
+void dr_process_pretzels(const dungeonraid::SelectionState*,dungeonraid::ResourcePreviewState*,dungeonraid::TokenQueue*);
 // Original Game::Process 0x1717c, the frame schedule: time, queues reset; the first active screen
 // (game over -- then the score screen once its state is 3 --, help, unlock, main menu or name entry,
 // intro, score) consumes a released or cancelled touch (phase 2/3 -> 0) and runs alone. With an in-game

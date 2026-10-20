@@ -216,8 +216,20 @@ Interface::ShowMenu 0x1eb20 只是 FoldoutMenu::Initialise（其活动字节即 
 
 注意：F2–F4 整合测试仍沿用链式宿主的适配器（原版在入口跳过 SetSpecialType / Shapeshift / Healing，两侧一致但未执行）；在原生会话（T040-G）中应接上本节三个函数，并在整合测试中让原版执行它们。
 
+## T040-G1：ProcessPretzels（Claude，2026-10-20）
+
+Game::ProcessPretzels 0xd03c（400 字节）在笔画更新中调用（SelectionEvent::ProcessPretzels，链式宿主原先作为边界跳过），属游戏规则：路径"打结"奖励。原生 `dr_process_pretzels(SelectionState*, ResourcePreviewState*, TokenQueue*)`：
+
+- 沿路径（Game+0xb3d8 列表）逐格，横纵坐标都变化的斜步对应它穿过的 2×2 格块，键 = min x + 6·min y（std::set<int>）；块已在集合中则交叉数 +1，否则插入。
+- 交叉数 > 14 → 等级 3、预览总数 100；> 9 → 等级 2；> 4 → 等级 1；否则 0；等级 0–2 时总数 = 交叉数 ×（等级 + 1）。
+- 等级写 Game+0x165d4（TokenQueueCounters.bonus_total_165d4），总数写 Game+0x165d0（ResourcePreviewState.total_165d0），都是覆盖写。
+
+验证 `recovered/verify_pretzels.py`：原函数从入口执行（std::set 由路径宿主模拟；本测试移除笔画宿主对它的入口跳过），1500 组。路径：随机八方向游走（偏好斜步），加三分之一"编织"路径——两列条带内两条交叉锯齿（每条带 5 个交叉，三条共 15，为 6×6 棋盘上限），随机对称变换并截取随机长度，使四个等级都出现（0:1074、1:223、2:188、3:15）。错误副本 14 个：首步也计、正交步也计、不更新上一格、三个阈值改为 >=、上限 99、乘数改为等级、不写等级、等级 3 不封顶等被拒；键改用 max x、步长 5、x/y 互换，以及交叉后从集合删除，四个存活——前三个对斜步块仍是单射（只作集合键），后者要求同一块第三次斜穿，而路径不重复格子时每块只有两条对角线，不可能发生，属等价变异。
+
+整合测试 F2–F4 中笔画宿主仍在入口跳过 ProcessPretzels（两侧一致但未执行），原生会话应在 SelectionHooks 的 ProcessPretzels 事件上接本函数。
+
 ## 后续
 
-- ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
+- ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。
 - T040-D：Game::Process 中的游戏部分调度（ProcessEffects、ShieldShatter、标签动画对生命/音效/CheckEndGame 的作用、ProcessAttack 调用条件），界面部分为表现层边界。
 - 物品模型：Item 构造（Initialise / GenerateName / GenerateStats / MakeStats）仍为边界，完整新局需要它才能得到起始物品属性。

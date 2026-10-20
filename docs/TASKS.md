@@ -62,9 +62,10 @@
 | T040-F3 | 完成 / Claude，待复核 | 原版真实 Game::Process 对原生 dr_process_frame（各单元接线）逐帧整合：6 局 22 回合 1603 帧，含 2 次游戏结束 | verify_game_frames.py |
 | T040-F4 | 完成 / Claude，待复核 | 从新局（InitNewGame / dr_init_new_game）开始逐帧对局：6 局 60 回合 3574 帧 | verify_new_game_play.py |
 | T040-G0 | 完成 / Claude，待复核 | 会话前补齐 SetSpecialType / Shapeshift / Healing（dr_set_special_type / dr_shapeshift / dr_healing）；400 组 | verify_small_units.py；8 个错误副本被拒 |
-| T040-G | 待做 | 原生会话库：把测试宿主中的共享对象与钩子接线固化为 C++ 会话（新局、每帧 dr_process_frame、触摸输入、状态查询），供 iOS 层调用；用 F4 方式与原版逐帧比较 | 新 recovered_session 模块 + 测试 |
+| T040-G1 | 完成 / Claude，待复核 | ProcessPretzels（dr_process_pretzels：路径斜步交叉计数→奖励等级与预览总数）；1500 组，四个等级都覆盖 | verify_pretzels.py；10 个错误副本被拒，4 个等价变异存活（见 T040_SCHEDULE） |
+| T040-G | 进行中 / Claude | 原生会话库：把测试宿主中的共享对象与钩子接线固化为 C++ 会话（新局、每帧 dr_process_frame、触摸输入、状态查询），供 iOS 层调用；用 F4 方式与原版逐帧比较 | 新 recovered_session 模块 + 测试 |
 | T040-F | 完成（F1..F4） | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |
-| T040-C3 | 待做 | ProcessInput 剩余：ProcessPretzels、UpdateDimming；UpdateCrossVisibility 定为表现层边界 | T040_PROCESS_CALLS.json unrecovered_by_size |
+| T040-C3 | 待做 | ProcessInput 剩余：UpdateDimming（ProcessPretzels 已由 T040-G1 完成）；UpdateCrossVisibility 定为表现层边界 | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 
 首次接力已验收：Claude Code 桌面会话于 2026-10-18 完成 T010 并提交 8d9604a，Codex 从干净工作区接手，重跑 `--check`、独立核对全部 18 段字节、确认 HavePerk/GetSpecialEnemyCount 和容器替代边界，修正一处 UI 误分类。详细结果见 T010_REVIEW.md。Gemini CLI 接力尚未发生。

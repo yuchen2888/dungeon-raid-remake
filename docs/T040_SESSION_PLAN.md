@@ -34,6 +34,7 @@ void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回�
 | SelectionHooks | ProcessRune | dr_process_rune（commit 参数） |
 | SelectionHooks | ResourceShadows | dr_preview_resources |
 | SelectionHooks | RuneMatchTile | dr_match_tile |
+| SelectionHooks | ProcessPretzels | dr_process_pretzels（G1） |
 | MatchHooks | Token | dr_enqueue_token → TokenHooks Initialise → dr_initialise_token（新代币运动） |
 | MatchHooks | SetSpecialType / Shapeshift | dr_set_special_type / dr_shapeshift（G0） |
 | ReleaseHooks | MatchTiles | dr_commit_path |
@@ -52,7 +53,7 @@ void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回�
 1. 物品模型：Item::Initialise / GenerateStats（1920 字节）/ GenerateName / MakeStats（文字，3028 字节）/ AddUpgrade，ItemUpgrade::GetRandomStat / IsUpgradeAllowed / Initialise。起始物品属性与升级都依赖它（当前测试用零属性）。
 2. FoldoutMenu：Initialise(MenuType)（4140 字节，生成升级/商店/技能选项）与 ProcessInput（选择后应用到物品/属性/技能）——含游戏规则，不只是界面。
 3. Interface 目标位置（GetTarget / GetSpecialTarget）：代币飞行目标是界面布局常量；当前测试由宿主给出。
-4. ProcessPretzels（0xd03c，400 字节，笔画更新中调用，目前是 SelectionEvent 边界）：按路径格子坐标建集合计数，阈值 4 / 9 / 14 决定奖励加成总数（Game+0x165d4，TokenQueueCounters.bonus_total）——是游戏规则，应先恢复（建议 T040-G1）。UpdateDimming（116 字节）待判定；UpdateCrossVisibility 为表现层。
+4. ProcessPretzels 已恢复（T040-G1，dr_process_pretzels），会话中接 SelectionHooks 的 ProcessPretzels 事件。UpdateDimming（116 字节）待判定；UpdateCrossVisibility 为表现层。
 5. SerialiseState / SerialiseClasses：存档（用户暂缓）。
 
 ## 实施顺序建议

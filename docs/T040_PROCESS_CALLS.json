@@ -1190,7 +1190,7 @@
           "target": "__ZN4Game15ProcessPretzelsEv",
           "target_address": "0xd03c",
           "size": 400,
-          "category": "unrecovered"
+          "category": "T040:dr_process_pretzels"
         },
         {
           "site": "0x170a4",
@@ -1269,10 +1269,6 @@
         {
           "symbol": "__ZN4Game13UpdateDimmingEv",
           "size": 116
-        },
-        {
-          "symbol": "__ZN4Game15ProcessPretzelsEv",
-          "size": 400
         },
         {
           "symbol": "__ZN4Game14SerialiseStateEv",
