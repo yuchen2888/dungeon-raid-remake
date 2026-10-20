@@ -153,6 +153,21 @@ ReleaseHooks 增加 `check_end_game` 回调（接 dr_check_end_game），Release
 
 错误副本 6 个全部 exit 1：阶段 2 取消、阶段 4 也松手、总是开始笔画、松手不做前缀、跳过卷轴、Idle 也分派。
 
+## T040-F1：回合循环的敌人半段，携带状态逐帧整合（Claude，2026-10-20）
+
+新整合测试 `recovered/verify_turn_loop.py`（不新增原生代码）：同一棋盘、随机数与资源状态跨多个回合携带，每帧按 Game::Process 顺序运行：ProcessInput 门槛（原版从 ProcessInput 入口执行；门槛调用 EndOfTurn 时 EndOfTurn 以原代码执行并按 verify_end_of_turn 记录；原生为 dr_input_gate，ScheduleHooks.end_of_turn 直接接 dr_end_of_turn）、下落格、奖励代币、闪光淡出、ProcessAttack。每回合开始时把"输入就绪"清零，模拟玩家刚完成一步；随后门槛开始敌人攻击，ProcessAttack 运行到阶段 8，门槛执行 EndOfTurn 并使输入就绪。8 局 32 回合 1699 帧全部一致（每回合一次攻击、一次 EndOfTurn）。
+
+整合时暴露、并在原生会话中必须统一的状态（各单元测试原本各建一份同一 Game 字段）：
+- 攻击阶段：门槛与 ProcessAttack 用同一个 AttackDamageState。
+- RuneState：门槛（高亮计数）与 EndOfTurn（enabled_16491）用同一个。
+- Game+0xbfba：EndOfTurn 的 counterattack 指针指向 AttackAnimation.counterattack。
+- 代币待处理数（Game+0xb52c）：TokenQueue 计数与 Process 代币循环（dr_process_reward_tokens 的 pending）是同一个数，每帧前后同步。
+- 测试宿主：AllOriginal 的攻击/移动模式切换按被测函数配置（ranges/entry/stop_at），EndOfTurn 与 ProcessAttack 交替运行时需逐步切换。
+
+测试注意：本循环里 ProcessAttack 阶段 7 自己就结束闪光，Process 的闪光淡出在此通常无事可做（其分支由 verify_frame_parts 覆盖）；早回合特长跳过等单元分支同理由各自测试覆盖。错误副本：门槛不调 EndOfTurn、阶段 8 也阻塞，均 exit 1。
+
+下一步 T040-F2：在同一携带状态上加入玩家半段（触摸笔画、松手、MatchTiles 与 MoveMatchedTiles 在松手中按原顺序执行、补位与奖励结算），形成完整回合。
+
 ## 后续
 
 - ProcessInput 剩余边界：UpdateCrossVisibility（1032 字节，按伤害类型生成路径上的交叉标签，属表现层）、UpdateDimming、ProcessPretzels（400 字节）、SerialiseState（存档，暂缓），见登记 unrecovered_by_size。

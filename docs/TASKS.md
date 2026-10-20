@@ -57,7 +57,8 @@
 | T040-D2b | 完成 / Claude，待复核 | Process 回合计数清零、攻击闪光淡出、当前伤害标签与帮助 8 取消笔画（三个原生函数）；300 组 726 帧 | verify_frame_parts.py；错误副本被拒 |
 | T040-D3 | 完成 / Claude，待复核 | Game::Process 整帧调度 dr_process_frame（界面门槛、触摸消耗、菜单、步骤顺序与离开/结束）；1500 帧、12 种去向 | verify_frame.py；错误副本被拒 |
 | T040-C3a | 完成 / Claude，待复核 | ProcessInput 整函数组合 dr_process_input（门槛 + 分派到笔画/取消/松手/卷轴）；1500 组、9 种去向 | verify_process_input.py；六个错误副本被拒 |
-| T040-F | 待做 | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |
+| T040-F1 | 完成 / Claude，待复核 | 回合循环敌人半段携带状态整合：门槛→攻击→闪光→EndOfTurn→输入就绪；8 局 32 回合 1699 帧 | verify_turn_loop.py |
+| T040-F | 进行中 | 原生整局示例：用 dr_init_new_game + dr_process_frame 与各步骤接线跑若干回合，与原版逐帧比较（不执行旧程序的整局验收） | 新的整合测试 |
 | T040-C3 | 待做 | ProcessInput 剩余：ProcessPretzels、UpdateDimming；UpdateCrossVisibility 定为表现层边界 | T040_PROCESS_CALLS.json unrecovered_by_size |
 | T050 | 待 T040，可独立做标注原型 | 现代 iOS 全屏界面、资源键、中英文和教程 | 实机/模拟器交互验收；原型明确标注，不能替代真实引擎 |
 

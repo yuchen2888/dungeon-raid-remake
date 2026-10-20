@@ -365,3 +365,8 @@
 
 - 新 verify_process_input：原版 ProcessInput 从入口到返回（原 ProcessRune / ProcessResourceShadows），1500 组、9 种去向全部出现；错误副本 6 个全部 exit 1。verify_release 改为允许空路径后仍 800 组通过。
 - `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、56 个 verify 脚本共 59 步通过。运行目录 `.relay/runs/20261020T081208.472317Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-F1：回合循环敌人半段整合（Claude）
+
+- 新 verify_turn_loop：8 局 32 回合 1699 帧，门槛 / EndOfTurn（原代码）/ 下落 / 代币 / 闪光淡出 / ProcessAttack 携带状态逐帧一致。错误副本：门槛不调 EndOfTurn、阶段 8 阻塞，均 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：构建、2 个示例、57 个 verify 脚本共 60 步通过。运行目录 `.relay/runs/20261020T083431.442431Z`，inputs_unchanged true。
