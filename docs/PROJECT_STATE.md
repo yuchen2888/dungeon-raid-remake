@@ -126,6 +126,8 @@
 
 2026-10-19 Claude 认领 T030（起始 ad116bd）：T030-A 新增 scripts/t030_eot_audit.py 与登记；T030-B 新增 recovered_turn.* 模块（build.sh 加入）与 verify_turn_small.py。
 
+2026-10-20～21 Claude 继续 T040-K（起始 ab10ae3，继承 K5a 未提交修改为本人前一会话所做）：提交 2a2c86d（K5 / C3：装备、三种菜单、变暗接入会话）、24f7993（L1：法力药水充能规则）、df0214b（G3：无界面整局演示）及其后的文档提交（T050_GODOT_PLAN.md）；每个代码提交前 verify --full 通过（见 VALIDATION.md）。交接时无未提交修改。
+
 活动任务与未提交现场实时以 `./scripts/relay.sh check`、`git diff` 和 `.relay/active/owner.json` 为准；文档中的提交号只作里程碑，不用手工维护“永远等于 HEAD”的循环字段。
 
 ## 尚未完成及下一步
