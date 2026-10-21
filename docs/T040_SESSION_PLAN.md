@@ -48,6 +48,10 @@ void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回�
 | GameFrameHooks | input / effects / falling / tokens / pools / flare_fade / damage_label / damage_labels / attack | 见 T040-F3 |
 | 其余事件 | 音效、标签、粒子、闪光、帮助、界面值、文字、UV、颜色、成就 | 进入表现事件队列 |
 
+## G3：无界面整局演示（session_demo，Claude，2026-10-20）
+
+`recovered/session_demo.cpp`（`sh recovered/run_session_demo.sh` 编译并运行）：只用原生会话库，不执行任何原版指令、也不经过测试宿主，自己打完整局。嵌入方做渲染层该做的事：职业表（0 号职业 1 级，其余未解锁）、棋盘布局（pitch 1/6）、触摸（按游戏自己的连线规则 dr_can_match 从所有起点随机走出的最长路径，或在技能就绪时按技能按钮）、菜单按钮（动画结束后选项、再确认）、代币飞行目标（演示用常量）。三局各打到结束画面（或 400 回合上限），打印每局回合数、等级、金币、技能数与菜单、技能使用次数；新局、连线、敌人回合、升级 / 商店 / 装备升级菜单、技能都要出现，否则返回非零。纳入 `verify` 的构建步骤（与 stroke_demo、rewards_demo 并列）。这证明规则核心可以脱离原版程序与 Python 测试独立运行，也是 Godot 接入（T050-A）的参考：Godot 侧做的就是这里 main 里的事，再加上画面。
+
 ## 仍需恢复或决定的部分（会话之外）
 
 1. 物品模型：Item::Initialise / GenerateStats（1920 字节）/ GenerateName / MakeStats（文字，3028 字节）/ AddUpgrade，ItemUpgrade::GetRandomStat / IsUpgradeAllowed / Initialise。起始物品属性与升级都依赖它（当前测试用零属性）。

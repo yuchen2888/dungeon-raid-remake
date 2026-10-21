@@ -496,3 +496,8 @@
 - 新 verify_special_target：原 Interface::GetSpecialTarget(Token*) 从入口执行，1500 组一致（结果 −1 441、0 519、槽 1 252、槽 2 174、槽 3 114）；错误副本 6 个全部 exit 1。
 - verify_session：原版侧执行原 GetSpecialTarget（此前由用例回答），装备与技能阶段约三成药水为法力药水；调用 72 次，32969 帧一致；会话接线的错误副本（不调用 dr_special_target）exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：81 步通过。运行目录 `.relay/runs/20261021T055021.916250Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-G3：无界面整局演示（Claude）
+
+- 新 session_demo（`sh recovered/run_session_demo.sh`）：原生会话不执行原版指令、不经测试宿主，自己打 3 整局：392 回合、31844 帧，3 局都打到结束画面；升级菜单 9 次、商店 10 次、装备升级 5 次，技能使用 39 次；退出码 0（要求出现结束画面、升级与商店菜单、技能使用）。这是演示与冒烟检查，不与原版逐帧对照（逐帧对照见 verify_session）。
+- `./scripts/relay.sh verify --full` → exit 0：82 步通过（新增 session_demo 构建运行步骤）。运行目录 `.relay/runs/20261021T062721.674980Z`，inputs_unchanged true。
