@@ -90,6 +90,14 @@
 | T040-K5a | 完成 / Claude，待复核 | 装备与属性接入会话：新局造装备、UpdateStats、种族 6 IncreaseStat、敌人 28 DestroyUpgrade（不再是边界），两份几率副本同步 | verify_session.py 装备阶段 |
 | T040-K5b | 完成 / Claude，待复核 | 菜单接入会话：经验 / 金币 / 升级点满 100 与技能 Upgrade 打开三种菜单，菜单打开时每帧 dr_menu_process（menu_button 由渲染层写入），买下的卷轴 dr_skill_activate | verify_session.py（菜单按原代码执行）；32065 帧一致；14 个错误副本被拒、1 个等价、2 个不可达 |
 | T040-K6 | 完成 / Claude，待复核 | 商店卷轴读到的吸血标签（Game+0xbfc0）类型与顶点：新模块 recovered_labels（SimpleLabel 全部函数，顶点只由代码常量与位置、运动决定）；会话持有吸血 / 火焰 / 尖刺三个标签模型（Game::Start 颜色与持续时间、伤害标签段的调用、淡出基准写入），商店卷轴读模型字节；标签位置作为松手飞行起点也改由会话提供 | verify_labels.py；41 个错误副本被拒；verify_session.py 三标签整块内存每帧比较 |
+| T040-M | 盘点完成 / Claude；M1..M7 待做 | 后端收尾盘点：从 iOS 层调用的入口出发，列出原版能走到、尚未恢复的函数，分成规则 / 显示 / 平台与旧版兼容；结论：一局之内已全部恢复，一局之外的规则分 7 项补做 | docs/T040_BACKEND_INVENTORY.md |
+| T040-M1 | 待做 | 主菜单的三种开局：Game::NewGame / StartTutorial（难度 0、帮助重置）/ StartChallenge（记录模式），HelpMenu::ResetHelp / ClearHelp | 原函数对照 + 会话接口 |
+| T040-M2 | 待做 | 开机初始状态：Game::Game / Game::Start 的职业名单（CharacterClass::Initialise、DeserialiseClasses）、当前职业、设置默认值；会话不再依赖调用方编写职业名单 | 原函数对照 + 会话接口 |
+| T040-M3 | 待做 | 开局设置：NameScreen（名字、随机名字、职业、模式、难度）、ModeScreen、IntroScreen（结束时存档）；确认后 InitNewGame | 原函数对照 + 会话接口 |
+| T040-M4 | 待做 | 职业编辑：ClassScreen 的规则部分与 CharacterClass 的 CanChooseRace / IsPerkUnlocked / SetPerk / SetFlaw / SetReplacementSkill 等，Game::IsRaceUnlocked / IsPerkUnlocked | 原函数对照 + 会话接口 |
+| T040-M5 | 待做 | 游戏中菜单：GameMenu::Process 的设置开关与退出，Game::UpdateHelpState | 原函数对照 + 会话接口 |
+| T040-M6 | 待做 | 帮助提示队列：HelpMenu::QueueHelp / Show / Process（待显示与已看过的帮助） | 原函数对照 + 会话接口 |
+| T040-M7 | 待做 | 局后流程：GameOverScreen / ScoreScreen / MainMenu 的切换与按钮、最高分页码 | 原函数对照 + 会话接口 |
 | T040-L1 | 完成 / Claude，待复核 | 法力药水给哪个技能充能：Interface::GetSpecialTarget(Token*) 实为规则（冷却未满且非技能 29 的槽中按流 5 随机选一），dr_special_target；会话自己计算，SessionHost 去掉 choose_special | verify_special_target.py；6 个错误副本被拒；verify_session 原版侧执行原函数 |
 | T040-G3 | 完成 / Claude，待复核 | 无界面整局演示 session_demo：原生会话自己打完整局（新局、连线、敌人回合、三种菜单、技能；第一局中途退出再从存档继续），不执行原版指令、不经测试宿主；Godot 接入的参考 | `sh recovered/run_session_demo.sh`；纳入 verify 构建步骤 |
 | T040-K | 完成（K1..K5） / Claude，待复核 | 升级 / 商店 / 装备升级菜单（FoldoutMenu）：资源单元在经验、金币、升级点满 100 时发出 Menu 0 / 1 / 2，原版 Interface::ShowMenu → FoldoutMenu::Initialise(MenuType)（4140 字节）生成选项（RandI 6 处、Rand 2 处；职业技能池 CharacterClass::GetSkillPool、Game::IsSkillUnlocked、Skill::CanActivate；商店 Game::GetItem + Item::Initialise(Item*)；装备升级 ItemUpgrade::Initialise / GetRandomStat 等），菜单打开期间 Game::Process 只处理菜单；FoldoutMenu::ProcessInput（636 字节）应用选择（Game::SetSkill 688 字节、物品购买、ItemUpgrade 应用、Item::GenerateStats / MakeStats）。K5 已把装备与三种菜单接入会话，选择升级这一核心玩法在原生整局中可用。分步：K1 选项生成（三种菜单），K2 选择的应用（SetSkill、物品、装备升级），K3 物品模型（Item 构造 / GenerateStats / MakeStats、ItemUpgrade），K4 会话接线（菜单打开 / 选择接口）与整局测试 | 新单元测试 + verify_session 菜单阶段 |
