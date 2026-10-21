@@ -58,6 +58,11 @@ extern "C" {
 // (skulls, skulls that are not special enemies, special enemies, shields, swords, normal potions or swords,
 // armour with skulls); types without a condition and types above 36 are always true.
 bool dr_skill_can_activate(const dungeonraid::SkillState*,std::int32_t type);
+// Original Interface::GetSpecialTarget(Token*) 0x20358: the skill slot a special reward token (kind 1, a mana potion
+// tile) recharges. The slots 0..skill_count-1 whose skill is not type 29 and whose cooldown is not full (current !=
+// max) are collected in order (a std::set<int>); none: -1; else the RandI(0, n-1, stream 5)-th of them. Other token
+// kinds: 0. (skill_count above 4 does not occur; the native loop stops at the four slots.)
+std::int32_t dr_special_target(const dungeonraid::SkillState*,std::int32_t token_kind);
 // Original Skill::Activate 0x2ad40 for a skill of the given type: its sound and board action, or a
 // this-turn flag set to 1 with its next-turn flag copied from Game+0x1554c (and the skill's active byte set
 // where the original sets it); skill 33 (CollectBoard) gives achievement 64 with more than 19 plain skulls

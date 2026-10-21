@@ -33,6 +33,8 @@ random taps, then a choice (two on the level-up menu) and the confirm until the 
 is compared too (the upgrade plans only while the upgrade menu is the current one). The item and skill phases draw the
 current class (Game+0x1648c) from 0..9 (with_class): the menus' skill pools and the class fields Game::MatchTile reads
 (type, level, race) follow it.
+Interface::GetSpecialTarget(Token*), the skill slot a mana potion recharges (T040-L1), runs as original code
+(std::set<int> modelled) instead of verify_motion.py's answer; the native session computes it (dr_special_target).
 The original side is the F4 / F3 harness, except that the functions the session wires itself from unit events
 (SetSpecialType, Shapeshift, Healing, ProcessPretzels, CheckEndGame in the units, InialiseShieldShatter) run as
 original code instead of the unit harnesses' adapters (OriginalMixin); carried-state variants make them occur.
@@ -83,6 +85,11 @@ def with_class(c,rng):
         roster=sc['classes'];roster[k]=list(roster[0])
         roster[0]=[(roster[k][0]+rng.randrange(1,10))%10,rng.randrange(10),rng.choice([0,1,5,10])]
     sc['current']=k;return c
+def with_mana(c,rng):
+    """T040-L1: some potions are mana potions (flag_232): their tokens recharge a skill (Interface::GetSpecialTarget)."""
+    for i,t in enumerate(c['board']):
+        if t['type']==0 and rng.random()<.3:c['preview']['potions'][i][0]=1
+    return c
 def skill_variant(c,rng,game):
     """Equipped skills, every type in turn (four per game; the slot order rotates every ten games, so each type also
     sits in the slots only reached with three or four skills), most cooldowns ready."""
@@ -103,9 +110,8 @@ class Objects(C.Structure):
               ('skill_button',C.c_void_p),('skill_input',C.c_void_p),('items',C.c_void_p),('menu',C.c_void_p),('menu_button',C.c_void_p),('dimmed',C.c_void_p)]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,I32,C.c_void_p)
 TARGET=C.CFUNCTYPE(None,C.c_void_p,I32,I32,C.POINTER(Point))
-CHOOSE=C.CFUNCTYPE(I32,C.c_void_p,C.POINTER(Motion))
 START=C.CFUNCTYPE(None,C.c_void_p,I32,C.POINTER(Point))
-class Host(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT),('target',TARGET),('choose',CHOOSE),('start',START)]
+class Host(C.Structure):_fields_=[('context',C.c_void_p),('event',EVENT),('target',TARGET),('start',START)]
 SOURCE_GENERATION,SOURCE_NEW_GAME,SOURCE_SKILL,SKILL_USED,SKILL_FLAME,SKILL_JUMP=8,28,31,17,16,13   # SkillEventKind UpdateSkills: a skill used; FlameVisibility: FireBreath; JumpDown
 
 SCREEN_INIT=0x307f8   # GameOverScreen::Initialise
@@ -156,6 +162,8 @@ def with_items(c,rng):
 # T040-K5b: FoldoutMenu (Interface+0xd10) as original code
 from verify_menu_level import MenuState, OPTION_INTS, OPTION_CHANCES, SET_OPS, SKIP as MENU_SKIP_SYMBOLS, BASE as CLASS_BASE
 SHOW_MENU,FM_INIT,FM_PROCESS,FM=0x1eb20,0x24a54,0x23c44,0x4cdc+0xd10
+GET_SPECIAL=0x20358   # Interface::GetSpecialTarget(Token*) (T040-L1): original code, std::set<int> modelled
+SPECIAL_CALLS=[0]     # its calls in play (all phases)
 MENU_OBJECTS,CLASS_ARRAYS,SET_NODES_K5=0x3280000,0x3290000,0x32a0000
 ITEM_SET_OPS={'__ZNSt8_Rb_treeI8ItemTypeS0_St9_IdentityIS0_ESt4lessIS0_ESaIS0_EE13_Rb_tree_implIS4_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS0_EERKS4_':'init',
               '__ZNSt3setI8ItemTypeSt4lessIS0_ESaIS0_EE6insertERKS0_':'insert',
@@ -197,7 +205,7 @@ class OriginalMixin:
         self.stats_skip={addr(n) for n in STATS_SKIP};self.vector_ops={addr(n):v for n,v in VECTOR_OPS.items()}
         # T040-K5b: the menus
         self.resource_calls={k:v for k,v in self.resource_calls.items() if v!='menu'}   # Interface::ShowMenu runs
-        self.menu_running=False;self.menu_button=-1;self.k5_sets={}
+        self.menu_running=False;self.menu_button=-1;self.k5_sets={};self.special_running=False
         self.menu_skip={addr(n) for n in MENU_SKIP};self.string_vector_size=addr('__ZNKSt6vectorISsSaISsEE4sizeEv')
         self.menu_set_ops={addr(n):v for n,v in SET_OPS.items()};self.menu_set_ops.update({addr(n):v for n,v in ITEM_SET_OPS.items()})
         self.fm_cursor=addr('__ZN11FoldoutMenu14CursorInButtonEi');self.fm_quad=addr('__ZN11FoldoutMenu12CursorInQuadEi')
@@ -249,6 +257,16 @@ class OriginalMixin:
         elif address==CHECK_END and not self.recording:self.until_return(u,'recording')
         elif address==self.update_skills and SHAPESHIFT<lr<SHAPESHIFT_END:u.reg_write(self.PC,lr|1);return
         elif address==self.quad_alpha and SHATTER_INIT<lr<SHATTER_INIT_END:u.reg_write(self.PC,lr|1);return
+        if address==GET_SPECIAL:   # the mana potion's skill slot: original code (not verify_motion's answer)
+            self.write(u.reg_read(self.regs[0])+0x1030,self.GAME);SPECIAL_CALLS[0]+=1;self.until_return(u,'special_running');return
+        if self.special_running:
+            r=[u.reg_read(v) for v in self.regs];op=self.menu_set_ops.get(address)
+            if op in ('init','insert','clear'):
+                if op=='insert':self.k5_sets.setdefault(r[1],set()).add(C.c_int32(self.read(r[2])).value);self.k5_write_set(r[1])
+                else:self.k5_sets[r[0]]=set();self.k5_write_set(r[0])
+                u.reg_write(self.PC,lr|1);return
+            if address==0x194d30:u.reg_write(self.regs[0],self.read(r[0]));u.reg_write(self.PC,lr|1);return
+            if address in (0x194cec,0x194cf0,0x194cf4):u.reg_write(self.PC,lr|1);return
         if address==SHOW_MENU and not self.menu_running:self.until_return(u,'menu_running');self.until_return(u,'skill_input',False)   # (Game::Upgrade from a skill)
         if address==IFACE_PROCESS and PROCESS<=lr<PROCESS_END and u.mem_read(self.GAME+0x59f4,1)[0]:   # an open FoldoutMenu: its Process
             u.reg_write(self.regs[0],self.GAME+FM);self.until_return(u,'menu_running');u.reg_write(self.PC,FM_PROCESS|1);return
@@ -429,9 +447,8 @@ class SessionMixin:
             elif source==SOURCE_GENERATION:
                 e=C.cast(p,C.POINTER(I32*6)).contents;self.gen_events.append(list(e))
         def get_target(_,kind,index,out):out[0]=Point(*motion_target(kind,index))
-        def choose(_,p):p.contents.linked=self.case['special_link'];return self.case['special_choice']
         def start(_,kind,out):out[0]=Point(*TARGET_POINT)
-        self.host_cb=(EVENT(event),TARGET(get_target),CHOOSE(choose),START(start));self.host=Host(None,*self.host_cb)
+        self.host_cb=(EVENT(event),TARGET(get_target),START(start));self.host=Host(None,*self.host_cb)
     def load(self,c):
         if self.session:self.q=self.own_queue   # the loaders replace the harness's own token queue, not the session's
         super().load(c);lib=self.session_lib;self.own_queue=self.q
@@ -610,6 +627,7 @@ def main():
                            ended=ended-phases['new_games']['ended'])
     for k,v in new.sources.items():sources[k]=sources.get(k,0)+v
     class_rng=random.Random(0x25526)   # T040-K5b: the current class (the menus' skill pools) in the item and skill phases
+    mana_rng=random.Random(0x20358)    # T040-L1: mana potions in the item and skill phases
     old,new=CarriedSessionOriginal(),CarriedSession();mark=dict(turns=turns,frames=frames,ended=ended)
     for game in range(ITEM_GAMES):   # T040-K5: Item::IncreaseStat (race 6, > 14 kills) and DestroyUpgrade (enemy 28)
         c=with_items(turn_case(rng),items_rng)
@@ -621,7 +639,7 @@ def main():
         else:   # enemies 28 one turn from their ability: Game::DestroyUpgrade
             for t in c['board']:
                 if t['type']==1 and rng.random()<.5:t['enemy']=28;t['enemy_state']=1
-        with_class(c,class_rng)
+        with_mana(with_class(c,class_rng),mana_rng)
         old.load(c);new.load(c);set_health(old,new,5000,5000)
         compare('load',old.game_state(),new.game_state(),game=game)
         play(old,new,200+game,CARRIED_TURNS,first_path=long)
@@ -631,7 +649,7 @@ def main():
     rng=random.Random(0x2ad40)   # the skill phase's own sequence (independent of the phases before it)
     old,new=CarriedSessionOriginal(),CarriedSession();mark=dict(turns=turns,frames=frames,ended=ended)
     for game in range(SKILL_GAMES):
-        c=with_class(with_items(skill_variant(turn_case(rng),rng,game),items_rng),class_rng);old.load(c);new.load(c);set_health(old,new,5000,5000)
+        c=with_mana(with_class(with_items(skill_variant(turn_case(rng),rng,game),items_rng),class_rng),mana_rng);old.load(c);new.load(c);set_health(old,new,5000,5000)
         compare('load',old.game_state(),new.game_state(),game=game)
         play(old,new,100+game,SKILL_TURNS if game<SKILL_GAMES-PROMOTE_GAMES else 5*SKILL_TURNS,skills=True)
     phases['skills']=dict(games=SKILL_GAMES,presses=presses,presses_while_busy=busy_presses,presses_input_not_ready=busy_blocked,used={k:used[k] for k in sorted(used)},**{k:v-mark[k] for k,v in dict(turns=turns,frames=frames,ended=ended).items()})
@@ -641,7 +659,8 @@ def main():
     assert busy_blocked>20 and sources.get((SOURCE_SKILL,SKILL_JUMP),0)>0,(busy_blocked,sources.get((SOURCE_SKILL,SKILL_JUMP)))
     assert set(used)==set(SKILL_TYPES) and sources.get((SOURCE_SKILL,SKILL_FLAME),0)>3,(set(SKILL_TYPES)-set(used),sources.get((SOURCE_SKILL,SKILL_FLAME)))
     assert set(menus_seen)=={0,1,2},menus_seen
-    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
+    assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
+    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',

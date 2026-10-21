@@ -170,7 +170,8 @@ void motion_event(void* c,MotionEventKind kind,std::int32_t index) {
     const SessionSmallEvent e{static_cast<std::int32_t>(kind),index,0,0};forward(self(c),SessionSource::Motion,&e);
 }
 void motion_target(void* c,std::int32_t kind,std::int32_t index,Point* out) {Session& s=self(c);s.host.target(s.host.context,kind,index,out);}
-std::int32_t choose_special(void* c,TokenMotion* t) {Session& s=self(c);return s.host.choose_special(s.host.context,t);}
+// Interface::GetSpecialTarget(Token*): the skill slot a mana potion recharges (a rule, not layout: dr_special_target).
+std::int32_t choose_special(void* c,TokenMotion* t) {return dr_special_target(&self(c).skill_state,t->token_type);}
 // The resource and encounter units call Game::Healing and Game::CheckEndGame (their result is not used there).
 void resource_event(void* c,const ResourceEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Resource,e);

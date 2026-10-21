@@ -47,6 +47,14 @@ void flag(SkillState* s,std::uint8_t& now,std::uint8_t& next,std::uint8_t* activ
     now=1;next=s->finish->flag_1554c;*active=1;
 }
 }
+extern "C" std::int32_t dr_special_target(const SkillState* s,std::int32_t token_kind) {
+    if(token_kind!=1)return 0;
+    const ResourceState& r=*s->resources;std::int32_t slots[4];std::int32_t n=0;
+    for(std::int32_t i=0;i<r.skill_count && i<4;++i)
+        if(s->slots->id[i]!=29 && r.skill_current[i]!=r.skill_max[i])slots[n++]=i;
+    if(!n)return -1;
+    return slots[dr_random_int(&s->path->match->random,0,n-1,5)];
+}
 extern "C" bool dr_skill_can_activate(const SkillState* s,std::int32_t type) {
     switch(type) {
     case 3:return tile_count(s,3)>0;

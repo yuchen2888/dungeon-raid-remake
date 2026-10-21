@@ -68,8 +68,6 @@ struct SessionHost {
     void (*event)(void*,SessionSource,const void*);
     // Interface::GetTarget for a flying reward token (MotionHooks.target: kind 0 resource, 1 skill slot).
     void (*target)(void*,std::int32_t kind,std::int32_t index,Point*);
-    // Interface::GetSpecialTarget for a special reward token (MotionHooks.choose_special).
-    std::int32_t (*choose_special)(void*,TokenMotion*);
     // Interface::GetTarget(kind) as the start of a token thrown by an enemy ability (TurnHooks.token_start).
     void (*token_start)(void*,std::int32_t kind,Point*);
 };

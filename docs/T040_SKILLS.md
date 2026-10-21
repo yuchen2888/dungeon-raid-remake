@@ -125,6 +125,12 @@ SkillHooks 增加 match（MatchTile）与 path（AttackSkull）钩子指针；Sk
 
 Upgrade 技能会打开升级菜单（物品模型、FoldoutMenu），不在本测试中按下。至此技能系统（T040-H）完成。
 
+## L1：法力药水给哪个技能充能（Interface::GetSpecialTarget，Claude，2026-10-20）
+
+原版 Interface::GetSpecialTarget(Token*) 0x20358 名为界面函数，实为规则：法力药水（flag_232）被消除后产生特殊代币（Token+0x7c = 1），由它决定给哪个已装备技能充能，并抽取随机流 5。做法：槽 0..skill_count−1 中技能类型不是 29、冷却未满（current ≠ max）的按顺序放进 std::set<int>；为空返回 −1（代币作废）；否则 RandI(0, n−1, 流 5) 取第几个。其他代币种类返回 0。原生 `dr_special_target`（recovered_skills）；会话的 MotionHooks.choose_special 改为调用它，SessionHost 去掉 choose_special 回调（以前由宿主回答，测试中两侧都用固定的用例值）。
+
+验证 `recovered/verify_special_target.py`：原函数从入口执行（RandI 为原代码，std::set<int> 由宿主模拟，SjLj 跳过），1500 组一致（结果 −1 441、0 519、槽 1 252、槽 2 174、槽 3 114；代币种类 1 占 1286 组）；错误副本 6 个（不排除技能 29、冷却比较改为小于、随机流、其他代币种类的返回值、RandI 上界、无候选时的返回值）全部 exit 1。verify_session 的原版侧改为执行原 GetSpecialTarget（不再用 verify_motion 的用例回答；std::set<int> 由宿主模拟），装备与技能阶段约三成药水为法力药水：整局测试中调用 72 次，共 32969 帧逐帧一致；会话接线的错误副本（不调用 dr_special_target）exit 1。verify_motion 单元测试仍由用例回答（该单元的边界）。
+
 ## 后续
 
 - Skill::Deactivate 已在 dr_end_of_turn 中；Game::SetSkill（装备技能）与 Upgrade 的升级菜单属 FoldoutMenu / 物品模型任务。

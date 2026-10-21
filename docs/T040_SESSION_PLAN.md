@@ -52,7 +52,7 @@ void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回�
 
 1. 物品模型：Item::Initialise / GenerateStats（1920 字节）/ GenerateName / MakeStats（文字，3028 字节）/ AddUpgrade，ItemUpgrade::GetRandomStat / IsUpgradeAllowed / Initialise。起始物品属性与升级都依赖它（当前测试用零属性）。
 2. FoldoutMenu：Initialise(MenuType)（4140 字节，生成升级/商店/技能选项）与 ProcessInput（选择后应用到物品/属性/技能）——含游戏规则，不只是界面。
-3. Interface 目标位置（GetTarget / GetSpecialTarget）：代币飞行目标是界面布局常量；当前测试由宿主给出。
+3. Interface 目标位置（GetTarget / GetSpecialTarget）：代币飞行目标是界面布局常量；当前测试由宿主给出。（后经核实 GetSpecialTarget(Token*) 决定法力药水给哪个技能充能并抽流 5，是规则，已由 T040-L1 恢复。）
 4. ProcessPretzels 已恢复（T040-G1，dr_process_pretzels），会话中接 SelectionHooks 的 ProcessPretzels 事件。UpdateDimming（116 字节）待判定；UpdateCrossVisibility 为表现层。
 5. SerialiseState / SerialiseClasses：存档（用户暂缓）。
 6. 技能系统（2026-10-20 发现，未恢复）：Skill::Activate 0x2ad40（按 40 种技能类型分派，调用约 25 个 Game 技能函数：Earthquake、Teleport、Upgrade、CreateArrows、CreateChain、CreateMagicSword、CreateManaPotions、CreateExplosivePotions、ConvertTiles、ConvertColumnToSwords、GrabTiles、CollectBoard / CollectRandomRow / CollectRandomBlock / CollectEdgeTiles、KillSpecialEnemy、KillSkullsNextToCoins、PromoteNormalEnemy、DemoteSpecialEnemy、FreezeSkulls、ShatterDefence、ExplodeArmour、RemoveSkill 等）、Skill::CanActivate、技能冷却与输入目标（Game+0x58ac）。RuneState.enabled_16491 只由技能启用（已恢复代码中没有置 1 的路径），所以符文玩法在新局对局中走不到。是游戏规则，需单独任务（建议 T040-H）。

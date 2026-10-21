@@ -490,3 +490,9 @@
 - 新 verify_dimming：1500 组一致；3 个错误副本 exit 1。
 - 此前一次全量检查（`.relay/runs/20261021T030607.845443Z`，K5a 状态）78/79 通过，verify_session 超过当时 600 秒时限（exit 124，未出现不一致）；同一测试单独运行通过。
 - `./scripts/relay.sh verify --full` → exit 0：80 步通过。运行目录 `.relay/runs/20261021T050537.779420Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-L1：法力药水给哪个技能充能（Claude）
+
+- 新 verify_special_target：原 Interface::GetSpecialTarget(Token*) 从入口执行，1500 组一致（结果 −1 441、0 519、槽 1 252、槽 2 174、槽 3 114）；错误副本 6 个全部 exit 1。
+- verify_session：原版侧执行原 GetSpecialTarget（此前由用例回答），装备与技能阶段约三成药水为法力药水；调用 72 次，32969 帧一致；会话接线的错误副本（不调用 dr_special_target）exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：81 步通过。运行目录 `.relay/runs/20261021T055021.916250Z`，inputs_unchanged true。
