@@ -223,7 +223,8 @@ struct GameFrameHooks {
 };
 // Label index 0 leech, 1 flame, 2 spike. Process: SimpleLabel::Process(dt) (fade, a=dt bits). Initialise:
 // SimpleLabel::Initialise(a=type 8/9/10, (x, y), b=number, scale 1). Position: SetPosition((x, y)). Number:
-// SetNumber(a). Alpha: SetAlpha(a). Scale: label scale (SimpleLabel+0x33c) = a float bits. HealthBar: a=value.
+// SetNumber(a). Alpha: SetAlpha(a), then the label's fade base (SimpleLabel+0x354, Game+0xc314) = a. Scale: label
+// scale (SimpleLabel+0x33c) = a float bits. HealthBar: a=value.
 // Sound: a. Achievement: a=id, b=float bits.
 enum class LabelEventKind : std::int32_t { Process=1, Initialise, Position, Number, Alpha, Scale, HealthBar, Sound, Achievement };
 struct LabelEvent { LabelEventKind kind; std::int32_t label,a,b; float x,y; };

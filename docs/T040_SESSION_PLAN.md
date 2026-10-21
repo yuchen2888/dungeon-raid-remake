@@ -24,7 +24,7 @@ void dr_session_set_screen(dr_session*, int screen, bool open); // 界面层回�
 | TurnFlags / TurnFinishFlags / EndGameState | 各一个 | 松手、EndOfTurn、结算、新局共用 |
 | 闪光数 Game+0xbd8c | AttackAnimation.flare_count | 门槛读取、闪光淡出写 |
 | 盾牌碎裂 Game+0xbf88/0xbf8c | ShieldShatterState | 生成事件启动、Process 推进、新局清零 |
-| SimpleLabel 活动字节 | NewGameExtra.label_active | 伤害标签段读取（渲染层维护） |
+| SimpleLabel 活动字节 | NewGameExtra.label_active | 伤害标签段读取；吸血 / 火焰 / 尖刺标签由会话的标签模型维护（damage_labels，T040-K6），当前伤害标签（Game+0xb550）仍由渲染层维护 |
 | 当前触摸 Game+0x10/0x14 | TouchState | 整帧调度与 SelectionState.touch 同步 |
 
 ## 钩子接线（参考：各单元测试 Native 类中的回调）

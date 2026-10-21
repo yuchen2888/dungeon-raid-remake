@@ -516,3 +516,9 @@
 - 读档遇到大于 9 的职业序号（损坏的存档）即停止；存档的技能数按最多 4 个处理（正常存档不出现，原版没有这两处保护）。verify_save / verify_load 结果不变。
 - session_demo：第一局中途退出并用 dr_session_continue_game 从 385 字节的存档继续（经验原样恢复），三局都打到结束；退出码要求出现一次继续。
 - `./scripts/relay.sh verify --full` → exit 0：85 步通过。运行目录 `.relay/runs/20261021T100020.788973Z`，inputs_unchanged true。
+
+## 2026-10-21 T040-K6：伤害数字标签（SimpleLabel）与商店卷轴（Claude）
+
+- 新 verify_labels：原 SimpleLabel 的构造、SetColour、Initialise、SetNumber、SetPosition、SetAlpha、Process 从入口执行（RegenerateLabel 等内部函数为原代码；数字表由原静态初始化函数 0x313c 填入；__divsi3 / __modsi3 为模型），400 组 × 30 次随机操作（44 种类型、负数、各种缩放 / 持续时间 / 透明度），每步整块 0x358 字节与六路随机种子一致；错误副本 41 个全部 exit 1。
+- verify_session：吸血 / 火焰 / 尖刺标签按构造函数与 Game::Start 设置，Game::Process 对它们的 SimpleLabel 调用作为原代码执行（不再跳过），三个标签的整块内存每帧比较，商店卷轴读到的吸血标签数据随之与原版一致；整局 33909 帧一致（标签调用 Initialise 174、SetPosition 3387、SetNumber 1641、Process 1270、SetAlpha 211 次）。对照中发现两处原版直接依赖标签字段的地方——透明度之后写淡出基准 Game+0xc314、松手时伤害数字的起飞点就是标签位置——已在会话中补上。会话接线错误副本 12 个：11 个 exit 1（“忽略改数字”在缩短版中存活、完整长度测试中 exit 1），1 个存活——新局 / 继续后标签模型的激活字节跟随清零（测试里新局与继续开始时标签都已淡出，只有游戏恰在火焰 / 尖刺伤害数字落地时结束、再从结束画面开新局才会用到）。
+- `./scripts/relay.sh verify --full` → exit 0：86 步通过。运行目录 `.relay/runs/20261021T161657.995942Z`，inputs_unchanged true。

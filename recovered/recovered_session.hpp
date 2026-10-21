@@ -8,13 +8,14 @@
 #include "recovered_menu.hpp"
 #include "recovered_save.hpp"
 #include "recovered_scores.hpp"
+#include "recovered_labels.hpp"
 namespace dungeonraid {
 // One game: every recovered state object, each Game field owned once, and the recovered units wired
 // to each other as Game does it (see docs/T040_SESSION_PLAN.md). No original instruction runs here.
 struct Session;
 // The objects of a session. Pointers stay valid for the session's lifetime; the embedding may read
-// them every frame and write the renderer-owned inputs (release_inputs, current_label_active,
-// extra->label_active, screens, input_target).
+// them every frame and write the renderer-owned inputs (release_inputs->health_target, current_label_active,
+// screens, input_target).
 struct SessionObjects {
     StrokeState* stroke;                 // selection (board, path), resource counts, record / mode
     ResourcePreviewState* preview;
@@ -36,7 +37,7 @@ struct SessionObjects {
     std::uint8_t* activated;             // Tile+0x254 of the 36 tiles
     EndOfTurnState* end_of_turn;         // regen
     ReleaseFlights* flights;
-    ReleaseInputs* release_inputs;       // renderer-owned label positions and the health target
+    ReleaseInputs* release_inputs;       // the health target (renderer-owned); the label positions are the damage labels'
     ClassProfile* classes;               // the 10 class records; the active one is classes[scroll->current]
     ClassScrollState* scroll;
     PlayerStats* player;
@@ -64,6 +65,8 @@ struct SessionObjects {
                                          // level-up): the platform stores it when changed_14adc is set and clears the flag
     ScoreBoard* scores;                  // the high-score tables (a game's end adds its score and skills); the platform stores a
                                          // changed table (dr_session_save_changed_scores) and gives them back at start-up
+    SimpleLabelState* damage_labels;     // the leech, flame and spike SimpleLabels (3; Game+0xbfc0 / 0x14afc / 0x14e70), drawn
+                                         // at their position and scale; their active bytes are extra->label_active[0..2]
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).

@@ -5,6 +5,7 @@
 #include "recovered_tokens.hpp"
 #include "recovered_path.hpp"
 #include <algorithm>
+#include <cstring>
 #include <utility>
 #include <vector>
 using namespace dungeonraid;
@@ -99,6 +100,7 @@ struct Session {
     SaveSettings settings{};              // Game+0x13ec8 help switch, Game+0x14ae4 difficulty changed (DeserialiseState)
     ClassSave class_save{};               // Game+0x146d5: the class records' save
     ScoreBoard scores{};                  // ScoreScreen's high-score tables (Game+0xef68)
+    SimpleLabelState damage_labels[3]{};  // leech, flame, spike SimpleLabels (Game+0xbfc0 / 0x14afc / 0x14e70)
     StatsTargets stats_targets{};
     StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
@@ -274,8 +276,8 @@ void stats_event(void* c,const StatsEvent* e) {
 }
 // FoldoutMenu: what it reads and writes. The scroll draw of the shop reads the 40 words at Game+0xbf90 (the
 // original reads past the four Skill pointers, docs/T040_MENU.md): pointers (non-zero), skill_count, matched_counts
-// 0..4, the bytes 0xbfb8..0xbfbb, next coin at 0xbfbc, then the leech SimpleLabel at Game+0xbfc0 (its active byte;
-// the rest of the label -- type, vertices -- is the renderer's and taken as 0 here).
+// 0..4, the bytes 0xbfb8..0xbfbb, next coin at 0xbfbc, then the leech SimpleLabel at Game+0xbfc0 (its active byte,
+// type and first vertices: the label model's bytes 4..0x6f).
 MenuSources menu_sources(Session& s) {
     std::uint32_t* w=s.probe;
     for(int t=0;t<4;++t)w[t]=1;
@@ -284,7 +286,7 @@ MenuSources menu_sources(Session& s) {
     w[10]=s.generation.filter_enabled|(s.generation.filter_swords<<8)|(s.animation.counterattack<<16)|
           (static_cast<std::uint32_t>(s.path.battle.grant_coin_on_attack)<<24);
     w[11]=s.turn_flags.next_coin_bfbc;w[12]=s.extra.label_active[0];
-    for(int t=13;t<40;++t)w[t]=0;
+    std::memcpy(w+13,reinterpret_cast<const std::uint8_t*>(&s.damage_labels[0])+4,27*sizeof *w);
     return MenuSources{&s.resources,&s.skills,s.classes,static_cast<std::int32_t>(s.scroll.current),&s.screens.menus[0],&s.preview,
                        &s.stroke.selection,&s.player,s.extra.base_bde8,s.items,&s.stats_targets,&s.stats_hooks,&s.skill_state,s.probe};
 }
@@ -414,6 +416,9 @@ void step_input(Session& s) {
     s.stroke.selection.touch=s.touch.position;
     s.gate_inputs=InputGateInputs{static_cast<std::uint32_t>(s.falling.size()),static_cast<std::int32_t>(dr_token_queue_counters(s.tokens)->pending),
                                   s.animation.flare_count,s.touch.phase,s.skill_input.pressed};
+    // a released damage label flies from its position (SimpleLabel+0x334: Game+0xc2f4 / 0x14e30 / 0x151a4)
+    const auto at=[&](int i) {return Point{s.damage_labels[i].x,s.damage_labels[i].y};};
+    s.release_inputs.leech_label=at(0);s.release_inputs.flame_label=at(1);s.release_inputs.spike_label=at(2);
     InputState state{&s.path,&s.damage,&s.rune,&s.gate_inputs,&s.release,&s.release_inputs,&s.scroll};
     s.input_route=static_cast<std::int32_t>(dr_process_input(&state,&s.input_hooks));
 }
@@ -443,6 +448,28 @@ void frame_flare_fade(void* c) {Session& s=self(c);dr_process_flare_fade(&s.fram
 void frame_damage_label(void* c) {Session& s=self(c);dr_process_damage_label(&s.frame_state,s.current_label_active,s.dt,&s.part_hooks);}
 bool frame_damage_labels(void* c) {Session& s=self(c);return dr_process_damage_labels(&s.labels,s.dt,s.touch.position,&s.label_hooks);}
 bool label_check_end_game(void* c) {return check_end_game(self(c));}
+// The damage labels' SimpleLabel calls (Game::Process) on their models. A label's active byte is
+// NewGameExtra.label_active (Game::InitNewGame clears it there); the model follows it.
+void label_event(void* c,const LabelEvent* e) {
+    Session& s=self(c);
+    if(e->label>=0 && e->label<3) {
+        SimpleLabelState& l=s.damage_labels[e->label];l.active=s.extra.label_active[e->label];
+        float value;std::memcpy(&value,&e->a,sizeof value);
+        switch(e->kind) {
+        case LabelEventKind::Process:dr_label_process(&l,value);break;
+        case LabelEventKind::Initialise:dr_label_initialise(&l,e->a,Point{e->x,e->y},e->b,1.0f,&s.match.random);break;
+        case LabelEventKind::Position:dr_label_set_position(&l,Point{e->x,e->y});break;
+        case LabelEventKind::Number:dr_label_set_number(&l,e->a);break;
+        case LabelEventKind::Alpha:   // SetAlpha, then Game::Process stores it as the fade's base (Game+0xc314)
+            dr_label_set_alpha(&l,static_cast<std::uint8_t>(e->a));l.alpha=static_cast<std::uint8_t>(e->a);break;
+        case LabelEventKind::Scale:l.scale=value;break;   // SimpleLabel+0x33c
+        default:break;
+        }
+        s.extra.label_active[e->label]=l.active;
+    }
+    forward(s,SessionSource::Label,e);
+}
+void follow_label_active(Session& s) {for(int i=0;i<3;++i)s.damage_labels[i].active=s.extra.label_active[i];}
 void frame_attack(void* c) {
     Session& s=self(c);dr_process_attack(&s.damage,&s.path,&s.animation,&s.overlay_alpha,s.dt,&s.attack_inputs,&s.process_hooks);
 }
@@ -496,7 +523,7 @@ void link(Session& s) {
     s.input_hooks={&s.schedule_hooks,&s.selection_hooks,&s.release_hooks};
     s.effect_hooks={c,forward_event<SessionSource::BoardEffect,BoardEffectEvent>};
     s.part_hooks={c,part_event};
-    s.label_hooks={c,forward_event<SessionSource::Label,LabelEvent>,label_check_end_game};
+    s.label_hooks={c,label_event,label_check_end_game};
     s.frame_hooks={c,frame_event,frame_input,frame_effects,frame_falling,frame_tokens,frame_pools,
                    frame_flare_fade,frame_damage_label,frame_damage_labels,frame_attack};
     s.new_game_hooks={c,new_game_event,&s.generation_hooks};
@@ -509,6 +536,9 @@ void link(Session& s) {
 }
 extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t difficulty) {
     auto* s=new Session;s->host=*host;s->difficulty=difficulty;dr_scores_init(&s->scores);
+    for(int i=0;i<3;++i) {   // SimpleLabel::SimpleLabel, then Game::Start: colours 17, 18, 19 and duration 0.2
+        SimpleLabelState& l=s->damage_labels[i];dr_label_construct(&l);dr_label_set_colour(&l,17+i);l.duration=0.2f;
+    }
     s->tokens=dr_token_queue_create(&s->match);
     link(*s);return s;
 }
@@ -519,7 +549,7 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->end_of_turn,&s->flights,&s->release_inputs,s->classes,&s->scroll,&s->player,&s->extra,&s->shatter,&s->touch,&s->screens,
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
         s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
-        s->save,s->name,&s->settings,&s->class_save,&s->scores};
+        s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 // Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
@@ -548,7 +578,9 @@ extern "C" void dr_session_restore_save(Session* s,const std::uint8_t* bytes,std
 }
 extern "C" void dr_session_set_falling(Session* s,const std::int32_t* tiles,std::uint32_t count) {s->falling.assign(tiles,tiles+count);}
 extern "C" void dr_session_set_motions(Session* s,const TokenMotion* motions,std::uint32_t count) {s->motions.assign(motions,motions+count);}
-extern "C" void dr_session_new_game(Session* s,std::uint32_t time) {dr_init_new_game(&s->new_game,time,&s->new_game_hooks);}
+extern "C" void dr_session_new_game(Session* s,std::uint32_t time) {
+    dr_init_new_game(&s->new_game,time,&s->new_game_hooks);follow_label_active(*s);
+}
 // Game::DeserialiseState now: the saved game in SessionObjects.save over the current state (false: no 0xff header).
 extern "C" bool dr_session_deserialise(Session* s) {const SaveSources src=save_sources(*s);return dr_deserialise_state(&src,s->save,&s->save_hooks);}
 // Game::ContinueGame 0x165f4: with a saved game (end.flag_146d0), Game::InitNewGame, Game::DeserialiseState and

@@ -40,6 +40,11 @@ a class scroll's level-up) run as original code instead of the units' boundaries
 bytes) and the class records' save are compared every frame. Every case has a player name (saved). In the new-game
 phase some games quit midway and continue from their save (the original's InitNewGame, DeserialiseState and
 CalculateTilePositions; the native dr_session_continue_game), then play on.
+Damage labels (T040-K6): the leech, flame and spike SimpleLabels (Game+0xbfc0 / 0x14afc / 0x14e70) are set up by the
+constructor and Game::Start's SetColour (17, 18, 19) and duration 0.2 as original code; Game::Process's SimpleLabel calls on
+them (Initialise, SetPosition, SetNumber, SetAlpha, Process) run as original code (the digit tables filled by their static
+initialiser, __divsi3 / __modsi3 modelled) instead of being skipped; the three labels' whole memory is compared every frame,
+and the shop's scroll draw reads the leech label's type and vertices from it.
 High scores (T030-N5d): a game's end runs ScoreScreen::AddScore (the GameMode or Difficulty overload) and SetSkills as
 original code (strcpy modelled); the whole table memory (ScoreScreen+0x1e0..+0x132e) is compared every frame. In the
 skill phase a press mostly takes the equipped skill used least so far, so that every type gets used.
@@ -116,7 +121,8 @@ NAMES=('stroke','preview','match','rune','tokens','resources','path','refill','g
 class Objects(C.Structure):
     _fields_=[(k,C.c_void_p) for k in NAMES]+[('motion_count',C.c_uint32),('falling',C.c_void_p),('falling_count',C.c_uint32),
               ('skill_button',C.c_void_p),('skill_input',C.c_void_p),('items',C.c_void_p),('menu',C.c_void_p),('menu_button',C.c_void_p),('dimmed',C.c_void_p),
-              ('save',C.c_void_p),('name',C.c_void_p),('settings',C.c_void_p),('class_save',C.c_void_p),('scores',C.c_void_p)]
+              ('save',C.c_void_p),('name',C.c_void_p),('settings',C.c_void_p),('class_save',C.c_void_p),('scores',C.c_void_p),
+              ('damage_labels',C.c_void_p)]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,I32,C.c_void_p)
 TARGET=C.CFUNCTYPE(None,C.c_void_p,I32,I32,C.POINTER(Point))
 START=C.CFUNCTYPE(None,C.c_void_p,I32,C.POINTER(Point))
@@ -194,6 +200,12 @@ LOAD_SKIP=['__ZN7Upgrade7SetIconEiiii','__ZN5Label7SetTextEPKci','__ZN4Item9Make
            '__ZN9Interface13PositionSkillEi','__ZN9Interface12UpdateSkillsEv','__ZN8GameMenu12SetHelpStateEb']
 LOAD_STUBS=(0x194f60,0x194fb0)
 HELP_SWITCH,DIFFICULTY_CHANGED=0x13ec8,0x14ae4
+# The damage labels (T040-K6): leech, flame, spike SimpleLabel; their calls from Game::Process run as original code
+DAMAGE_LABELS,LABEL_SIZE=(0xbfc0,0x14afc,0x14e70),0x358
+LABEL_FUNCTIONS=('__ZN11SimpleLabel7ProcessEf','__ZN11SimpleLabel10InitialiseE15SimpleLabelTypeRK8GLfloat2if',
+                 '__ZN11SimpleLabel11SetPositionERK8GLfloat2','__ZN11SimpleLabel9SetNumberEi','__ZN11SimpleLabel8SetAlphaEh')
+LABEL_CTOR,LABEL_COLOUR,LABEL_DIGITS,DIVSI3,MODSI3=0x22194,0x221c4,0x313c,0x194d78,0x194d8c
+LABEL_CALLS={}        # by function: the damage labels' calls in play
 CONTINUES=[0]         # games continued from their save (new-game phase)
 MENU_OBJECTS,CLASS_ARRAYS,SET_NODES_K5=0x3280000,0x3290000,0x32a0000
 ITEM_SET_OPS={'__ZNSt8_Rb_treeI8ItemTypeS0_St9_IdentityIS0_ESt4lessIS0_ESaIS0_EE13_Rb_tree_implIS4_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS0_EERKS4_':'init',
@@ -230,6 +242,7 @@ class OriginalMixin:
         self.overlay_quad={addr(q) for q in ('__ZN4Quad7SetSizeERK8GLfloat2','__ZN4Quad5SetUVERK8GLfloat2S2_','__ZN4Quad8SetAlphaEh')}
         self.load_skip={addr(n) for n in LOAD_SKIP}|set(LOAD_STUBS);self.loading=False
         self.score_functions={addr(n):n for n in SCORE_FUNCTIONS};self.scoring=False
+        self.label_functions={addr(n):n for n in LABEL_FUNCTIONS};self.label_running=False;self.digits_ready=False
         assert addr('__ZN4Game16DeserialiseStateEv')==DESERIALISE and addr('__ZN4Game22CalculateTilePositionsEv')==TILE_POSITIONS
         # T040-K5: items, UpdateStats, Item::IncreaseStat and DestroyUpgrade run as original code
         self.u.mem_map(ITEM_SPACE,0x100000);self.heap=ITEM_SPACE;self.naming=False;self.names_ready=False;self.stats_running=False
@@ -254,6 +267,14 @@ class OriginalMixin:
     def hook(self,u,address,size,context):
         for undo in self.returns.pop(address,[]):undo()
         lr=u.reg_read(self.LR)&~1
+        if address in self.label_functions and not self.label_running and u.reg_read(self.regs[0])-self.GAME in DAMAGE_LABELS:
+            assert PROCESS<=lr<PROCESS_END,hex(lr)   # the damage labels' calls (Game::Process): original code
+            n=self.label_functions[address];LABEL_CALLS[n]=LABEL_CALLS.get(n,0)+1;self.until_return(u,'label_running');return
+        if self.label_running:   # the runtime's __divsi3 / __modsi3 modelled
+            if address in (DIVSI3,MODSI3):
+                a,b=(C.c_int32(u.reg_read(r)).value for r in self.regs[:2]);q=abs(a)//abs(b)*(1 if (a<0)==(b<0) else -1)
+                u.reg_write(self.regs[0],(q if address==DIVSI3 else a-q*b)&0xffffffff);u.reg_write(self.PC,lr|1)
+            return
         if address==SERIALISE:SAVE_CALLS[0]+=1;self.until_return(u,'saving');return   # the save: original code (not the units' boundary)
         if address==SERIALISE_CLASSES:CLASS_SAVES[0]+=1;self.until_return(u,'classing');return   # the class records' save: original code
         if getattr(self,'classing',False):return
@@ -425,6 +446,11 @@ class OriginalMixin:
             try:u.emu_start(NAMES_FN|1,self.STOP,timeout=0,count=5000000)
             finally:self.naming=False
             self.names_ready=True
+        if not self.digits_ready:self.run_label(LABEL_DIGITS,1,0xffff);self.digits_ready=True   # the label digit tables, once
+        for i,a in enumerate(DAMAGE_LABELS):   # SimpleLabel::SimpleLabel, then Game::Start: SetColour(17, 18, 19), duration 0.2
+            at=bytes(self.u.mem_read(G+a+0x334,8))   # the case's label position (the release harness wrote it)
+            self.u.mem_write(G+a,bytes(LABEL_SIZE));self.run_label(LABEL_CTOR,G+a);self.run_label(LABEL_COLOUR,G+a,17+i)
+            self.write(G+a+0x34c,0x3e4ccccd);self.u.mem_write(G+a+0x334,at)
         k=c['k5'];self.item_allocs=0;self.int_vectors_k5={}
         for i,rec in enumerate(k['items']):
             base=ITEM_OBJECTS+0x200*i;self.write(base+0x7c,G);self.write(G+0xbe88+4*i,base);self.write(VEC_DATA-0x100+4*i,G+0xbe88+4*i)
@@ -484,7 +510,13 @@ class OriginalMixin:
         k5={key:i32(G+a) for key,a in STATS_INTS.items()};k5.update({key:self.read(G+a) for key,a in STATS_FLOATS.items()});k5['cooldown']=self.u.mem_read(G+0xbe64,1)[0]
         return dict(super().game_state(),counts=[C.c_int32(self.read(self.GAME+0x164b0+4*i)).value for i in range(6)],
                     game_over_state=C.c_int32(self.read(self.GAME+0xcc1c)).value,skill_slots=slots,skill_count=i32(G+0xbfa0),items=items,k5=k5,
-                    menu=self.menu_state(),save=self.save_state(),scores=bytes(self.u.mem_read(G+SCORE_SCREEN+SCORE_TABLES,SCORE_SIZE)).hex())
+                    menu=self.menu_state(),save=self.save_state(),scores=bytes(self.u.mem_read(G+SCORE_SCREEN+SCORE_TABLES,SCORE_SIZE)).hex(),
+                    labels=[bytes(self.u.mem_read(G+a,LABEL_SIZE)).hex() for a in DAMAGE_LABELS])
+    def run_label(self,entry,*args):   # a SimpleLabel function (or the digit tables' initialiser) from its entry to its return
+        u=self.u;u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1);self.label_running=True
+        for r,v in zip(self.regs,args):u.reg_write(r,v&0xffffffff)
+        try:u.emu_start(entry|1,self.STOP,timeout=0,count=200000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
+        finally:self.label_running=False
     def run_entry(self,entry,flags):   # an original function from its entry to its return, with harness flags set
         u=self.u;u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1)
         for f in flags:setattr(self,f,True)
@@ -538,6 +570,8 @@ class SessionMixin:
                    screens=self.screens)
         pairs={k:v for k,v in pairs.items() if v is not None}   # the carried harness has no PlayerStats (zero)
         for name,obj in pairs.items():C.memmove(getattr(o,name),C.addressof(obj),C.sizeof(obj))
+        ri=self.release_inputs   # the case's damage label positions are the labels' (SimpleLabel+0x334)
+        for i,p in enumerate((ri.leech_label,ri.flame_label,ri.spike_label)):C.memmove(o.damage_labels+LABEL_SIZE*i+0x334,C.addressof(p),8)
         lib.dr_session_link(self.session)
         moving=(I32*max(1,len(self.moving_list)))(*self.moving_list);lib.dr_session_set_falling(self.session,moving,len(self.moving_list))
         motions=[t for _,t in sorted(self.motions.items())];array=(Motion*max(1,len(motions)))(*motions)
@@ -577,7 +611,8 @@ class SessionMixin:
         items=[[getattr(x,key) for _,key in ITEM_FIELDS]+list(x.stats) for x in self.k5_items]
         return dict(super().game_state(),counts=list(self.state.counts),game_over_state=self.screens.game_over_state_cc1c,skill_slots=slots,
                     skill_count=r.skill_count,items=items,k5=self.k5_status(),menu=self.menu_state(),save=self.save_state(),
-                    scores=bytes((U8*SCORE_SIZE).from_address(self.session_lib.dr_session_objects(self.session).scores)).hex())
+                    scores=bytes((U8*SCORE_SIZE).from_address(self.session_lib.dr_session_objects(self.session).scores)).hex(),
+                    labels=[bytes((U8*LABEL_SIZE).from_address(self.session_lib.dr_session_objects(self.session).damage_labels+LABEL_SIZE*i)).hex() for i in range(3)])
     def save_state(self):
         n=self.flags.flag_146d0;o=self.session_lib.dr_session_objects(self.session);cs=(U8*480).from_address(o.class_save)
         k=C.c_int32.from_address(o.class_save+472).value
@@ -755,14 +790,15 @@ def main():
     assert set(used)==set(SKILL_TYPES) and sources.get((SOURCE_SKILL,SKILL_FLAME),0)>3,(set(SKILL_TYPES)-set(used),sources.get((SOURCE_SKILL,SKILL_FLAME)))
     assert set(menus_seen)=={0,1,2},menus_seen
     assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
+    assert all(LABEL_CALLS.get(n,0)>0 for n in LABEL_FUNCTIONS),LABEL_CALLS   # the damage labels shown, moved, renumbered, dimmed, faded
     assert SAVE_CALLS[0]>100 and CONTINUES[0]>0 and CLASS_SAVES[0]>0 and len(SCORE_CALLS)==3,(SAVE_CALLS,CONTINUES,CLASS_SAVES,SCORE_CALLS)   # saves; continued games; class saves; scores
-    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
+    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',
                 boundaries=['time() returns the case seed',
                             'the harness picks the paths, the skill button and the menu button under the touch; GameMenu / StatsMenu closed',
-                            "the shop's scroll probe takes the leech label's type and vertices as 0 (T040-K6)",
+                            'the current-damage label (Game+0xb550) and the label pools stay presentation (their calls skipped)',
                             'events and presentation mirrors not compared here (unit tests)'],
                 scope='games from their start through many turns up to the end of the game, carried mid-game states, skill use, items, the three menus, saves, continued games and high scores')
     (HERE/'session_verification.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))

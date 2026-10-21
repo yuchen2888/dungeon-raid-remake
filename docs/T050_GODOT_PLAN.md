@@ -15,7 +15,7 @@
   - `new_game(seed)`：建会话、写职业表与棋盘布局（同 `session_demo.cpp` 的 main），`dr_session_new_game`。
   - `frame(dt, phase, x, y)`：`dr_session_frame`；phase 0 无触摸、1 按下 / 拖动、2 抬起；坐标为归一化坐标（屏幕宽 = 1，格子间距 pitch = 1/6）。
   - 读取：36 格（类型、特殊类型、敌人类型、血量 / 攻击 / 护甲、选中、变暗 dimmed、下落位置 geometry.center）、路径、资源（生命 / 护甲 / 经验 / 金币 / 升级点 / 等级）、技能槽与冷却、菜单状态（类型、选项、选择、动画计时）、结束画面。
-  - 写入（渲染层拥有）：`skill_button` / `menu_button`（触摸下的按钮）、`release_inputs`（标签位置与生命条目标点）、`current_label_active` 与 `extra->label_active`（伤害标签是否在显示）。
+  - 写入（渲染层拥有）：`skill_button` / `menu_button`（触摸下的按钮）、`release_inputs->health_target`（生命条目标点）、`current_label_active`（当前伤害标签是否在显示）。吸血 / 火焰 / 尖刺三个伤害标签由会话自己维护（`SessionObjects.damage_labels`：位置、缩放、字形与顶点、透明度，T040-K6），渲染层只按它们绘制。
   - 存档（T030-N5 已恢复，平台层要做的部分）：每帧检查 `end->flag_146d4`（对局存档变化：`flag_146d0` 为长度，0 表示删除）、`class_save->changed_14adc`（职业进度）与 `dr_session_save_changed_scores`（最高分，按类别 0..5 逐个返回），把对应字节写盘（Godot 的 `user://`）并清标志；启动时依次 `dr_session_restore_classes`、`dr_session_restore_scores`（每个类别）、`dr_session_restore_save`；主菜单在存档长度不为 0 时显示“继续”，点击调用 `dr_session_continue_game`。玩家名写入 `SessionObjects.name`（最多 16 个字符）。另：`match->spawn_dirty_15555` 置位时保存 `match->spawn_remaining_15558`（职业卷轴倒计时），启动时写回。
   - 事件：会话的表现事件（SessionHost.event：来源 + 单元自己的事件结构）转成 Godot 信号，原型只用少数（音效、飞行代币、闪光可先忽略）；代币飞行目标点（SessionHost.target / token_start）给界面布局常量。
 
