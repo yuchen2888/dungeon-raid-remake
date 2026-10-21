@@ -1,6 +1,6 @@
 # T040-K：升级 / 商店 / 装备升级菜单（FoldoutMenu）
 
-状态：K1、K2、K3a 完成，K3b 起进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
+状态：K1..K4 完成（三种菜单与物品生成），K5 会话接线进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
 
 ## 触发
 
@@ -91,6 +91,22 @@ Item::GenerateStats（有原物品时，原物品的正属性按升序逐个处�
 - 类型 4：属性 10 = 原值 + GetStatUpgrade(10) / 2；其他属性以 0.1 概率下降并给 GetRandomStat(4) 选出的属性加一次升级；最后 record 模式 1 时必定、否则以 0.5 概率再给一个随机属性加一次升级（属性 5 为 0 时可选 5）。
 
 验证 `recovered/verify_items.py`：先让原版 Item::InitialiseNames 真实建好名字表（std::vector 的存储用测试宿主的分配器），再从入口执行 Item::Initialise(Item*)（商店物品）或新物品的三步（Initialise(ItemType)、GenerateName(0)、GenerateStats(0)），IsUpgradeAllowed、GetRandomStat、GetStatUpgrade / Downgrade、HaveFlaw / HavePerk、RandI / Rand 为原代码，std::set 由宿主模拟，MakeStats 跳过。1500 组一致（5 种物品类型、商店物品 1117 组、新物品 383 组）。错误副本 24 个：20 个 exit 1；4 个等价或本测试不可达：IsUpgradeAllowed 14 的“不超过 100”截断（两种写法在 v > 100 时都为真）、GetRandomStat 类型 1 的属性池（GenerateStats 只用类型 4，K4 装备升级会用到）、类型 4 的 /2 与 >>1（升幅只会是 0 或 10）、属性 5 的 == 0 与 <= 0（新物品属性不会为负）。前缀等级边界变体在补充 135..147 用例后被拒。
+
+## K3b：商店（完成）
+
+`dr_menu_open_shop`（Initialise 类型 1）与 `dr_menu_process` 的商店生效。MenuState 增加商店的 3 个物品、卷轴所在选项（−1 无）与卷轴技能对象；MenuSources 增加装备中的 5 件物品（Game+0xbe88..0xbe98：类型 0..3 各一件，其余一件）、StatsTargets 与 StatsHooks（物品函数与 Game::UpdateStats）、SkillState（Skill::CanActivate）与 probe（Game+0xbf90 起的 40 个字，见下节怪行为）。
+
+打开：音效 11；物品类型池 {0..4}，3 个选项各由 RandI(流 2) 取池中一种类型并去掉，选项物品 = Item::Initialise(Game::GetItem(类型))（K3a 的商店物品）。卷轴：概率 0.25（当前职业种族 3 时 0.5），Rand(流 2) 小于概率时卷轴位于选项 RandI(0,2,流 2)，再 Rand(流 2) = r；候选为 0..39 中除 33（与 record 模式 1 的 24）外、已解锁、Skill::CanActivate 为真、且 r ≥ 0.1 时 probe 字为 0 的类型，RandI(流 2) 选一个，Skill::Initialise(类型, 无)。原版候选为空时会读空向量（崩溃），原生侧不处理该情形（实际对局中 t ≥ 13 的类型通常可选）。
+
+点选：选项 14..16（17 不可用），音效 1，点到卷轴所在选项时显示卷轴提示。确认后关闭：Game::SetItem 0x8b08 把所选物品与同类型装备互换（返回的旧物品存回选项），Game::UpdateStats；卷轴在该选项时 Skill::Activate（未装备的对象，ActivateScroll 事件，会话接 dr_skill_activate，槽 −1），种族 3 时成就 49。
+
+验证 `recovered/verify_menu_shop.py`：原 Initialise(1) 从入口执行（GetItem、Item::Initialise(Item*) 及其生成函数、Rand / RandI、IsSkillUnlocked、Skill::CanActivate(int) 为原代码；std::set<ItemType> 与 std::vector<int> 由宿主模拟；吸血标签内存 Game+0xbfc4.. 写入随机字，原生侧拿到同样的 40 个字），再逐帧运行 Process（SetItem、UpdateStats 为原代码，界面刷新记录）。500 组、20489 帧一致：出现卷轴 210 次、买下卷轴 77 次。错误副本 18 个：17 个 exit 1；1 个等价（卷轴概率比较 < 与 ≤，只在随机数恰好等于 0.25 / 0.5 时不同）。
+
+## K4：装备升级（完成）
+
+`dr_menu_open_upgrade`（Initialise 类型 2）：音效 13；类型池 {0..4}，4 个选项各由 RandI(流 4) 取一种类型并去掉，选项为该类型的装备物品，配一个 ItemUpgrade::Initialise 0x2da74：属性 = GetRandomStat(物品类型, 属性 5 为 0 时允许 5)，幅度 = GetStatUpgrade(属性)。选项 14..17，音效 8。确认后关闭：Item::AddUpgrade 0x29de0 把幅度加到该物品的属性，Game::UpdateStats。
+
+验证 `recovered/verify_menu_upgrade.py`：在商店测试的宿主上执行原 Initialise(2)（ItemUpgrade::Initialise、GetRandomStat、GetStatUpgrade 为原代码，升级文字跳过）与逐帧 Process（Item::AddUpgrade、UpdateStats 为原代码）。500 组、20510 帧一致，20 种属性都出现在升级方案中。错误副本 7 个全部 exit 1。
 
 ## 原版怪行为：商店卷轴候选读到了 Game+0xbf90 之后的内存
 

@@ -475,3 +475,9 @@
 - 新 verify_items：原 Item::InitialiseNames 真实建表后，原 Item::Initialise(Item*) 与新物品三步从入口执行，1500 组一致（5 种类型，商店物品 1117、新物品 383）。
 - 错误副本 24 个：20 个 exit 1，4 个等价或本测试不可达（见 T040_MENU.md）。
 - `./scripts/relay.sh verify --full` → exit 0：77 步通过。运行目录 `.relay/runs/20261020T231024.795956Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-K3b/K4：商店与装备升级（Claude）
+
+- 新 verify_menu_shop：原 FoldoutMenu::Initialise(1) 与逐帧 Process（Game::SetItem、Game::UpdateStats）执行，500 组、20489 帧一致，卷轴出现 210 次、买下 77 次；错误副本 18 个，17 个 exit 1、1 个等价。
+- 新 verify_menu_upgrade：原 Initialise(2)（ItemUpgrade::Initialise）与逐帧 Process（Item::AddUpgrade、UpdateStats），500 组、20510 帧一致，20 种属性都出现；错误副本 7 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：79 步通过。运行目录 `.relay/runs/20261020T234343.725631Z`，inputs_unchanged true。

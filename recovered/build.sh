@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")"
-for module in combat rules input battle round progression selection random stroke preview rune match tokens resources motion path refill generation encounters attack_shield turn stats schedule session skills menu items; do
+for module in combat rules input battle round progression selection random stroke preview rune match tokens resources motion path refill generation encounters attack_shield turn stats schedule session skills items menu; do
     set -- "recovered_${module}.cpp"
     case "$module" in
         battle) set -- "$@" recovered_combat.cpp ;;
@@ -20,7 +20,7 @@ for module in combat rules input battle round progression selection random strok
         stats) set -- "$@" recovered_rules.cpp recovered_random.cpp ;;
         schedule) set -- "$@" recovered_combat.cpp recovered_random.cpp recovered_rules.cpp recovered_stroke.cpp recovered_selection.cpp recovered_input.cpp recovered_progression.cpp recovered_tokens.cpp recovered_refill.cpp recovered_generation.cpp ;;
         skills) set -- "$@" recovered_generation.cpp recovered_rules.cpp recovered_random.cpp recovered_path.cpp recovered_round.cpp recovered_match.cpp recovered_tokens.cpp recovered_battle.cpp recovered_combat.cpp ;;
-        menu) set -- "$@" recovered_random.cpp ;;
+        menu) set -- "$@" recovered_items.cpp recovered_stats.cpp recovered_skills.cpp recovered_generation.cpp recovered_rules.cpp recovered_random.cpp recovered_path.cpp recovered_round.cpp recovered_match.cpp recovered_tokens.cpp recovered_battle.cpp recovered_combat.cpp ;;
         items) set -- "$@" recovered_stats.cpp recovered_rules.cpp recovered_random.cpp ;;
         session) set -- "$@" recovered_skills.cpp recovered_schedule.cpp recovered_stats.cpp recovered_turn.cpp recovered_attack_shield.cpp recovered_encounters.cpp recovered_generation.cpp recovered_refill.cpp recovered_path.cpp recovered_motion.cpp recovered_resources.cpp recovered_tokens.cpp recovered_match.cpp recovered_rune.cpp recovered_preview.cpp recovered_stroke.cpp recovered_random.cpp recovered_selection.cpp recovered_progression.cpp recovered_round.cpp recovered_battle.cpp recovered_input.cpp recovered_rules.cpp recovered_combat.cpp ;;
     esac

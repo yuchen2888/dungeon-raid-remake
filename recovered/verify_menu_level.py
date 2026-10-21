@@ -47,9 +47,11 @@ BASE=[[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19],[31,2,3,4,5,7,8,9,10,1
 
 class SkillRecord(C.Structure):
     _fields_=[(k,I32) for k in ('type','level','max','current')]+[('active',U8)]+[(k,I32) for k in ('lines','health','healing','shield','damage')]+[('chance',I32*4)]
+class ItemRecord(C.Structure):_fields_=[(k,I32) for k in ('type','icon','prefix_level','prefix','name')]+[('stats',I32*20)]
 class MenuState(C.Structure):
     _fields_=[(k,I32) for k in ('type','first','second','skill_options','previous_phase')]+[('timer',C.c_float)]+\
-             [(k,U8) for k in ('opening','confirm_ready','confirm_pressed')]+[('options',SkillRecord*4)]
+             [(k,U8) for k in ('opening','confirm_ready','confirm_pressed')]+[('options',SkillRecord*4),('items',ItemRecord*3),('scroll_slot',I32),('scroll',SkillRecord),
+              ('upgrade_items',I32*4),('upgrade_type',I32*4),('upgrade_amount',I32*4)]
 class MenuSources(C.Structure):
     _fields_=[('resources',C.c_void_p),('slots',C.c_void_p),('classes',C.c_void_p),('class_index',I32),('open',C.POINTER(U8)),
               ('preview',C.c_void_p),('selection',C.c_void_p),('player',C.c_void_p),('stat_counts',C.c_void_p)]

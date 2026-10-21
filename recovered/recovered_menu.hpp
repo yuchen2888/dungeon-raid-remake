@@ -3,6 +3,8 @@
 #include "recovered_resources.hpp"
 #include "recovered_turn.hpp"
 #include "recovered_stats.hpp"
+#include "recovered_items.hpp"
+#include "recovered_skills.hpp"
 namespace dungeonraid {
 // A Skill object's game fields, for an equipped skill or a menu option: type (Skill+0x84; 40..47 are the
 // level-up menu's stat options, StatType + 40), level +0x88, cooldown maximum / current +0x8c / +0x90,
@@ -18,12 +20,20 @@ struct SkillRecord {
 // FoldoutMenu (Interface+0xd10): the level-up (0), shop (1) and upgrade (2) menus. open is
 // FrameScreens.menus[0] (FoldoutMenu+0x8); first / second are the chosen buttons 14..17 (+0x30 / +0x34, -1
 // none); skill_options the level-up menu's skill option count (+0x78); options its four Skill objects
-// (+0x48..), which Game::SetSkill swaps with the equipped ones.
+// (+0x48..), which Game::SetSkill swaps with the equipped ones; items the shop's three Item objects (+0x38..),
+// which Game::SetItem swaps with the equipped one; scroll_slot the shop option that comes with a scroll (+0x10c,
+// -1 none) and scroll its Skill object (+0x110).
 struct MenuState {
     std::int32_t type, first, second, skill_options, previous_phase;
     float timer;
     std::uint8_t opening, confirm_ready, confirm_pressed;
     SkillRecord options[4];
+    ItemRecord items[3];
+    std::int32_t scroll_slot;
+    SkillRecord scroll;
+    // The upgrade menu: four equipped items (FoldoutMenu+0x58.., here their slot in MenuSources.equipped) and the
+    // ItemUpgrade proposed for each (+0x68..: stat type +0x80, amount +0x84).
+    std::int32_t upgrade_items[4], upgrade_type[4], upgrade_amount[4];
 };
 // What the menus read and write. resources: level (Game+0xbe4c), skill_count, cooldowns; resources->match:
 // random streams, bonus chances (Game+0xbe20 / 28 / 18 / 30 and the item parts +4), match->stroke:
@@ -42,12 +52,22 @@ struct MenuSources {
     SelectionState* selection;
     PlayerStats* player;
     std::int32_t* stat_counts;
+    // The shop: equipped the five equipped items (Game+0xbe88..0xbe98: types 0..3, then the rest), stats what
+    // the item functions and Game::UpdateStats read and write (with stats_hooks), skills for Skill::CanActivate,
+    // and probe the 40 words at Game+0xbf90 that the scroll draw reads (see FoldoutMenu::Initialise(1)).
+    ItemRecord* equipped;
+    StatsTargets* stats;
+    const StatsHooks* stats_hooks;
+    const SkillState* skills;
+    const std::uint32_t* probe;
 };
 // Sound: Game::QueueSound(a). PositionSkill: Interface::PositionSkill(a). UpdateSkills: Interface::UpdateSkills.
 // HealthBar: Interface::UpdateHealthBar(value a). SkullValue: Interface::UpdateSkullValue. Highlight:
 // FoldoutMenu::HighlightButton(button a, selection b, on c). Confirm: the confirm button's colour (a = 1 pressed,
-// 0 normal). TooltipHide: Tooltip::Hide.
-enum class MenuEventKind : std::int32_t { Sound=1, PositionSkill, UpdateSkills, HealthBar, SkullValue, Highlight, Confirm, TooltipHide };
+// 0 normal). TooltipHide: Tooltip::Hide. ScrollTooltip: Tooltip::ShowScroll(type a). ActivateScroll: Skill::Activate of
+// the scroll's Skill object (type a, not equipped: wire to dr_skill_activate with slot -1). Achievement: a, b float bits.
+enum class MenuEventKind : std::int32_t { Sound=1, PositionSkill, UpdateSkills, HealthBar, SkullValue, Highlight, Confirm, TooltipHide,
+    ScrollTooltip, ActivateScroll, Achievement };
 struct MenuEvent { MenuEventKind kind; std::int32_t a,b,c; };
 struct MenuHooks { void* context; void (*event)(void*,const MenuEvent*); };
 }
@@ -95,10 +115,22 @@ void dr_set_skill(const dungeonraid::MenuSources*,dungeonraid::SkillRecord* opti
 // confirm button still on it starts the closing animation (sound 11 / 12 / 13 by type), elsewhere un-presses
 // it. Tooltip::Hide unless phase 1; the phase is kept.
 void dr_menu_input(dungeonraid::MenuState*,std::int32_t phase,std::int32_t button,const dungeonraid::MenuHooks*);
+// Original FoldoutMenu::Initialise 0x24a54, the shop (type 1): three items, each Item::Initialise(Item*) from the
+// equipped item of a type RandI(stream 2) draws among those left; with chance 0.25 (0.5 for race 3) against
+// Rand(stream 2) a scroll in option RandI(0, 2, stream 2): Rand(stream 2) = r, candidates every type but 33 (and 24
+// in record mode 1) that is unlocked, can activate and -- when r >= 0.1 -- whose probe word is 0; RandI(stream 2)
+// picks one, Skill::Initialise(type, none).
+void dr_menu_open_shop(dungeonraid::MenuState*,const dungeonraid::MenuSources*,const dungeonraid::MenuHooks*);
+// Original FoldoutMenu::Initialise 0x24a54, the upgrade menu (type 2): four of the five equipped items, each the
+// item of a type RandI(stream 4) draws among those left, with ItemUpgrade::Initialise 0x2da74: the stat
+// GetRandomStat(item type, allow 5 when its stat 5 is 0) and the amount GetStatUpgrade(stat).
+void dr_menu_open_upgrade(dungeonraid::MenuState*,const dungeonraid::MenuSources*,const dungeonraid::MenuHooks*);
 // Original FoldoutMenu::Process 0x23c44 (Interface::Process while the menu is open): a negative timer
 // (open) takes input; otherwise the animation timer grows by dt and at 0.3 s the opening ends (timer -1) or the
 // closing ends: the menu closes (timer -1) and the choice applies -- level-up: Game::SetSkill on the first and
-// then the second chosen option.
+// then the second chosen option; shop: Game::SetItem 0x8b08 exchanges the chosen item with the equipped one of
+// its type, Game::UpdateStats, and the scroll of that option is activated (achievement 49 for race 3); upgrade:
+// Item::AddUpgrade 0x29de0 adds the amount to the item's stat, Game::UpdateStats.
 void dr_menu_process(dungeonraid::MenuState*,const dungeonraid::MenuSources*,float dt,std::int32_t phase,std::int32_t button,
     const dungeonraid::MenuHooks*);
 }
