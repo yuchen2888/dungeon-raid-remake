@@ -93,6 +93,12 @@ struct Session {
     std::uint8_t dimmed[36]{};      // Game::UpdateDimming: tiles that cannot continue the path (the renderer dims them)
     std::uint32_t probe[40]{};      // the words at Game+0xbf90 the shop's scroll draw reads
     MenuHooks menu_hooks{};
+    std::uint8_t save[save_capacity]{};   // Game+0x13ecf: the saved game (length / changed: end.flag_146d0 / flag_146d4)
+    std::uint8_t name[17]{};              // Game+0xbe38: the player's name (the renderer's name entry)
+    SaveHooks save_hooks{};
+    SaveSettings settings{};              // Game+0x13ec8 help switch, Game+0x14ae4 difficulty changed (DeserialiseState)
+    ClassSave class_save{};               // Game+0x146d5: the class records' save
+    ScoreBoard scores{};                  // ScoreScreen's high-score tables (Game+0xef68)
     StatsTargets stats_targets{};
     StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
@@ -103,6 +109,7 @@ namespace {
 Session& self(void* c) {return *static_cast<Session*>(c);}
 void forward(Session& s,SessionSource source,const void* e) {if(s.host.event)s.host.event(s.host.context,source,e);}
 void open_menu(Session& s,std::int32_t type);
+void save_state(Session& s);
 template<SessionSource source,class Event> void forward_event(void* c,const Event* e) {forward(self(c),source,e);}
 
 // Game::AddFlare: every unit's Flare event is one call (dr_add_flare: rotation from stream 0, count + 1).
@@ -247,6 +254,7 @@ void turn_event(void* c,const TurnEvent* e) {
     case TurnEventKind::Flare:case TurnEventKind::FlareRest:case TurnEventKind::FlareTarget:add_flare(s);break;
     case TurnEventKind::Label:case TurnEventKind::LabelRest:case TurnEventKind::LabelTarget:case TurnEventKind::LabelPoison:label(s,e->a);break;
     case TurnEventKind::Particles:particles(s,e->a);break;
+    case TurnEventKind::SerialiseState:save_state(s);break;
     default:break;
     }
 }
@@ -286,6 +294,19 @@ void open_menu(Session& s,std::int32_t type) {   // Interface::ShowMenu -> Foldo
     else if(type==1)dr_menu_open_shop(&s.menu,&src,&s.menu_hooks);
     else if(type==2)dr_menu_open_upgrade(&s.menu,&src,&s.menu_hooks);
 }
+SaveSources save_sources(Session& s) {
+    return SaveSources{&s.stroke,&s.match,&s.preview,&s.resources,&s.path,&s.generation,&s.scroll,&s.extra,&s.skills,s.items,&s.finish,
+                       s.name,&s.player,&s.settings};
+}
+void load_update_stats(void* c) {update_stats(self(c));}
+// Game::SerialiseState: the saved game into the buffer, its length and the changed flag (the platform stores it).
+void save_state(Session& s) {
+    const SaveSources src=save_sources(s);
+    s.end.flag_146d0=static_cast<std::int32_t>(dr_serialise_state(&src,s.save,&s.save_hooks));s.end.flag_146d4=1;
+}
+void save_event(void* c,SaveEventKind kind,std::int32_t a,std::int32_t b) {
+    const SessionSmallEvent e{static_cast<std::int32_t>(kind),-1,a,b};forward(self(c),SessionSource::Save,&e);
+}
 void menu_event(void* c,const MenuEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Menu,e);
     if(e->kind==MenuEventKind::ActivateScroll) {   // the bought scroll: Skill::Activate on the unequipped object
@@ -313,11 +334,20 @@ void token_start(void* c,std::uint32_t slot,std::int32_t kind) {Session& s=self(
 void game_over(void* c,bool win) {
     Session& s=self(c);dr_game_over(&s.resources,&s.path,&s.classes[s.scroll.current],&s.skills,&s.end,win,&s.over_hooks);
 }
-void add_score(void* c,const ScoreEntry* e) {forward(self(c),SessionSource::Score,e);}
+// ScoreScreen::AddScore(name, ...) with the GameMode (variant 1: type mode + 4) or Difficulty (variant 0) overload.
+void add_score(void* c,const ScoreEntry* e) {
+    Session& s=self(c);forward(s,SessionSource::Score,e);
+    char name[18]{};std::copy(s.name,s.name+17,name);   // Game::SetName keeps names to 16 characters and their terminator
+    dr_score_add(&s.scores,name,e->turn,e->a,e->b,e->c,e->score,e->variant?e->mode+4:e->mode);
+}
 void over_event(void* c,const TurnEvent* e) {
     Session& s=self(c);forward(s,SessionSource::GameOver,e);
     // GameOverScreen::Initialise (0x307f8): the screen shows (Game+0xcac4 = 1, 0x30898) in its state 0
     // (Game+0xcc1c = 0, 0x30868); the rest of it is presentation.
+    if(static_cast<std::int32_t>(e->kind)==static_cast<std::int32_t>(EndGameEventKind::SetSkills))dr_score_set_skills(&s.scores,e->a,e->b,e->c,e->d);
+    if(static_cast<std::int32_t>(e->kind)==static_cast<std::int32_t>(EndGameEventKind::SerialiseClasses)) {
+        const SaveSources src=save_sources(s);dr_serialise_classes(&src,&s.class_save);
+    }
     if(static_cast<std::int32_t>(e->kind)==static_cast<std::int32_t>(EndGameEventKind::GameOverScreen)) {
         s.end.game_over_screen=1;s.screens.game_over_state_cc1c=0;
     }
@@ -341,6 +371,8 @@ void release_event(void* c,const ReleaseEvent* e) {
     }
     case ReleaseEventKind::MatchTile:dr_match_tile(&s.match,static_cast<std::uint32_t>(e->tile),e->a,&s.match_hooks);break;
     case ReleaseEventKind::MoveMatchedTiles:move_matched_tiles(s);break;
+    case ReleaseEventKind::SerialiseState:save_state(s);break;
+    case ReleaseEventKind::SerialiseClasses: {const SaveSources src=save_sources(s);dr_serialise_classes(&src,&s.class_save);break;}
     default:break;
     }
 }
@@ -470,13 +502,13 @@ void link(Session& s) {
     s.new_game_hooks={c,new_game_event,&s.generation_hooks};
     s.stats_targets=StatsTargets{&s.resources,&s.preview,&s.stroke,&s.path.battle,&s.attack_inputs,&s.end_of_turn.regen,&s.player};
     s.stats_hooks={c,stats_event};
-    s.menu_hooks={c,menu_event};
+    s.menu_hooks={c,menu_event};s.save_hooks={c,save_event,load_update_stats,&s.generation_hooks,&s.turn_hooks};
     s.cross_hooks={c,forward_event<SessionSource::Cross,CrossEvent>};
     s.skill_hooks={c,skill_event,skill_action,&s.match_hooks,&s.path_hooks};
 }
 }
 extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t difficulty) {
-    auto* s=new Session;s->host=*host;s->difficulty=difficulty;
+    auto* s=new Session;s->host=*host;s->difficulty=difficulty;dr_scores_init(&s->scores);
     s->tokens=dr_token_queue_create(&s->match);
     link(*s);return s;
 }
@@ -486,12 +518,48 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->damage,&s->animation,&s->overlay_alpha,&s->attack_inputs,&s->skills,&s->turn_flags,&s->finish,&s->end,s->activated,
         &s->end_of_turn,&s->flights,&s->release_inputs,s->classes,&s->scroll,&s->player,&s->extra,&s->shatter,&s->touch,&s->screens,
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
-        s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed};
+        s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
+        s->save,s->name,&s->settings,&s->class_save,&s->scores};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
+// Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
+extern "C" void dr_session_save(Session* s) {save_state(*s);}
+// Game::SerialiseClasses now (the session runs it at a game's end and a class scroll's level-up; the class screen's
+// changes call it too).
+extern "C" void dr_session_save_classes(Session* s) {const SaveSources src=save_sources(*s);dr_serialise_classes(&src,&s->class_save);}
+// The platform's start-up: one stored high-score table back (ScoreScreen::DeserialiseState).
+extern "C" bool dr_session_restore_scores(Session* s,std::int32_t type,const std::uint8_t* bytes,std::uint32_t length) {
+    if(type<0 || type>5 || length>sizeof(s->scores.bytes))return false;
+    std::copy(bytes,bytes+length,s->scores.bytes);dr_score_deserialise(&s->scores,type);return true;
+}
+// The platform's store loop (ScoreScreen::HaveScoresChanged / SerialiseChangedState): the next changed table into
+// SessionObjects.scores->bytes (length scores->length); its type, -1 when none changed.
+extern "C" std::int32_t dr_session_save_changed_scores(Session* s) {return dr_score_serialise_changed(&s->scores);}
+// The platform's start-up: the stored class records back into Game+0x146d5 and Game::Start's DeserialiseClasses.
+extern "C" bool dr_session_restore_classes(Session* s,const std::uint8_t* bytes,std::uint32_t length) {
+    if(length>class_save_capacity)return false;
+    std::copy(bytes,bytes+length,s->class_save.bytes);s->class_save.length_14ad8=static_cast<std::int32_t>(length);
+    const SaveSources src=save_sources(*s);return dr_deserialise_classes(&src,&s->class_save);
+}
+// The platform's start-up: the stored save back into Game+0x13ecf and its length (stored data over 0x800 bytes is ignored).
+extern "C" void dr_session_restore_save(Session* s,const std::uint8_t* bytes,std::uint32_t length) {
+    if(length>save_capacity)return;
+    std::copy(bytes,bytes+length,s->save);s->end.flag_146d0=static_cast<std::int32_t>(length);
+}
 extern "C" void dr_session_set_falling(Session* s,const std::int32_t* tiles,std::uint32_t count) {s->falling.assign(tiles,tiles+count);}
 extern "C" void dr_session_set_motions(Session* s,const TokenMotion* motions,std::uint32_t count) {s->motions.assign(motions,motions+count);}
 extern "C" void dr_session_new_game(Session* s,std::uint32_t time) {dr_init_new_game(&s->new_game,time,&s->new_game_hooks);}
+// Game::DeserialiseState now: the saved game in SessionObjects.save over the current state (false: no 0xff header).
+extern "C" bool dr_session_deserialise(Session* s) {const SaveSources src=save_sources(*s);return dr_deserialise_state(&src,s->save,&s->save_hooks);}
+// Game::ContinueGame 0x165f4: with a saved game (end.flag_146d0), Game::InitNewGame, Game::DeserialiseState and
+// Game::CalculateTilePositions (the main menu's fade and Interface::Process(0, false) are presentation).
+extern "C" bool dr_session_continue_game(Session* s,std::uint32_t time) {
+    if(!s->end.flag_146d0)return false;
+    dr_session_new_game(s,time);
+    const SaveSources src=save_sources(*s);dr_deserialise_state(&src,s->save,&s->save_hooks);
+    dr_calculate_tile_positions(&s->stroke,&s->new_game_hooks);
+    return true;
+}
 extern "C" FrameRoute dr_session_frame(Session* s,float dt,std::int32_t touch_phase,Point touch) {
     s->touch.phase=touch_phase;s->touch.position=touch;s->dt=dt;s->input_route=-1;
     return dr_process_frame(&s->frame,dt,&s->frame_hooks);

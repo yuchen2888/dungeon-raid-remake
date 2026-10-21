@@ -44,7 +44,11 @@
 | T030-N3c | 完成 / Claude，待复核 | StealGold（含 set 重载）恢复并接入；动作模块新增 dr_token_set_target_tile，TurnHooks 新增 token_target/token_start；1440 次比较 | 四个错误副本被拒 |
 | T030-N4a | 完成 / Claude，待复核 | 新模块 stats：Game::UpdateStats 0x14c04（dr_update_stats），ProcessAttack 输入与回复量的生产者；400 次比较 | verify_stats.py；五个错误副本被拒 |
 | T030-N4b | 完成 / Claude，待复核 | DestroyUpgrade、GetStatUpgrade/Downgrade 恢复（stats 模块）；经 TurnHooks.ability(28) 接线；verify_stats 共 700 次 | 四个错误副本被拒（另一个为等价变异） |
-| T030-N5 | 待做 | Game::SerialiseState 0x91c4（896 字节，存档格式）；之后 T040 回合调度 | 存档格式需与 progression 编解码一并考虑 |
+| T030-N5 | 完成（N5a..N5d） / Claude，待复核 | 存档 / 读档 / 继续游戏 / 职业进度 / 最高分，按原版（用户 2026-10-21 决定先做）；见 T030_SAVE.md | verify_save.py、verify_load.py、verify_session.py |
+| T030-N5a | 完成 / Claude，待复核 | 对局存档 Game::SerialiseState（新模块 recovered_save：dr_serialise_state；会话在回合结束与 ProcessInput 尾段存档） | verify_save.py；23 个错误副本被拒 |
+| T030-N5b | 完成 / Claude，待复核 | 读档 Game::DeserialiseState（版本 0..3）与继续游戏 Game::ContinueGame（dr_session_continue_game） | verify_load.py；verify_session 新局阶段“退出再继续” |
+| T030-N5c | 完成 / Claude，待复核 | 职业进度 Game::SerialiseClasses / DeserialiseClasses（含 Validate 对当前职业的改动同步到单位视图） | verify_session（游戏结束、职业卷轴）；verify_load 职业部分 |
+| T030-N5d | 完成 / Claude，待复核 | 最高分 ScoreScreen（新模块 recovered_scores：AddScore 插入前 10 名、SetSkills、按类别存取与变化标志、启动时读回；会话在游戏结束时加分） | verify_scores.py；15 个错误副本被拒；verify_session 每帧比较最高分内存 |
 | T040 | 进行中 / Claude | 恢复输入阻塞门槛、新局初始化与完整回合调度 | ProcessInput 0x16638、InitNewGame 0x15c50、Game::Process；同一棋盘可进入下一回合且不执行旧程序；见 T040_SCHEDULE.md |
 | T040-A | 完成 / Claude，待复核 | 调用登记：Process 76 / ProcessInput 74 / InitNewGame 51 个直接调用点，已恢复段落与哈希 | scripts/t040_process_audit.py → docs/T040_PROCESS_CALLS.json（--check） |
 | T040-B | 完成 / Claude，待复核 | 新模块 schedule：ProcessInput 门槛 [0x16638,0x16748)（dr_input_gate，含 EndOfTurn 调度）与 CountAttackers；600 次比较 | verify_input_gate.py；五个错误副本被拒 |

@@ -35,6 +35,14 @@ current class (Game+0x1648c) from 0..9 (with_class): the menus' skill pools and 
 (type, level, race) follow it.
 Interface::GetSpecialTarget(Token*), the skill slot a mana potion recharges (T040-L1), runs as original code
 (std::set<int> modelled) instead of verify_motion.py's answer; the native session computes it (dr_special_target).
+Saves (T030-N5): Game::SerialiseState (the turns' ends, ProcessInput's tail) and Game::SerialiseClasses (a game's end,
+a class scroll's level-up) run as original code instead of the units' boundaries; the save buffer (length, changed flag,
+bytes) and the class records' save are compared every frame. Every case has a player name (saved). In the new-game
+phase some games quit midway and continue from their save (the original's InitNewGame, DeserialiseState and
+CalculateTilePositions; the native dr_session_continue_game), then play on.
+High scores (T030-N5d): a game's end runs ScoreScreen::AddScore (the GameMode or Difficulty overload) and SetSkills as
+original code (strcpy modelled); the whole table memory (ScoreScreen+0x1e0..+0x132e) is compared every frame. In the
+skill phase a press mostly takes the equipped skill used least so far, so that every type gets used.
 The original side is the F4 / F3 harness, except that the functions the session wires itself from unit events
 (SetSpecialType, Shapeshift, Healing, ProcessPretzels, CheckEndGame in the units, InialiseShieldShatter) run as
 original code instead of the unit harnesses' adapters (OriginalMixin); carried-state variants make them occur.
@@ -107,7 +115,8 @@ NAMES=('stroke','preview','match','rune','tokens','resources','path','refill','g
        'player','extra','shatter','touch','screens','input_target','current_label_active','motions')
 class Objects(C.Structure):
     _fields_=[(k,C.c_void_p) for k in NAMES]+[('motion_count',C.c_uint32),('falling',C.c_void_p),('falling_count',C.c_uint32),
-              ('skill_button',C.c_void_p),('skill_input',C.c_void_p),('items',C.c_void_p),('menu',C.c_void_p),('menu_button',C.c_void_p),('dimmed',C.c_void_p)]
+              ('skill_button',C.c_void_p),('skill_input',C.c_void_p),('items',C.c_void_p),('menu',C.c_void_p),('menu_button',C.c_void_p),('dimmed',C.c_void_p),
+              ('save',C.c_void_p),('name',C.c_void_p),('settings',C.c_void_p),('class_save',C.c_void_p),('scores',C.c_void_p)]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,I32,C.c_void_p)
 TARGET=C.CFUNCTYPE(None,C.c_void_p,I32,I32,C.POINTER(Point))
 START=C.CFUNCTYPE(None,C.c_void_p,I32,C.POINTER(Point))
@@ -158,12 +167,34 @@ def with_items(c,rng):
     stats={k:rng.randrange(0,20) for k in STATS_INTS if k not in ('health','health_max','health_bonus','ui_health','ui_armour','armour_current','base_damage')}
     stats.update({k:f32(rng.choice([0,0.5,1.0])) for k in STATS_FLOATS},cooldown=0)
     c['k5']=dict(items=[item(i) for i in range(5)],stats=stats)
+    n=NAME_RNG.choice([0,1,5,16]);c['name']=[NAME_RNG.randrange(32,127) for _ in range(n)]   # the player's name (saved; Game::SetName: at most 16)
     return c
 # T040-K5b: FoldoutMenu (Interface+0xd10) as original code
 from verify_menu_level import MenuState, OPTION_INTS, OPTION_CHANCES, SET_OPS, SKIP as MENU_SKIP_SYMBOLS, BASE as CLASS_BASE
 SHOW_MENU,FM_INIT,FM_PROCESS,FM=0x1eb20,0x24a54,0x23c44,0x4cdc+0xd10
 GET_SPECIAL=0x20358   # Interface::GetSpecialTarget(Token*) (T040-L1): original code, std::set<int> modelled
 SPECIAL_CALLS=[0]     # its calls in play (all phases)
+SERIALISE,QUEUE_ACHIEVEMENT=0x91c4,0xbd68   # Game::SerialiseState (T030-N5): original code; its achievement recorded
+SAVE_BUFFER,SAVE_LENGTH,SAVE_CHANGED,NAME=0x13ecf,0x146d0,0x146d4,0xbe38
+SAVE_CALLS=[0]        # Game::SerialiseState calls in play (all phases)
+SERIALISE_CLASSES,CLASS_SAVE,CLASS_SAVE_LENGTH,CLASS_SAVE_CHANGED=0x8ee8,0x146d5,0x14ad8,0x14adc   # Game::SerialiseClasses: original code
+CLASS_SAVES=[0]
+# ScoreScreen (Game+0xef68, T030-N5d): AddScore (all three overloads) and SetSkills as original code (strcpy modelled)
+SCORE_SCREEN,SCORE_TABLES,SCORE_SIZE=0xef68,0x1e0,0x1328+6-0x1e0
+SCORE_FUNCTIONS=('__ZN11ScoreScreen8AddScoreEPKciiiii9ScoreType','__ZN11ScoreScreen8AddScoreEPKciiiii8GameMode',
+                 '__ZN11ScoreScreen8AddScoreEPKciiiii10Difficulty','__ZN11ScoreScreen9SetSkillsEiiii')
+SCORE_CALLS={}         # by function: the GameMode / Difficulty overloads and SetSkills
+NAME_RNG=random.Random(0xbe38)
+# Game::DeserialiseState / ContinueGame / CalculateTilePositions (T030-N5): original code; the interface updates, icons
+# and texts are skipped (sprintf, strcpy stubs too)
+DESERIALISE,CONTINUE_GAME,TILE_POSITIONS=0x15c18,0x165f4,0xb264
+LOAD_SKIP=['__ZN7Upgrade7SetIconEiiii','__ZN5Label7SetTextEPKci','__ZN4Item9MakeStatsEv','__ZN9Interface16UpdateSkullValueEv',
+           '__ZN9Interface15UpdateHealthBarER4Quadi','__ZN9Interface17UpdateShieldValueEv','__ZN9Interface11UpdateXPBarER4Quadi',
+           '__ZN9Interface11UpdateUPBarER4Quadi','__ZN9Interface13UpdateGoldBarERA2_4Quadi','__ZN9Interface9SetPoisonEi',
+           '__ZN9Interface13PositionSkillEi','__ZN9Interface12UpdateSkillsEv','__ZN8GameMenu12SetHelpStateEb']
+LOAD_STUBS=(0x194f60,0x194fb0)
+HELP_SWITCH,DIFFICULTY_CHANGED=0x13ec8,0x14ae4
+CONTINUES=[0]         # games continued from their save (new-game phase)
 MENU_OBJECTS,CLASS_ARRAYS,SET_NODES_K5=0x3280000,0x3290000,0x32a0000
 ITEM_SET_OPS={'__ZNSt8_Rb_treeI8ItemTypeS0_St9_IdentityIS0_ESt4lessIS0_ESaIS0_EE13_Rb_tree_implIS4_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS0_EERKS4_':'init',
               '__ZNSt3setI8ItemTypeSt4lessIS0_ESaIS0_EE6insertERKS0_':'insert',
@@ -197,6 +228,9 @@ class OriginalMixin:
         self.cursor=addr('__ZN9Interface14CursorInButtonEi');self.contains=addr('__ZN4Quad13ContainsPointERK8GLfloat2')
         self.set_type=addr('__ZN4Tile7SetTypeE8TileTypeii')
         self.overlay_quad={addr(q) for q in ('__ZN4Quad7SetSizeERK8GLfloat2','__ZN4Quad5SetUVERK8GLfloat2S2_','__ZN4Quad8SetAlphaEh')}
+        self.load_skip={addr(n) for n in LOAD_SKIP}|set(LOAD_STUBS);self.loading=False
+        self.score_functions={addr(n):n for n in SCORE_FUNCTIONS};self.scoring=False
+        assert addr('__ZN4Game16DeserialiseStateEv')==DESERIALISE and addr('__ZN4Game22CalculateTilePositionsEv')==TILE_POSITIONS
         # T040-K5: items, UpdateStats, Item::IncreaseStat and DestroyUpgrade run as original code
         self.u.mem_map(ITEM_SPACE,0x100000);self.heap=ITEM_SPACE;self.naming=False;self.names_ready=False;self.stats_running=False
         self.item_allocs=0;self.int_vectors_k5={}
@@ -205,7 +239,7 @@ class OriginalMixin:
         self.stats_skip={addr(n) for n in STATS_SKIP};self.vector_ops={addr(n):v for n,v in VECTOR_OPS.items()}
         # T040-K5b: the menus
         self.resource_calls={k:v for k,v in self.resource_calls.items() if v!='menu'}   # Interface::ShowMenu runs
-        self.menu_running=False;self.menu_button=-1;self.k5_sets={};self.special_running=False
+        self.menu_running=False;self.menu_button=-1;self.k5_sets={};self.special_running=False;self.saving=False;self.save_achievements=[]
         self.menu_skip={addr(n) for n in MENU_SKIP};self.string_vector_size=addr('__ZNKSt6vectorISsSaISsEE4sizeEv')
         self.menu_set_ops={addr(n):v for n,v in SET_OPS.items()};self.menu_set_ops.update({addr(n):v for n,v in ITEM_SET_OPS.items()})
         self.fm_cursor=addr('__ZN11FoldoutMenu14CursorInButtonEi');self.fm_quad=addr('__ZN11FoldoutMenu12CursorInQuadEi')
@@ -220,6 +254,25 @@ class OriginalMixin:
     def hook(self,u,address,size,context):
         for undo in self.returns.pop(address,[]):undo()
         lr=u.reg_read(self.LR)&~1
+        if address==SERIALISE:SAVE_CALLS[0]+=1;self.until_return(u,'saving');return   # the save: original code (not the units' boundary)
+        if address==SERIALISE_CLASSES:CLASS_SAVES[0]+=1;self.until_return(u,'classing');return   # the class records' save: original code
+        if getattr(self,'classing',False):return
+        if address in self.score_functions and not self.scoring:   # the high scores: original code
+            n=self.score_functions[address];SCORE_CALLS[n]=SCORE_CALLS.get(n,0)+1;self.until_return(u,'scoring');return
+        if self.scoring:
+            if address==0x194fb0:   # strcpy
+                d,src=u.reg_read(self.regs[0]),u.reg_read(self.regs[1])
+                while True:
+                    b=u.mem_read(src,1);u.mem_write(d,bytes(b));src+=1;d+=1
+                    if not b[0]:break
+                u.reg_write(self.PC,lr|1)
+            return
+        if self.loading:   # DeserialiseState: its presentation skipped, Set*Visibility's overlay quads as original code
+            if address in self.load_skip:u.reg_write(self.PC,lr|1);return
+            if address in self.overlay_quad and 0x3d89c<=lr<0x3d9a4:return
+        if self.saving:   # Item::Serialise's achievement 72; Tile / Item / Skill / HelpMenu::Serialise, GetRandSeed run
+            if address==QUEUE_ACHIEVEMENT:self.save_achievements.append(C.c_int32(u.reg_read(self.regs[1])).value);u.reg_write(self.PC,lr|1)
+            return
         if self.naming:   # Item::InitialiseNames: its vectors on a bump heap
             if address==NEW_STUB:n=u.reg_read(self.regs[0]);u.reg_write(self.regs[0],self.heap);self.heap+=(n+15)&~15;u.reg_write(self.PC,lr|1);return
             if address==DELETE_STUB:u.reg_write(self.PC,lr|1);return
@@ -355,11 +408,18 @@ class OriginalMixin:
         RANDOM.dr_random_float(C.byref(seeds),lo,hi,stream);self.u.mem_write(SEEDS,struct.pack('<6I',*seeds.seeds))
     def load(self,c):
         super().load(c);G=self.GAME;I=G+INTERFACE
+        self.u.mem_write(G+SAVE_BUFFER,bytes(0x800));self.u.mem_write(G+NAME,bytes(c['name'])+bytes(17-len(c['name'])))   # no save yet; the name
         sc=c.get('release',{}).get('scroll',{});self.class_current=sc.get('current',0)
         if self.class_current:   # with_class: record 0 (as the loaders wrote it) is the current class's
             rec=G+CLASSES+CLASS_STRIDE*self.class_current;self.u.mem_write(rec,bytes(self.u.mem_read(G+CLASSES,CLASS_STRIDE)))
             type_,base,level=sc['classes'][self.class_current];self.write(rec+4,type_);self.write(rec+0xc,base);self.u.mem_write(rec+0x54,bytes([level]))
             self.write(G+CLASS_INDEX_ADDR,self.class_current)
+        S=G+SCORE_SCREEN;self.u.mem_write(S+SCORE_TABLES,bytes(SCORE_SIZE));self.write(S+0xf18,0xffffffff);self.write(S+0xf1c,0xffffffff)   # ScoreScreen's constructor
+        self.u.mem_write(G+CLASS_SAVE,bytes(472));self.write(G+CLASS_SAVE_LENGTH,0);self.u.mem_write(G+CLASS_SAVE_CHANGED,b'\0')
+        cur=self.read(G+CLASS_INDEX_ADDR)
+        for i in range(10):   # the record fields no loader writes: zero, as the native records (the current class's are the case's)
+            rec=G+CLASSES+CLASS_STRIDE*i
+            if i!=cur:self.u.mem_write(rec+8,bytes(4));self.u.mem_write(rec+0x10,bytes(32));self.u.mem_write(rec+0x58,bytes(20))
         if not self.names_ready:   # the item name tables, once
             u=self.u;self.naming=True;u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1)
             try:u.emu_start(NAMES_FN|1,self.STOP,timeout=0,count=5000000)
@@ -424,7 +484,22 @@ class OriginalMixin:
         k5={key:i32(G+a) for key,a in STATS_INTS.items()};k5.update({key:self.read(G+a) for key,a in STATS_FLOATS.items()});k5['cooldown']=self.u.mem_read(G+0xbe64,1)[0]
         return dict(super().game_state(),counts=[C.c_int32(self.read(self.GAME+0x164b0+4*i)).value for i in range(6)],
                     game_over_state=C.c_int32(self.read(self.GAME+0xcc1c)).value,skill_slots=slots,skill_count=i32(G+0xbfa0),items=items,k5=k5,
-                    menu=self.menu_state())
+                    menu=self.menu_state(),save=self.save_state(),scores=bytes(self.u.mem_read(G+SCORE_SCREEN+SCORE_TABLES,SCORE_SIZE)).hex())
+    def run_entry(self,entry,flags):   # an original function from its entry to its return, with harness flags set
+        u=self.u;u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1)
+        for f in flags:setattr(self,f,True)
+        try:u.emu_start(entry|1,self.STOP,timeout=0,count=5000000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
+        finally:
+            for f in flags:setattr(self,f,False)
+        return u.reg_read(self.regs[0])&0xff
+    def continue_game(self):   # Game::ContinueGame: InitNewGame (the new-game harness), DeserialiseState, CalculateTilePositions
+        NewGameOriginal.run(self);self.run_entry(DESERIALISE,['loading','gen_active']);self.run_entry(TILE_POSITIONS,['initialising','gen_active'])
+        self.class_current=True;self.moving_list=[self.index(v) for v in self.list_values(self.GAME+0xb3f8)]
+    def save_state(self):   # the saved game: length, changed flag and bytes
+        G=self.GAME;n=C.c_int32(self.read(G+SAVE_LENGTH)).value
+        k=C.c_int32(self.read(G+CLASS_SAVE_LENGTH)).value
+        return [n,self.u.mem_read(G+SAVE_CHANGED,1)[0],bytes(self.u.mem_read(G+SAVE_BUFFER,max(0,min(n,0x800)))).hex(),
+                k,self.u.mem_read(G+CLASS_SAVE_CHANGED,1)[0],bytes(self.u.mem_read(G+CLASS_SAVE,max(0,min(k,472)))).hex()]
 class NewGameSessionOriginal(OriginalMixin,NewGameOriginal):pass
 class CarriedSessionOriginal(OriginalMixin,FramesOriginal):pass
 
@@ -475,6 +550,10 @@ class SessionMixin:
         self.fin_flags=self.finish;self.counter=U8.from_address(o.animation+type(self.anim).counterattack.offset)
         self.label_active=(U8*4).from_address(o.extra+type(self.extra).label_active.offset)
         self.q=o.tokens;self.sync()
+        cls=self.classes[self.scroll_state.current];sel=self.state.selection   # the current class record is what the units read
+        cls.race=sel.character.race;cls.perks=(I32*4)(*self.m.perks);cls.flaws=(I32*4)(*sel.character.flaws)
+        for k,v in c.get('cls',{}).items():setattr(cls,k,v)   # its progress (Game::GameOver adds to it; SerialiseClasses saves it)
+        self.save=(U8*0x800).from_address(o.save);C.memmove(o.name,bytes(c['name'])+bytes(17-len(c['name'])),17)
         self.menu=MenuState.from_address(o.menu);self.k5_items=(ItemRecord*5).from_address(o.items);self.k5_player=PlayerStats.from_address(o.player);k5=c['k5']
         for i,rec in enumerate(k5['items']):
             x=self.k5_items[i]
@@ -497,7 +576,12 @@ class SessionMixin:
         slots=[[k.id[i],k.level[i],k.active[i],r.skill_max[i],r.skill_current[i]] for i in range(4)]
         items=[[getattr(x,key) for _,key in ITEM_FIELDS]+list(x.stats) for x in self.k5_items]
         return dict(super().game_state(),counts=list(self.state.counts),game_over_state=self.screens.game_over_state_cc1c,skill_slots=slots,
-                    skill_count=r.skill_count,items=items,k5=self.k5_status(),menu=self.menu_state())
+                    skill_count=r.skill_count,items=items,k5=self.k5_status(),menu=self.menu_state(),save=self.save_state(),
+                    scores=bytes((U8*SCORE_SIZE).from_address(self.session_lib.dr_session_objects(self.session).scores)).hex())
+    def save_state(self):
+        n=self.flags.flag_146d0;o=self.session_lib.dr_session_objects(self.session);cs=(U8*480).from_address(o.class_save)
+        k=C.c_int32.from_address(o.class_save+472).value
+        return [n,self.flags.flag_146d4,bytes(self.save[:max(0,min(n,0x800))]).hex(),k,cs[476],bytes(cs[:max(0,min(k,472))]).hex()]
     def k5_targets(self):
         r,p,sel,b,a,pl=self.r,self.p,self.state.selection,self.path_state.battle,self.inputs,self.k5_player
         t=dict(health=(r,'health'),health_max=(r,'health_max'),health_bonus=(r,'health_bonus'),ui_health=(r,'ui_health'),ui_armour=(r,'ui_armour'),
@@ -515,6 +599,9 @@ class SessionMixin:
         return out
     def new_game(self,time):
         self.new_events=[];self.gen_events=[];self.session_lib.dr_session_new_game(self.session,time);self.sync()
+    def continue_game(self,time):
+        lib=self.session_lib;lib.dr_session_continue_game.argtypes=[C.c_void_p,C.c_uint32];lib.dr_session_continue_game.restype=C.c_bool
+        self.new_events=[];self.gen_events=[];assert lib.dr_session_continue_game(self.session,time);self.sync()
     def set_button(self,button):
         o=self.session_lib.dr_session_objects(self.session);I32.from_address(o.skill_button).value=button
     def set_menu_button(self,button):
@@ -561,7 +648,9 @@ def main():
         for turn in range(count):
             count_=new.r.skill_count
             if skills and count_>0 and rng.random()<.75:   # a skill button pressed and released (sometimes released on another)
-                button=turn%count_ if rng.random()<.9 else rng.randrange(count_);release=button if rng.random()<.92 else rng.randrange(-1,4)
+                # mostly the equipped skill used least so far (then the turn's slot), so that every type gets used
+                button=min(range(count_),key=lambda k:(used.get(new.skills.id[k],0),(k-turn)%count_)) if rng.random()<.9 else rng.randrange(count_)
+                release=button if rng.random()<.92 else rng.randrange(-1,4)
                 script=[(1,('button',button)),(2,('button',release))];presses+=1;path=[]
                 pressed_type,used_before=new.skills.id[button],new.sources.get((SOURCE_SKILL,SKILL_USED),0)
             else:
@@ -616,11 +705,17 @@ def main():
         elif game%3==2:set_health(old,new,1000,1000)            # strengthened: long games, later enemies
         compare('after init',old.game_state(),new.game_state(),game=game)
         play(old,new,game,LONG_TURNS if game%3==2 else TURNS)
+        if game%3!=1 and not old.read(old.GAME+0xcac4)&0xff:   # T030-N5: quit, then Continue from the saved game and play on
+            assert old.read(old.GAME+SAVE_LENGTH),'no save'
+            old.continue_game();new.continue_game(c['new_game']['time'])
+            compare('continue',old.game_state(),new.game_state(),game=game);CONTINUES[0]+=1
+            play(old,new,game,TURNS)
     phases['new_games']=dict(games=GAMES,turns=turns,frames=frames,ended=ended);sources.update(new.sources)
     old,new=CarriedSessionOriginal(),CarriedSession()
     for game in range(CARRIED_GAMES):
         c=with_items(variant(turn_case(rng),game),items_rng);old.load(c);new.load(c)
         if game%2==0 and game%5!=1:set_health(old,new,5000,5000)   # most carried boards end the game within a turn
+        elif game%5==2:set_health(old,new,2)   # T030-N5d: a record-mode game that ends (ScoreScreen::AddScore, GameMode)
         compare('load',old.game_state(),new.game_state(),game=game)
         play(old,new,GAMES+game,CARRIED_TURNS)
     phases['carried']=dict(games=CARRIED_GAMES,turns=turns-phases['new_games']['turns'],frames=frames-phases['new_games']['frames'],
@@ -660,7 +755,8 @@ def main():
     assert set(used)==set(SKILL_TYPES) and sources.get((SOURCE_SKILL,SKILL_FLAME),0)>3,(set(SKILL_TYPES)-set(used),sources.get((SOURCE_SKILL,SKILL_FLAME)))
     assert set(menus_seen)=={0,1,2},menus_seen
     assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
-    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
+    assert SAVE_CALLS[0]>100 and CONTINUES[0]>0 and CLASS_SAVES[0]>0 and len(SCORE_CALLS)==3,(SAVE_CALLS,CONTINUES,CLASS_SAVES,SCORE_CALLS)   # saves; continued games; class saves; scores
+    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',
@@ -668,7 +764,7 @@ def main():
                             'the harness picks the paths, the skill button and the menu button under the touch; GameMenu / StatsMenu closed',
                             "the shop's scroll probe takes the leech label's type and vertices as 0 (T040-K6)",
                             'events and presentation mirrors not compared here (unit tests)'],
-                scope='games from their start through many turns up to the end of the game, carried mid-game states, skill use, items and the three menus')
+                scope='games from their start through many turns up to the end of the game, carried mid-game states, skill use, items, the three menus, saves, continued games and high scores')
     (HERE/'session_verification.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
 
 if __name__=='__main__':main()

@@ -6,6 +6,8 @@
 #include "recovered_skills.hpp"
 #include "recovered_items.hpp"
 #include "recovered_menu.hpp"
+#include "recovered_save.hpp"
+#include "recovered_scores.hpp"
 namespace dungeonraid {
 // One game: every recovered state object, each Game field owned once, and the recovered units wired
 // to each other as Game does it (see docs/T040_SESSION_PLAN.md). No original instruction runs here.
@@ -54,14 +56,23 @@ struct SessionObjects {
     MenuState* menu;                     // FoldoutMenu (Interface+0xd10): the level-up, shop and upgrade menus
     std::int32_t* menu_button;           // renderer-owned: the menu button under the touch (14..17 options, 7 confirm, -1 none)
     std::uint8_t* dimmed;                // 36 tiles: dimmed by Game::UpdateDimming (cannot continue the path)
+    std::uint8_t* save;                  // the saved game (save_capacity bytes, Game+0x13ecf): length end->flag_146d0 (0: none),
+                                         // end->flag_146d4 set when it changed -- the platform stores it then and clears the flag
+    std::uint8_t* name;                  // renderer-owned: the player's name (Game+0xbe38, 17 bytes, saved and given to the scores)
+    SaveSettings* settings;              // the help switch and the difficulty-changed flag DeserialiseState writes
+    ClassSave* class_save;               // the class records' save (Game::SerialiseClasses at a game's end and a class scroll's
+                                         // level-up): the platform stores it when changed_14adc is set and clears the flag
+    ScoreBoard* scores;                  // the high-score tables (a game's end adds its score and skills); the platform stores a
+                                         // changed table (dr_session_save_changed_scores) and gives them back at start-up
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
 enum class SessionSource : std::int32_t { Selection=1, Match, Token, Motion, Resource, Path, Refill, Generation, Encounter,
     AttackFlare, AttackAnim, AttackAbsorb, AttackShield, AttackWeaken, AttackHealth, AttackFade, AttackAll, Vampires,
     Turn, EndGame, GameOver, Score, Release, BoardEffect, Frame, Label, GameFrame, NewGame,
-    Ability, Cross, Skill, Stats, Menu };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), wired to dr_destroy_upgrade; Stats: a StatsEvent;
-                        // Cross: a CrossEvent of Game::UpdateCrossVisibility; Skill: a SkillEvent; Menu: a MenuEvent
+    Ability, Cross, Skill, Stats, Menu, Save };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), wired to dr_destroy_upgrade; Stats: a StatsEvent;
+                        // Cross: a CrossEvent of Game::UpdateCrossVisibility; Skill: a SkillEvent; Menu: a MenuEvent;
+                        // Save: Game::SerialiseState's achievement (kind 1, a = achievement, b = value bits)
 struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 struct SessionHost {
     void* context;
@@ -87,6 +98,28 @@ void dr_session_set_motions(dungeonraid::Session*,const dungeonraid::TokenMotion
 void dr_session_new_game(dungeonraid::Session*,std::uint32_t time);
 // One Game::Process frame (dr_process_frame with every step wired) for the touch (phase, position).
 dungeonraid::FrameRoute dr_session_frame(dungeonraid::Session*,float dt,std::int32_t touch_phase,dungeonraid::Point touch);
+// Game::SerialiseState now: the saved game into SessionObjects.save, its length and changed flag into end (the
+// session runs it itself where the original does: the end of a turn, ProcessInput's tail).
+void dr_session_save(dungeonraid::Session*);
+// Game::DeserialiseState: the saved game in SessionObjects.save over the current state (ContinueGame runs it after a
+// new game); false when the buffer has no 0xff header (the format before version 1, not recovered).
+bool dr_session_deserialise(dungeonraid::Session*);
+// Game::ContinueGame: with a saved game, a new game (time seeds the random streams) that the save then overwrites
+// (DeserialiseState) and the tile positions; false without one (the main menu shows Continue only with one).
+bool dr_session_continue_game(dungeonraid::Session*,std::uint32_t time);
+// Game::SerialiseClasses now: the class records into SessionObjects.class_save (the session runs it itself at a game's
+// end and a class scroll's level-up; the class screen calls it after the player changes a class).
+void dr_session_save_classes(dungeonraid::Session*);
+// The platform's start-up: a stored high-score table (type 0..5) back (ScoreScreen::DeserialiseState); false: no such type.
+bool dr_session_restore_scores(dungeonraid::Session*,std::int32_t type,const std::uint8_t* bytes,std::uint32_t length);
+// The next changed high-score table serialised into SessionObjects.scores->bytes (length scores->length): its type,
+// -1 when none changed (the platform stores it under its type and calls again).
+std::int32_t dr_session_save_changed_scores(dungeonraid::Session*);
+// The platform's start-up: stored class records back (Game+0x146d5) and Game::Start's DeserialiseClasses (false: the
+// bytes do not hold ten records, nothing read).
+bool dr_session_restore_classes(dungeonraid::Session*,const std::uint8_t* bytes,std::uint32_t length);
+// The platform's start-up: stored save bytes back into the session (Game+0x13ecf and its length).
+void dr_session_restore_save(dungeonraid::Session*,const std::uint8_t* bytes,std::uint32_t length);
 // How the last frame's input step went (InputRoute; -1 when the input step did not run).
 std::int32_t dr_session_input_route(const dungeonraid::Session*);
 }

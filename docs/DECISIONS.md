@@ -43,3 +43,7 @@ AGENTS.md 是真源，CLAUDE.md / GEMINI.md 用 `@AGENTS.md` 导入。三种启�
 ## 2026-10-20：先完成后端（用户决定）
 
 用户决定先把规则核心（后端）做完（T040-H 技能、物品模型、FoldoutMenu 等），Godot 试玩原型（T050-A）放到其后。前端选型 Godot 不变。ROADMAP 时间按实际速度修正为 iOS 测试版约 3～4 周。
+
+## 2026-10-21：先做存档 / 读档，Godot 往后（用户决定）
+
+用户问原版是否有存档、为什么提出这一项。核实：原版自带三类存取——每回合结束（未结束游戏时）Game::SerialiseState 自动保存整局，主菜单“继续游戏”Game::ContinueGame → DeserialiseState 读回；职业进度 Game::SerialiseClasses / DeserialiseClasses；最高分 ScoreScreen 的存取。用户决定先按原版恢复存档 / 读档（中途自动存档 + 继续游戏，以及最高分），Godot 试玩原型（T050-A）放到其后。规则核心只负责产生 / 读取与原版相同格式的字节，写入文件由平台层（将来的 Godot）负责。

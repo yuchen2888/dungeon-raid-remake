@@ -1,12 +1,12 @@
 # 当前状态
 
-更新：2026-10-20（America/Los_Angeles）。维护者：Claude（T040-K5）。当前阶段：规则核心（后端）的计划项——战斗、敌人回合、整帧调度、技能系统、装备、升级 / 商店 / 装备升级菜单——均已原生恢复并接入整局会话，与原版逐帧一致，待复核；剩存档（SerialiseState，ROADMAP M3）与少量已知差异；无界面整局演示（T040-G3）证明规则核心可独立打完整局；下一步按用户决定进入 Godot 试玩原型（T050-A，计划见 T050_GODOT_PLAN.md，需用户先安装 Godot）；Gemini 尚未接入。
+更新：2026-10-20（America/Los_Angeles）。维护者：Claude（T040-K5）。当前阶段：规则核心（后端）的计划项——战斗、敌人回合、整帧调度、技能系统、装备、升级 / 商店 / 装备升级菜单——均已原生恢复并接入整局会话，与原版逐帧一致，待复核；存档 / 读档也已恢复（T030-N5）；剩少量已知差异；无界面整局演示（T040-G3）证明规则核心可独立打完整局；用户 2026-10-21 决定先做存档：对局存档、读档、继续游戏、职业进度与最高分已完成（T030-N5）；之后进入 Godot 试玩原型（T050-A，计划见 T050_GODOT_PLAN.md，需用户先安装 Godot）；Gemini 尚未接入。
 
 ## 已核实
 
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
-- recovered/ 当前存在 27 个 `recovered_*.cpp` 模块、22 个头文件、78 个 verify 脚本、三个独立源码示例（含整局演示 session_demo）。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
+- recovered/ 当前存在 29 个 `recovered_*.cpp` 模块、24 个头文件、81 个 verify 脚本、三个独立源码示例（含整局演示 session_demo）。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
 - 根外同级 ZIP（2026-10-16）缺少 refill/generation/encounters 三组新源码和四个新验证脚本，rewards_demo.cpp 也较旧；不从 ZIP 覆盖当前代码。
 - `/Users/yuchen/Documents/Codex/2026-10-14/new-chat/dungeon-raid-investigation` 是较早研究副本：7 个恢复模块与当前同名源码一致，另有旧版头文件/脚本；未改动或合并覆盖。
 - Codex CLI 0.135.0 可执行；Claude Code 以桌面应用会话运行（`claude` 仍不在 PATH，check 如实显示），Gemini CLI 未发现。2026-10-18 Claude 完成 T010 并提交，属于首次实际跨模型接力；Gemini 尚未参与。
@@ -48,6 +48,7 @@
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
 - T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 - T040-C2a：stats 模块恢复 Item::IncreaseStat（dr_item_increase_stat），松手的种族 6 升级事件接此函数。
+- T030-N5：存档 / 读档按原版恢复——每回合结束自动存档（与原版逐字节相同）、“继续游戏”从存档接着打（整局对照逐帧一致）、职业进度与最高分的存取。详见 T030_SAVE.md。
 - T040-G3：无界面整局演示 session_demo——原生规则核心不靠原版程序、不靠测试工具，自己连续打完三整局（升级、商店、装备升级、技能都会出现）；`sh recovered/run_session_demo.sh` 可直接运行。
 - T040-L1：法力药水给哪个技能充能的规则（原版藏在界面函数 Interface::GetSpecialTarget 里，会抽随机数）恢复为 dr_special_target，会话自己计算，不再由界面层回答。
 - T040-K5：装备与三种菜单接入整局会话：新局按原版造出 5 件装备、属性随装备更新；28 号敌人“摧毁装备升级”与种族 6 的击杀奖励不再是缺口；经验 / 金币 / 升级点满 100（及技能 Upgrade）时打开升级 / 商店 / 装备升级菜单，选择后生效（K5b）；连线时不能接上的格子变暗（UpdateDimming，C3）。已知差异：商店卷轴读到的吸血标签顶点暂取 0（T040-K6，低优先）。

@@ -501,3 +501,12 @@
 
 - 新 session_demo（`sh recovered/run_session_demo.sh`）：原生会话不执行原版指令、不经测试宿主，自己打 3 整局：392 回合、31844 帧，3 局都打到结束画面；升级菜单 9 次、商店 10 次、装备升级 5 次，技能使用 39 次；退出码 0（要求出现结束画面、升级与商店菜单、技能使用）。这是演示与冒烟检查，不与原版逐帧对照（逐帧对照见 verify_session）。
 - `./scripts/relay.sh verify --full` → exit 0：82 步通过（新增 session_demo 构建运行步骤）。运行目录 `.relay/runs/20261021T062721.674980Z`，inputs_unchanged true。
+
+## 2026-10-21 T030-N5：存档 / 读档 / 继续游戏 / 职业进度 / 最高分（Claude）
+
+- 新 verify_save：原 Game::SerialiseState 从入口执行，400 个覆盖各分支的状态逐字节一致（长度 419..741 字节、197 种长度；成就 72 一致）；错误副本 23 个全部 exit 1。
+- 新 verify_load：原 Game::DeserialiseState 读另一状态的存档（版本 3 与转换出的 0..2），300 组比较整局状态、资源、当前职业与视图、名字、设置，以及读档中的每次随机抽取与格子事件；并比较原版 / 原生 Game::SerialiseClasses 的字节（含视图与记录不同、Validate 改动）与 DeserialiseClasses 读回的十个职业记录。错误副本：读档 35 个中 30 个 exit 1、5 个等价；职业存取 4 个全部 exit 1。
+- 新 verify_scores：原 ScoreScreen 的 AddScore（三种重载）/ SetSkills / 存 / 取 / 计数，300 组 × 40 次操作，每步整块最高分内存逐字节一致（满表 201 次）；错误副本 15 个全部 exit 1。
+- verify_session：存档、职业存档、最高分作为原代码执行并每帧比较；新局阶段“退出再继续”4 次；整局 34561 帧一致（存档 340 次、职业存档 14 次、加分 14 次）。会话接线错误副本：模式 / 难度类别对应、技能写入均 exit 1。
+- 此前一次全量检查（`.relay/runs/20261021T082748.687295Z`）只有 verify_session 的覆盖断言失败（技能 4、31 未被使用；比较全部一致），改为优先按用得最少的技能后通过。
+- `./scripts/relay.sh verify --full` → exit 0：85 步通过。运行目录 `.relay/runs/20261021T092839.503612Z`，inputs_unchanged true。
