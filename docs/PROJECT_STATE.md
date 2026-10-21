@@ -48,6 +48,7 @@
 - T040-A/B：调度调用登记（T040_PROCESS_CALLS.json）；新模块 schedule 恢复 ProcessInput 门槛（dr_input_gate：阻塞条件、开始敌人攻击、阶段 8 调用 EndOfTurn）与 CountAttackers。回合循环结构见 T040_SCHEDULE.md。
 - T040-C：schedule 模块恢复松手后的 MatchPath 分支（音效/帮助、计数清零后 MatchTiles、成就 74、火焰/spike/吸血标签起飞、AddRevengeHealth、种族 6 护甲升级、击杀攻击回血）、短路径与公共尾段（dr_release_path / dr_release_clear）。职业卷轴分支、Item::IncreaseStat、UpdateCrossVisibility 等列为 T040-C2。
 - T040-C2a：stats 模块恢复 Item::IncreaseStat（dr_item_increase_stat），松手的种族 6 升级事件接此函数。
+- T040-M1 / M2：主菜单的三种开局（普通、教程、挑战）与开机时的十个职业初始配置按原版恢复，会话自己建立职业名单；整局演示改用这两项。
 - T040-M（盘点）：从 iOS 层调用的入口出发列出原版尚未恢复的函数。一局之内已全部恢复；一局之外待补 7 项——主菜单的三种开局（普通 / 教程 / 挑战）、开机初始状态（职业名单）、开局设置（名字、职业、模式、难度）、职业编辑、游戏中菜单、帮助提示队列、局后流程（T040-M1..M7，约 3～4 天）。纯显示、文字内容、平台功能、旧版兼容归前端或不做。详见 T040_BACKEND_INVENTORY.md。
 - T040-K6：伤害数字标签（SimpleLabel）按原版恢复为新模块 recovered_labels（字形、数字、顶点、上升与淡出）。会话持有吸血、火焰、尖刺三个标签，商店抽卷轴时读到的吸血标签数据与原版一致，K5 留下的已知差异消除；标签位置（松手时伤害数字飞向生命条的起点）也改由会话提供。详见 T040_MENU.md 怪行为一节。
 - T030-N5：存档 / 读档按原版恢复——每回合结束自动存档（与原版逐字节相同）、“继续游戏”从存档接着打（整局对照逐帧一致）、职业进度与最高分的存取。详见 T030_SAVE.md。

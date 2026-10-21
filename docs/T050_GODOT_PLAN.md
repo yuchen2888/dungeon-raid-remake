@@ -12,7 +12,7 @@
 - `frontend/godot/`（新目录）：Godot 项目（场景、脚本、简单图形）。
 - `frontend/gdext/`（新目录）：GDExtension 原生库，C++，编译时直接包含 `recovered/` 的源码（与 `run_session_demo.sh` 的源文件列表相同），不复制规则代码。
 - 一个 Godot 节点类 `DungeonRaidSession`：
-  - `new_game(seed)`：建会话、写职业表与棋盘布局（同 `session_demo.cpp` 的 main），`dr_session_new_game`。
+  - `new_game(kind, seed)`：建会话（会话自带原版的开机职业名单，T040-M2）、写棋盘布局（同 `session_demo.cpp` 的 main），`dr_session_start_game`（0 普通 / 1 教程 / 2 挑战，T040-M1）。
   - `frame(dt, phase, x, y)`：`dr_session_frame`；phase 0 无触摸、1 按下 / 拖动、2 抬起；坐标为归一化坐标（屏幕宽 = 1，格子间距 pitch = 1/6）。
   - 读取：36 格（类型、特殊类型、敌人类型、血量 / 攻击 / 护甲、选中、变暗 dimmed、下落位置 geometry.center）、路径、资源（生命 / 护甲 / 经验 / 金币 / 升级点 / 等级）、技能槽与冷却、菜单状态（类型、选项、选择、动画计时）、结束画面。
   - 写入（渲染层拥有）：`skill_button` / `menu_button`（触摸下的按钮）、`release_inputs->health_target`（生命条目标点）、`current_label_active`（当前伤害标签是否在显示）。吸血 / 火焰 / 尖刺三个伤害标签由会话自己维护（`SessionObjects.damage_labels`：位置、缩放、字形与顶点、透明度，T040-K6），渲染层只按它们绘制。

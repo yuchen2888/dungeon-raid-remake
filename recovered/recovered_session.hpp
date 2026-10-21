@@ -99,6 +99,17 @@ void dr_session_set_falling(dungeonraid::Session*,const std::int32_t* tiles,std:
 void dr_session_set_motions(dungeonraid::Session*,const dungeonraid::TokenMotion*,std::uint32_t count);
 // Game::InitNewGame (dr_init_new_game) on the session's objects; time seeds the random streams.
 void dr_session_new_game(dungeonraid::Session*,std::uint32_t time);
+// Game::SetCurrentClass (T040-M2): the class (0..9) becomes the current one when it is unlocked, else class 0. A new
+// session already holds Game::Start's roster (CharacterClass::Initialise of the ten classes: class 0 at level 1, the
+// others locked) with class 0 current; the platform then gives the stored records back (dr_session_restore_classes).
+void dr_session_set_current_class(dungeonraid::Session*,std::int32_t type);
+// The main menu's three new games (T040-M1): kind 0 Game::NewGame 0x16590, 1 StartTutorial 0x164c0, 2 StartChallenge
+// 0x1652c. The record mode (Game+0x14aed) is set for the challenge only; InitNewGame (time seeds the random streams);
+// the tutorial's difficulty is 0 (Game+0x14ae0); the main menu closes; the help switch is on for the tutorial only; the
+// queued help topics (Game+0x102d0) are HelpMenu::ResetHelp's (tutorial: topics 0..22 added) or ClearHelp's (none). The
+// new-game setup screen (NameScreen::Show) follows; StartCyclingGamesColour and Interface::Process(0, false) are
+// presentation.
+void dr_session_start_game(dungeonraid::Session*,std::int32_t kind,std::uint32_t time);
 // One Game::Process frame (dr_process_frame with every step wired) for the touch (phase, position).
 dungeonraid::FrameRoute dr_session_frame(dungeonraid::Session*,float dt,std::int32_t touch_phase,dungeonraid::Point touch);
 // Game::SerialiseState now: the saved game into SessionObjects.save, its length and changed flag into end (the

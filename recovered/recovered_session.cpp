@@ -101,6 +101,7 @@ struct Session {
     ClassSave class_save{};               // Game+0x146d5: the class records' save
     ScoreBoard scores{};                  // ScoreScreen's high-score tables (Game+0xef68)
     SimpleLabelState damage_labels[3]{};  // leech, flame, spike SimpleLabels (Game+0xbfc0 / 0x14afc / 0x14e70)
+    std::int32_t class_replacements[10][20]{};   // the class records' replacement skill lists
     StatsTargets stats_targets{};
     StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
@@ -539,6 +540,7 @@ extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t diffi
     for(int i=0;i<3;++i) {   // SimpleLabel::SimpleLabel, then Game::Start: colours 17, 18, 19 and duration 0.2
         SimpleLabelState& l=s->damage_labels[i];dr_label_construct(&l);dr_label_set_colour(&l,17+i);l.duration=0.2f;
     }
+    for(int i=0;i<10;++i)dr_class_initialise(&s->classes[i],i,s->class_replacements[i]);   // Game::Start: the class roster
     s->tokens=dr_token_queue_create(&s->match);
     link(*s);return s;
 }
@@ -580,6 +582,15 @@ extern "C" void dr_session_set_falling(Session* s,const std::int32_t* tiles,std:
 extern "C" void dr_session_set_motions(Session* s,const TokenMotion* motions,std::uint32_t count) {s->motions.assign(motions,motions+count);}
 extern "C" void dr_session_new_game(Session* s,std::uint32_t time) {
     dr_init_new_game(&s->new_game,time,&s->new_game_hooks);follow_label_active(*s);
+}
+extern "C" void dr_session_set_current_class(Session* s,std::int32_t type) {s->scroll.current=static_cast<std::size_t>(dr_current_class(s->classes,type));}
+extern "C" void dr_session_start_game(Session* s,std::int32_t kind,std::uint32_t time) {
+    s->stroke.record_14aed=kind==2;
+    dr_session_new_game(s,time);
+    if(kind==1)s->match.spawn_enabled_14ae0=0;
+    s->screens.main_menu_c400=0;                     // MainMenu::SetActive(false)
+    s->settings.help_13ec8=kind==1;                  // Game::SetHelpState
+    s->finish.help_flags_102d0=kind==1?s->finish.help_flags_102d0|0x7fffffu:0u;   // HelpMenu::ResetHelp / ClearHelp
 }
 // Game::DeserialiseState now: the saved game in SessionObjects.save over the current state (false: no 0xff header).
 extern "C" bool dr_session_deserialise(Session* s) {const SaveSources src=save_sources(*s);return dr_deserialise_state(&src,s->save,&s->save_hooks);}

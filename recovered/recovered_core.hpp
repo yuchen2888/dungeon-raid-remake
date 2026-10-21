@@ -115,6 +115,8 @@ void dr_touch_interrupted(dungeonraid::TouchState*);
 const dungeonraid::TileGeometry* dr_tile_at(const dungeonraid::BoardGeometry*, const dungeonraid::Point*);
 bool dr_is_selected(const dungeonraid::TileGeometry*, const dungeonraid::Point*);
 std::size_t dr_replacement_skill_count(const dungeonraid::ClassProfile*);
+bool dr_class_initialise(dungeonraid::ClassProfile*, std::int32_t, std::int32_t*);
+std::int32_t dr_current_class(const dungeonraid::ClassProfile*, std::int32_t);
 bool dr_class_validate(dungeonraid::ClassProfile*);
 std::size_t dr_class_write_game(const dungeonraid::ClassProfile*, std::uint8_t*, std::size_t);
 std::size_t dr_class_read_game(dungeonraid::ClassProfile*, const std::uint8_t*, std::size_t);

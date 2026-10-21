@@ -19,6 +19,32 @@ std::uint32_t read_u32(const std::uint8_t* in) {
 
 extern "C" std::uint32_t dr_progression_pointer_size() { return sizeof(void*); }
 
+// CharacterClass::Initialise, original Thumb entry 0x111e20 (Game::Start, once per class type 0..9; other types are
+// not used). The type; level 1 for class 0 and 0 (locked) for the others; the class's race, which is also its base
+// race; its first perk and flaw (the class's own; 255 for class 0) and 255 in the other slots; one replacement slot
+// per base skill, all 255 (none replaced; replacement_skills holds 20). The base skills (dr_class_base_skills) and the
+// other 20 skills in order are constant per class. The progress counters are left as they are.
+extern "C" bool dr_class_initialise(ClassProfile* state, std::int32_t type, std::int32_t* replacement_skills) {
+    static constexpr std::int32_t races[10] = {0, 1, 6, 4, 5, 9, 3, 8, 2, 7};
+    static constexpr std::int32_t first[10] = {255, 6, 2, 5, 4, 1, 7, 8, 9, 3};
+    if (!state || !replacement_skills || type < 0 || type > 9) return false;
+    state->class_type = type;
+    state->level = type == 0 ? 1 : 0;
+    state->race = state->base_race = races[type];
+    for (int i = 0; i < 4; ++i) state->perks[i] = state->flaws[i] = i == 0 ? first[type] : 255;
+    for (int i = 0; i < 20; ++i) replacement_skills[i] = 255;
+    state->replacement_skills = replacement_skills;
+    state->replacement_skill_count = 20;
+    return true;
+}
+
+// Game::SetCurrentClass, original Thumb entry 0x1a390: the class becomes the current one when it is unlocked
+// (level above 0), else class 0 (NameScreen::SelectClass shows it). Types 0..9 (the original reads past the
+// records for others): else 0.
+extern "C" std::int32_t dr_current_class(const ClassProfile* states, std::int32_t type) {
+    return type >= 0 && type <= 9 && states[type].level ? type : 0;
+}
+
 // CharacterClass::GetReplacementSkillCount, original Thumb entry 0x111844.
 extern "C" std::size_t dr_replacement_skill_count(const ClassProfile* state) {
     if (!state || !state->replacement_skills) return 0;

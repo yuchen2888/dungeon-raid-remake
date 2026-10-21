@@ -522,3 +522,10 @@
 - 新 verify_labels：原 SimpleLabel 的构造、SetColour、Initialise、SetNumber、SetPosition、SetAlpha、Process 从入口执行（RegenerateLabel 等内部函数为原代码；数字表由原静态初始化函数 0x313c 填入；__divsi3 / __modsi3 为模型），400 组 × 30 次随机操作（44 种类型、负数、各种缩放 / 持续时间 / 透明度），每步整块 0x358 字节与六路随机种子一致；错误副本 41 个全部 exit 1。
 - verify_session：吸血 / 火焰 / 尖刺标签按构造函数与 Game::Start 设置，Game::Process 对它们的 SimpleLabel 调用作为原代码执行（不再跳过），三个标签的整块内存每帧比较，商店卷轴读到的吸血标签数据随之与原版一致；整局 33909 帧一致（标签调用 Initialise 174、SetPosition 3387、SetNumber 1641、Process 1270、SetAlpha 211 次）。对照中发现两处原版直接依赖标签字段的地方——透明度之后写淡出基准 Game+0xc314、松手时伤害数字的起飞点就是标签位置——已在会话中补上。会话接线错误副本 12 个：11 个 exit 1（“忽略改数字”在缩短版中存活、完整长度测试中 exit 1），1 个存活——新局 / 继续后标签模型的激活字节跟随清零（测试里新局与继续开始时标签都已淡出，只有游戏恰在火焰 / 尖刺伤害数字落地时结束、再从结束画面开新局才会用到）。
 - `./scripts/relay.sh verify --full` → exit 0：86 步通过。运行目录 `.relay/runs/20261021T161657.995942Z`，inputs_unchanged true。
+
+## 2026-10-21 T040-M1 / M2：主菜单三种开局与开机职业名单（Claude）
+
+- verify_session 新局阶段改由原版 Game::NewGame / StartTutorial / StartChallenge 从入口开局（各 3 / 3 / 3 局；开局前主菜单打开、帮助开关与待显示帮助随机），原生 dr_session_start_game；记录模式、难度、帮助开关、主菜单与待显示帮助一并比较；整局 35160 帧一致。错误副本 9 个全部 exit 1。
+- 新 verify_class_init：原 CharacterClass::Initialise（十种职业各 40 次，记录预先填随机字节，std::vector 的 push_back 为模型）与 Game::SetCurrentClass（随机等级，400 次，其中 111 次退回职业 0）对照原生 dr_class_initialise / dr_current_class 一致；错误副本 13 个全部 exit 1。
+- session_demo 改用会话自带的职业名单，三局依次以普通 / 教程 / 挑战开局，均打到结束。
+- `./scripts/relay.sh verify --full` → exit 0：87 步通过。运行目录 `.relay/runs/20261021T171728.864092Z`，inputs_unchanged true。

@@ -5,11 +5,12 @@
 #include <vector>
 using namespace dungeonraid;
 // Headless source-only example: one native session plays whole games by itself -- no original instruction,
-// no test harness. The embedding does what a renderer would: the class roster and board layout, the touch (the
+// no test harness. The embedding does what a renderer would: the board layout, the touch (the
 // longest of a few random paths that follow the game's linking rule, or a ready skill's button), the menu buttons
 // (options, then confirm) and the layout targets of flying tokens (demonstration constants). Each game runs until
-// the game-over screen or a turn limit; the first game quits at turn 40 and continues from its save
-// (dr_session_continue_game). DEMO_TRACE=1 prints every turn.
+// the game-over screen or a turn limit; the games start as the main menu's new game, tutorial and challenge in
+// turn (dr_session_start_game, on the session's own class roster); the first game quits at turn 40 and continues
+// from its save (dr_session_continue_game). DEMO_TRACE=1 prints every turn.
 namespace {
 struct Demo { long events=0; int menus[3]{},skills_used=0,continued=0; };
 void event(void* c,SessionSource source,const void* e) {
@@ -45,19 +46,12 @@ std::vector<int> pick_path(const SelectionState& s) {
 }
 int main() {
     Demo demo;const SessionHost host{&demo,event,target,token_start};
-    static std::int32_t replacement[10][20];
     int ended=0,total_turns=0;long total_frames=0;
     for(int game=0;game<3;++game) {
         Session* s=dr_session_create(&host,1);SessionObjects o=dr_session_objects(s);
-        for(int i=0;i<10;++i) {   // the roster: class 0 at level 1, the others locked
-            ClassProfile& c=o.classes[i];c.class_type=i;c.level=i==0?1:0;
-            for(int k=0;k<4;++k)c.perks[k]=c.flaws[k]=255;
-            for(int k=0;k<20;++k)replacement[i][k]=255;
-            c.replacement_skills=replacement[i];c.replacement_skill_count=20;
-        }
         auto& sel=o.stroke->selection;sel.geometry.pitch=1.0f/6;sel.half_spacing=1.0f/12;
         for(int k=0;k<4;++k){sel.character.flaws[k]=255;o.match->perks[k]=255;}
-        dr_session_new_game(s,20261020u+static_cast<std::uint32_t>(game));
+        dr_session_start_game(s,game,20261020u+static_cast<std::uint32_t>(game));
         int turns=0;long frames=0;bool over=false;
         while(!over && turns<400) {
             if(game==0 && turns==40) {   // quit and continue from the saved game (the end of the last turn saved it)

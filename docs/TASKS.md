@@ -91,8 +91,8 @@
 | T040-K5b | 完成 / Claude，待复核 | 菜单接入会话：经验 / 金币 / 升级点满 100 与技能 Upgrade 打开三种菜单，菜单打开时每帧 dr_menu_process（menu_button 由渲染层写入），买下的卷轴 dr_skill_activate | verify_session.py（菜单按原代码执行）；32065 帧一致；14 个错误副本被拒、1 个等价、2 个不可达 |
 | T040-K6 | 完成 / Claude，待复核 | 商店卷轴读到的吸血标签（Game+0xbfc0）类型与顶点：新模块 recovered_labels（SimpleLabel 全部函数，顶点只由代码常量与位置、运动决定）；会话持有吸血 / 火焰 / 尖刺三个标签模型（Game::Start 颜色与持续时间、伤害标签段的调用、淡出基准写入），商店卷轴读模型字节；标签位置作为松手飞行起点也改由会话提供 | verify_labels.py；41 个错误副本被拒；verify_session.py 三标签整块内存每帧比较 |
 | T040-M | 盘点完成 / Claude；M1..M7 待做 | 后端收尾盘点：从 iOS 层调用的入口出发，列出原版能走到、尚未恢复的函数，分成规则 / 显示 / 平台与旧版兼容；结论：一局之内已全部恢复，一局之外的规则分 7 项补做 | docs/T040_BACKEND_INVENTORY.md |
-| T040-M1 | 待做 | 主菜单的三种开局：Game::NewGame / StartTutorial（难度 0、帮助重置）/ StartChallenge（记录模式），HelpMenu::ResetHelp / ClearHelp | 原函数对照 + 会话接口 |
-| T040-M2 | 待做 | 开机初始状态：Game::Game / Game::Start 的职业名单（CharacterClass::Initialise、DeserialiseClasses）、当前职业、设置默认值；会话不再依赖调用方编写职业名单 | 原函数对照 + 会话接口 |
+| T040-M1 | 完成 / Claude，待复核 | 主菜单的三种开局：dr_session_start_game（Game::NewGame / StartTutorial：难度 0、帮助打开并重置 23 条 / StartChallenge：记录模式；HelpMenu::ResetHelp / ClearHelp、MainMenu::SetActive） | verify_session 新局阶段改由原版三个入口开局（各 3 局）；9 个错误副本被拒 |
+| T040-M2 | 完成 / Claude，待复核 | 开机职业名单：dr_class_initialise（CharacterClass::Initialise：种族、自带天赋 / 缺陷、1 号职业 1 级其余锁住、替换技能位）由 dr_session_create 对十个职业执行；dr_current_class / dr_session_set_current_class（Game::SetCurrentClass：未解锁退回职业 0）；整局演示不再自编职业名单 | verify_class_init.py；13 个错误副本被拒 |
 | T040-M3 | 待做 | 开局设置：NameScreen（名字、随机名字、职业、模式、难度）、ModeScreen、IntroScreen（结束时存档）；确认后 InitNewGame | 原函数对照 + 会话接口 |
 | T040-M4 | 待做 | 职业编辑：ClassScreen 的规则部分与 CharacterClass 的 CanChooseRace / IsPerkUnlocked / SetPerk / SetFlaw / SetReplacementSkill 等，Game::IsRaceUnlocked / IsPerkUnlocked | 原函数对照 + 会话接口 |
 | T040-M5 | 待做 | 游戏中菜单：GameMenu::Process 的设置开关与退出，Game::UpdateHelpState | 原函数对照 + 会话接口 |

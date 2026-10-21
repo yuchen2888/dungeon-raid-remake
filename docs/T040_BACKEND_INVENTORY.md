@@ -20,7 +20,7 @@
 | 编号 | 内容 | 原版函数（地址，字节数） | 要点 |
 | --- | --- | --- | --- |
 | M1 | 主菜单的三种开局 | Game::NewGame 0x16590（100）、StartTutorial 0x164c0（108）、StartChallenge 0x1652c（100）；HelpMenu::ResetHelp 0x37528、ClearHelp 0x37540 | 都是先 InitNewGame，再打开开局设置画面。普通：记录模式关（Game+0x14aed = 0），帮助关闭并清空。教程：记录模式关，难度设为 0（Game+0x14ae0），帮助打开，ResetHelp 把 23 条帮助全部重新标为待显示（Game+0x102d0）。挑战：记录模式开，帮助关闭并清空。会话目前没有这三个入口。 |
-| M2 | 开机初始状态 | Game::Game 0xdd9c（2272，多为界面对象构造）、Game::Start 0xb880（1184） | 十个职业各自 CharacterClass::Initialise（已恢复）、DeserialiseClasses（已恢复）、当前职业、各项设置的默认值、格子位置；伤害标签的颜色和持续时间已在 K6 完成。目标：会话自己建立职业名单，不再由调用方编写。 |
+| M2 | 开机初始状态 | Game::Game 0xdd9c（2272，多为界面对象构造）、Game::Start 0xb880（1184）、CharacterClass::Initialise 0x111e20（2744）、Game::SetCurrentClass 0x1a390（92） | 十个职业各自 CharacterClass::Initialise（盘点时只从中提取了基础技能表，函数本身未恢复——M2 补上）、DeserialiseClasses（已恢复）、SetCurrentClass（Game+0x1648c；Game::Game 之后为 0）、格子位置；伤害标签的颜色和持续时间已在 K6 完成。设置的默认值来自平台层（启动时 EAGLView 调用各 Set 函数）。目标：会话自己建立职业名单，不再由调用方编写。 |
 | M3 | 开局设置画面 | NameScreen::Show 0x3bd60（664）/ Process 0x3cac0（664）/ ProcessInput 0x3bff8（2760）/ GenerateRandomName；ModeScreen::Process 0x112c0c（304）；Game::SetCurrentClass 0x1a390、SetMode 0x83e8、SetDifficulty 0x842c、SetName 0x8470；IntroScreen::Initialise 0x2de90（884）/ Process 0x2dd04（396） | 规则：可选哪些职业、模式、难度，随机名字（随机流 0），确认后的顺序是 SetName → IntroScreen::Initialise → InitNewGame（介绍画面的随机抽取在重新播种之前，不影响本局）。介绍画面结束时调用 SerialiseState，所以一开局就有存档——会话目前不在这个时间点存档。 |
 | M4 | 职业编辑画面 | ClassScreen::Process 0x10ca70（5044）、Initialise、SelectTab、UpdateRace / UpdatePerks / UpdateAbilities；CharacterClass::CanChooseRace 0x110a54、IsPerkUnlocked 0x111548、GetReplacementSkillsAllowed 0x111590、SetPerk 0x1115e0、SetFlaw 0x111628、IsBaseSkill 0x11198c、SetLevel 0x1119b8、IsReplacementSkill 0x111aa8、GetNonBaseSkillIndex 0x111b54、SetReplacementSkill 0x111b80；Game::IsRaceUnlocked 0x8d88、IsPerkUnlocked 0x8f60 | 规则：按职业等级与解锁情况可选的种族、天赋、缺陷、替换技能；改完后 Validate 与 SerialiseClasses（都已恢复）。画面本身很大，规则部分小得多。 |
 | M5 | 游戏中菜单 | GameMenu::Process 0x32580（544）、Game::UpdateHelpState 0x9edc | 设置开关（帮助、攻击变暗、时钟、音效、高帧率）与退出到主菜单。帮助开关经 UpdateHelpState：待显示的帮助（Game+0x102d0 的位，即 HelpMenu+0x38）不为空且帮助关闭时全部清空；为空且帮助打开时 ResetHelp 重新置上 23 条。 |
@@ -30,6 +30,11 @@
 验证方式同前几项：原版画面函数从入口执行，模拟按钮输入，跳过显示调用，比较游戏状态；原生会话增加相应接口（例如开机、三种开局、确认开局设置、职业编辑操作）。
 
 估算：M1 约 0.2 天，M2 约 0.5 天，M3 0.5～1 天，M4 约 1 天，M5 与 M6 合计约 0.5 天，M7 约 0.5 天，合计 3～4 天（AI 连续工作，不含等待）。
+
+## 进度
+
+- M1（2026-10-21）：dr_session_start_game，与原版三个入口逐帧对照一致（verify_session 新局阶段）。
+- M2（2026-10-21）：dr_class_initialise 与 dr_current_class，dr_session_create 自建职业名单（verify_class_init.py）。
 
 ## 归前端或平台（后端不补）
 

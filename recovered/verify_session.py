@@ -45,6 +45,11 @@ constructor and Game::Start's SetColour (17, 18, 19) and duration 0.2 as origina
 them (Initialise, SetPosition, SetNumber, SetAlpha, Process) run as original code (the digit tables filled by their static
 initialiser, __divsi3 / __modsi3 modelled) instead of being skipped; the three labels' whole memory is compared every frame,
 and the shop's scroll draw reads the leech label's type and vertices from it.
+New games from the main menu (T040-M1): the new-game phase starts its games with the original Game::NewGame,
+StartTutorial or StartChallenge from their entries (in turn; InitNewGame with the new-game harness, Game::SetHelpState,
+MainMenu::SetActive and HelpMenu::ResetHelp / ClearHelp as original code; NameScreen::Show, StartCyclingGamesColour,
+Interface::Process(0, false) and GameMenu's help button skipped), the main menu open and the help switch and queued help
+random beforehand; the native dr_session_start_game. The record mode, difficulty, help switch and main menu are compared.
 High scores (T030-N5d): a game's end runs ScoreScreen::AddScore (the GameMode or Difficulty overload) and SetSkills as
 original code (strcpy modelled); the whole table memory (ScoreScreen+0x1e0..+0x132e) is compared every frame. In the
 skill phase a press mostly takes the equipped skill used least so far, so that every type gets used.
@@ -206,6 +211,11 @@ LABEL_FUNCTIONS=('__ZN11SimpleLabel7ProcessEf','__ZN11SimpleLabel10InitialiseE15
                  '__ZN11SimpleLabel11SetPositionERK8GLfloat2','__ZN11SimpleLabel9SetNumberEi','__ZN11SimpleLabel8SetAlphaEh')
 LABEL_CTOR,LABEL_COLOUR,LABEL_DIGITS,DIVSI3,MODSI3=0x22194,0x221c4,0x313c,0x194d78,0x194d8c
 LABEL_CALLS={}        # by function: the damage labels' calls in play
+# The main menu's new games (T040-M1): Game::NewGame / StartTutorial / StartChallenge from their entries
+START_ENTRIES,START_LO,START_HI,INIT_NEW_GAME,HELP_STATE_RETURN=(0x16590,0x164c0,0x1652c),0x164c0,0x165f4,0x15c50,0x95e8
+START_SKIP=('__ZN10NameScreen4ShowEPKcb','__ZN8MainMenu23StartCyclingGamesColourEv','__ZN9Interface7ProcessEfb','__ZN8GameMenu12SetHelpStateEb')
+RECORD,DIFFICULTY,MAIN_MENU,HELP_QUEUE=0x14aed,0x14ae0,0xc400,0x102d0
+STARTS={}             # new games by kind (0 NewGame, 1 StartTutorial, 2 StartChallenge)
 CONTINUES=[0]         # games continued from their save (new-game phase)
 MENU_OBJECTS,CLASS_ARRAYS,SET_NODES_K5=0x3280000,0x3290000,0x32a0000
 ITEM_SET_OPS={'__ZNSt8_Rb_treeI8ItemTypeS0_St9_IdentityIS0_ESt4lessIS0_ESaIS0_EE13_Rb_tree_implIS4_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS0_EERKS4_':'init',
@@ -243,6 +253,8 @@ class OriginalMixin:
         self.load_skip={addr(n) for n in LOAD_SKIP}|set(LOAD_STUBS);self.loading=False
         self.score_functions={addr(n):n for n in SCORE_FUNCTIONS};self.scoring=False
         self.label_functions={addr(n):n for n in LABEL_FUNCTIONS};self.label_running=False;self.digits_ready=False
+        self.start_skip={addr(n):n for n in START_SKIP};self.starting=False
+        assert [addr(n) for n in ('__ZN4Game7NewGameEv','__ZN4Game13StartTutorialEv','__ZN4Game14StartChallengeEv')]==list(START_ENTRIES)
         assert addr('__ZN4Game16DeserialiseStateEv')==DESERIALISE and addr('__ZN4Game22CalculateTilePositionsEv')==TILE_POSITIONS
         # T040-K5: items, UpdateStats, Item::IncreaseStat and DestroyUpgrade run as original code
         self.u.mem_map(ITEM_SPACE,0x100000);self.heap=ITEM_SPACE;self.naming=False;self.names_ready=False;self.stats_running=False
@@ -275,6 +287,10 @@ class OriginalMixin:
                 a,b=(C.c_int32(u.reg_read(r)).value for r in self.regs[:2]);q=abs(a)//abs(b)*(1 if (a<0)==(b<0) else -1)
                 u.reg_write(self.regs[0],(q if address==DIVSI3 else a-q*b)&0xffffffff);u.reg_write(self.PC,lr|1)
             return
+        if self.starting:   # a main-menu new game: InitNewGame with the new-game harness; the setup screen and presentation skipped
+            if address==INIT_NEW_GAME and START_LO<=lr<START_HI:self.until_return(u,'initialising');self.until_return(u,'gen_active');return
+            if address in self.start_skip and (START_LO<=lr<START_HI or lr==HELP_STATE_RETURN):
+                self.start_skipped.append(self.start_skip[address]);u.reg_write(self.PC,lr|1);return
         if address==SERIALISE:SAVE_CALLS[0]+=1;self.until_return(u,'saving');return   # the save: original code (not the units' boundary)
         if address==SERIALISE_CLASSES:CLASS_SAVES[0]+=1;self.until_return(u,'classing');return   # the class records' save: original code
         if getattr(self,'classing',False):return
@@ -430,6 +446,7 @@ class OriginalMixin:
     def load(self,c):
         super().load(c);G=self.GAME;I=G+INTERFACE
         self.u.mem_write(G+SAVE_BUFFER,bytes(0x800));self.u.mem_write(G+NAME,bytes(c['name'])+bytes(17-len(c['name'])))   # no save yet; the name
+        self.u.mem_write(G+HELP_SWITCH,b'\0')   # help off (a new session's setting)
         sc=c.get('release',{}).get('scroll',{});self.class_current=sc.get('current',0)
         if self.class_current:   # with_class: record 0 (as the loaders wrote it) is the current class's
             rec=G+CLASSES+CLASS_STRIDE*self.class_current;self.u.mem_write(rec,bytes(self.u.mem_read(G+CLASSES,CLASS_STRIDE)))
@@ -511,7 +528,19 @@ class OriginalMixin:
         return dict(super().game_state(),counts=[C.c_int32(self.read(self.GAME+0x164b0+4*i)).value for i in range(6)],
                     game_over_state=C.c_int32(self.read(self.GAME+0xcc1c)).value,skill_slots=slots,skill_count=i32(G+0xbfa0),items=items,k5=k5,
                     menu=self.menu_state(),save=self.save_state(),scores=bytes(self.u.mem_read(G+SCORE_SCREEN+SCORE_TABLES,SCORE_SIZE)).hex(),
-                    labels=[bytes(self.u.mem_read(G+a,LABEL_SIZE)).hex() for a in DAMAGE_LABELS])
+                    labels=[bytes(self.u.mem_read(G+a,LABEL_SIZE)).hex() for a in DAMAGE_LABELS],flow=self.flow_state())
+    def start_game(self,kind):   # Game::NewGame / StartTutorial / StartChallenge from the entry (as NewGameOriginal.run for InitNewGame)
+        self.new_events=[];self.items_made=0;self.gen_events=[];self.pending_gen=None;self.start_skipped=[];u=self.u
+        u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1);self.starting=True
+        try:u.emu_start(START_ENTRIES[kind]|1,self.STOP,timeout=0,count=3000000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
+        finally:self.starting=self.initialising=self.gen_active=False
+        assert sorted(self.start_skipped)==sorted(START_SKIP),self.start_skipped
+        return dict(new_events=self.new_events,**self.gen_status())
+    def flow_state(self):   # the main-menu flow fields (T040-M1)
+        G=self.GAME;b=lambda a:self.u.mem_read(G+a,1)[0]
+        return dict(record=b(RECORD),difficulty=C.c_int32(self.read(G+DIFFICULTY)).value,help=b(HELP_SWITCH),main_menu=b(MAIN_MENU))
+    def set_flow(self,help_queue,help,main_menu):
+        G=self.GAME;self.write(G+HELP_QUEUE,help_queue);self.u.mem_write(G+HELP_SWITCH,bytes([help]));self.u.mem_write(G+MAIN_MENU,bytes([main_menu]))
     def run_label(self,entry,*args):   # a SimpleLabel function (or the digit tables' initialiser) from its entry to its return
         u=self.u;u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1);self.label_running=True
         for r,v in zip(self.regs,args):u.reg_write(r,v&0xffffffff)
@@ -612,7 +641,17 @@ class SessionMixin:
         return dict(super().game_state(),counts=list(self.state.counts),game_over_state=self.screens.game_over_state_cc1c,skill_slots=slots,
                     skill_count=r.skill_count,items=items,k5=self.k5_status(),menu=self.menu_state(),save=self.save_state(),
                     scores=bytes((U8*SCORE_SIZE).from_address(self.session_lib.dr_session_objects(self.session).scores)).hex(),
-                    labels=[bytes((U8*LABEL_SIZE).from_address(self.session_lib.dr_session_objects(self.session).damage_labels+LABEL_SIZE*i)).hex() for i in range(3)])
+                    labels=[bytes((U8*LABEL_SIZE).from_address(self.session_lib.dr_session_objects(self.session).damage_labels+LABEL_SIZE*i)).hex() for i in range(3)],
+                    flow=self.flow_state())
+    def flow_state(self):
+        settings=(U8*2).from_address(self.session_lib.dr_session_objects(self.session).settings)
+        return dict(record=self.state.record,difficulty=self.m.spawn_enabled_14ae0,help=settings[0],main_menu=self.screens.main_menu_c400)
+    def set_flow(self,help_queue,help,main_menu):
+        settings=(U8*2).from_address(self.session_lib.dr_session_objects(self.session).settings)
+        self.fin_flags.help_flags_102d0=help_queue;settings[0]=help;self.screens.main_menu_c400=main_menu
+    def start_game(self,kind,time):
+        lib=self.session_lib;lib.dr_session_start_game.argtypes=[C.c_void_p,I32,C.c_uint32];lib.dr_session_start_game.restype=None
+        self.new_events=[];self.gen_events=[];lib.dr_session_start_game(self.session,kind,time);self.sync()
     def save_state(self):
         n=self.flags.flag_146d0;o=self.session_lib.dr_session_objects(self.session);cs=(U8*480).from_address(o.class_save)
         k=C.c_int32.from_address(o.class_save+472).value
@@ -733,7 +772,9 @@ def main():
     old,new=NewGameSessionOriginal(),NewGameSession()
     for game in range(GAMES):
         c=with_items(case(rng),items_rng);old.load(c);new.load(c)
-        a=NewGameOriginal.run(old);new.new_game(c['new_game']['time'])
+        kind=(game//3)%3;flow=[rng.getrandbits(32),rng.randrange(2),1]   # from the main menu: queued help, help switch
+        old.set_flow(*flow);new.set_flow(*flow);STARTS[kind]=STARTS.get(kind,0)+1
+        a=old.start_game(kind);new.start_game(kind,c['new_game']['time'])
         compare('init events',[a['new_events'],a['events']],[new.new_events,new.gen_events],game=game)
         old.moving_list=[old.index(v) for v in old.list_values(old.GAME+0xb3f8)]
         if game%3==1:set_health(old,new,rng.choice([2,4,6]))   # weakened after the start: enemies end the game early
@@ -792,7 +833,7 @@ def main():
     assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
     assert all(LABEL_CALLS.get(n,0)>0 for n in LABEL_FUNCTIONS),LABEL_CALLS   # the damage labels shown, moved, renumbered, dimmed, faded
     assert SAVE_CALLS[0]>100 and CONTINUES[0]>0 and CLASS_SAVES[0]>0 and len(SCORE_CALLS)==3,(SAVE_CALLS,CONTINUES,CLASS_SAVES,SCORE_CALLS)   # saves; continued games; class saves; scores
-    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
+    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],starts=STARTS,label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',
