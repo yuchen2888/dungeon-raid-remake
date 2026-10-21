@@ -65,7 +65,8 @@ extern "C" {
 std::uint32_t dr_serialise_state(const dungeonraid::SaveSources*,std::uint8_t* buffer,const dungeonraid::SaveHooks*);
 // Original Game::DeserialiseState 0x15c18 / DeserialiseState2 0x15290 from buffer (after Game::InitNewGame in
 // Game::ContinueGame). A buffer without the 0xff header is the format before version 1 (DeserialiseState1, not
-// recovered): false, nothing read. Otherwise version = the second byte (format with a header when it is not 0):
+// recovered): false, nothing read (also false, stopped there, for a class index above 9: a damaged save). Otherwise
+// version = the second byte (format with a header when it is not 0):
 // spawn_count_1555c = 0; version > 2: record mode (not 0xff; mode = clamp(byte, 0, 1)), total and crossing values
 // (else total 0, not record mode); version > 1: the current class, CharacterClass::DeserialiseGameState of it (the
 // units' race / perks / flaws follow the record) and spawn_count_1555c (else class 0); time_to_promotion = 1; every

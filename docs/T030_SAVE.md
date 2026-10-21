@@ -24,6 +24,7 @@
 - 冰冻且燃烧的格子：存档写了火焰伤害字节，读档却先冰冻（清除燃烧）而不读它，后面全部错位。正常对局中冰冻与燃烧互相清除，不会同时出现。
 - 存 “xp + 累计 xp”、读回时按 100 拆分：依赖“当前值 < 100、累计为 100 的倍数”。
 - DeserialiseState1（无 0xff 标志的最老格式）未恢复：只可能来自很早期版本的原版存档，本作不需要；读档时返回 false、不读。
+- 原生的两处保护（原版没有）：读档时职业序号大于 9（损坏的存档）即停止并返回 false；存档时技能数按最多 4 个处理。正常存档里不会出现这两种值。
 
 ## 原生实现
 
@@ -42,6 +43,10 @@
 原生新模块 `recovered_scores`（ScoreBoard 的内存布局与原版 ScoreScreen+0x1e0..0x132e 相同）：dr_score_add / set_skills / count / changed / serialise / serialise_changed / deserialise。会话：游戏结束时的 AddScore 事件（会话里的玩家名）与 SetSkills 事件写入会话的最高分表；接口 `dr_session_restore_scores(类别, 字节)`（启动时）、`dr_session_save_changed_scores()`（返回下一个已变化的类别及其字节，平台存盘后再调用，直到 −1）。玩家名由 Game::SetName 限制在 16 个字符以内。
 
 验证：`recovered/verify_scores.py`：原 ScoreScreen 各函数从入口执行（ClampI 为原代码，strcpy 由宿主模拟），300 组、每组 40 次随机操作（加分、技能、存、取（原样 / 改坏 / 随机字节）、计数与“是否变化”），每步比较原版整块最高分内存（0x114e 字节）逐字节一致；出现满表 201 次。错误副本 15 个全部 exit 1。verify_session：游戏结束时原版 AddScore / SetSkills 作为原代码执行，每帧比较整块最高分内存；会话接线的错误副本 2 个（模式 / 难度的类别对应、技能写入）exit 1（前者在完整测试中由记录模式下结束的对局覆盖）。
+
+## 演示
+
+`sh recovered/run_session_demo.sh`：第一局打到第 40 个操作时“退出”，dr_session_continue_game 从存档继续（经验、金币等原样恢复），接着打到结束。
 
 ## 验证
 

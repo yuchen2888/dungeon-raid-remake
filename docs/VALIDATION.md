@@ -510,3 +510,9 @@
 - verify_session：存档、职业存档、最高分作为原代码执行并每帧比较；新局阶段“退出再继续”4 次；整局 34561 帧一致（存档 340 次、职业存档 14 次、加分 14 次）。会话接线错误副本：模式 / 难度类别对应、技能写入均 exit 1。
 - 此前一次全量检查（`.relay/runs/20261021T082748.687295Z`）只有 verify_session 的覆盖断言失败（技能 4、31 未被使用；比较全部一致），改为优先按用得最少的技能后通过。
 - `./scripts/relay.sh verify --full` → exit 0：85 步通过。运行目录 `.relay/runs/20261021T092839.503612Z`，inputs_unchanged true。
+
+## 2026-10-21 T030-N5 补充：读档保护与演示中的“继续游戏”（Claude）
+
+- 读档遇到大于 9 的职业序号（损坏的存档）即停止；存档的技能数按最多 4 个处理（正常存档不出现，原版没有这两处保护）。verify_save / verify_load 结果不变。
+- session_demo：第一局中途退出并用 dr_session_continue_game 从 385 字节的存档继续（经验原样恢复），三局都打到结束；退出码要求出现一次继续。
+- `./scripts/relay.sh verify --full` → exit 0：85 步通过。运行目录 `.relay/runs/20261021T100020.788973Z`，inputs_unchanged true。

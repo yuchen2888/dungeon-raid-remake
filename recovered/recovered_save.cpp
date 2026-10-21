@@ -136,7 +136,7 @@ extern "C" std::uint32_t dr_serialise_state(const SaveSources* s,std::uint8_t* b
     for(std::int32_t v:values)w.word(static_cast<std::uint32_t>(v));
     for(int k=0;k<5;++k)item(w,s->items[k],h);
     w.byte(r.skill_count);
-    for(int k=0;k<r.skill_count;++k){w.byte(s->skills->id[k]);w.byte(r.skill_max[k]);w.byte(r.skill_current[k]);w.byte(s->skills->level[k]);}
+    for(int k=0;k<r.skill_count && k<4;++k){w.byte(s->skills->id[k]);w.byte(r.skill_max[k]);w.byte(r.skill_current[k]);w.byte(s->skills->level[k]);}
     for(int k=0;k<17;++k){w.byte(s->name[k]);if(!s->name[k])break;}
     for(int k=1;k<6;++k)w.word(m.random.seeds[k]);
     w.word(s->finish->help_flags_102d0);
@@ -155,7 +155,9 @@ extern "C" bool dr_deserialise_state(const SaveSources* s,const std::uint8_t* bu
         p.total=r.word();p.crossing_samples=r.word();p.crossing_average=r.byte();p.crossing_best=r.byte();
     } else {p.total=0;st.record_14aed=0;}
     if(version>1) {
-        const std::size_t index=static_cast<std::size_t>(r.byte());s->scroll->current=index;
+        const std::size_t index=static_cast<std::size_t>(r.byte());
+        if(index>9)return false;   // a class outside the ten records: a damaged save (the original would read past them)
+        s->scroll->current=index;
         ClassProfile& c=s->scroll->classes[index];
         std::int32_t none[20];   // no replacement list: read into a scratch one (as the menus read none)
         ClassProfile read=c;if(!read.replacement_skills){for(auto& v:none)v=255;read.replacement_skills=none;read.replacement_skill_count=20;}

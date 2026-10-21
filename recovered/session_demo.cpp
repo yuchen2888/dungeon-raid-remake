@@ -8,9 +8,10 @@ using namespace dungeonraid;
 // no test harness. The embedding does what a renderer would: the class roster and board layout, the touch (the
 // longest of a few random paths that follow the game's linking rule, or a ready skill's button), the menu buttons
 // (options, then confirm) and the layout targets of flying tokens (demonstration constants). Each game runs until
-// the game-over screen or a turn limit; DEMO_TRACE=1 prints every turn.
+// the game-over screen or a turn limit; the first game quits at turn 40 and continues from its save
+// (dr_session_continue_game). DEMO_TRACE=1 prints every turn.
 namespace {
-struct Demo { long events=0; int menus[3]{},skills_used=0; };
+struct Demo { long events=0; int menus[3]{},skills_used=0,continued=0; };
 void event(void* c,SessionSource source,const void* e) {
     auto& d=*static_cast<Demo*>(c);++d.events;
     if(source==SessionSource::Skill && static_cast<const SkillEvent*>(e)->kind==SkillEventKind::UpdateSkills)++d.skills_used;
@@ -59,6 +60,14 @@ int main() {
         dr_session_new_game(s,20261020u+static_cast<std::uint32_t>(game));
         int turns=0;long frames=0;bool over=false;
         while(!over && turns<400) {
+            if(game==0 && turns==40) {   // quit and continue from the saved game (the end of the last turn saved it)
+                o=dr_session_objects(s);const int before=o.resources->xp+o.resources->total_xp;
+                if(dr_session_continue_game(s,777u)) {
+                    o=dr_session_objects(s);++demo.continued;
+                    std::printf("game 0: continued at turn %d from a %d-byte save (xp %d before, %d after)\n",o.path->turn,o.end->flag_146d0,
+                                before,o.resources->xp+o.resources->total_xp);
+                }
+            }
             o=dr_session_objects(s);
             struct Step { int phase; Point touch; int button; };   // touch phase, position, skill button under it
             std::vector<Step> script;
@@ -101,7 +110,7 @@ int main() {
                     o.resources->gold,o.resources->skill_count);
         ended+=over;total_turns+=turns;total_frames+=frames;dr_session_destroy(s);
     }
-    std::printf("%d games, %d ended, %d turns, %ld frames, %ld events; menus opened: level-up %d, shop %d, upgrade %d; skills used %d\n",
-                3,ended,total_turns,total_frames,demo.events,demo.menus[0],demo.menus[1],demo.menus[2],demo.skills_used);
-    return ended>0 && demo.menus[0]>0 && demo.menus[1]>0 && demo.skills_used>0 ? 0 : 1;
+    std::printf("%d games, %d ended, %d turns, %ld frames, %ld events; menus opened: level-up %d, shop %d, upgrade %d; skills used %d; continued %d\n",
+                3,ended,total_turns,total_frames,demo.events,demo.menus[0],demo.menus[1],demo.menus[2],demo.skills_used,demo.continued);
+    return ended>0 && demo.menus[0]>0 && demo.menus[1]>0 && demo.skills_used>0 && demo.continued>0 ? 0 : 1;
 }
