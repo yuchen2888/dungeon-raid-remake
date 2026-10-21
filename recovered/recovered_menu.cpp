@@ -76,7 +76,7 @@ extern "C" void dr_stat_option(SkillRecord* o,std::int32_t stat,const MatchState
 }
 extern "C" void dr_menu_open_level(MenuState* menu,const MenuSources* s,const MenuHooks* h) {
     auto& r=*s->resources;auto& m=*r.match;
-    *s->open=1;menu->type=0;menu->timer=0.0f;menu->opening=1;menu->confirm_ready=menu->confirm_pressed=0;menu->first=menu->second=-1;
+    *s->open=1;menu->type=0;menu->timer=0.0f;menu->opening=1;menu->confirm_ready=menu->confirm_pressed=0;menu->first=menu->second=-1;menu->previous_phase=0;
     emit(h,MenuEventKind::Sound,12);
     const bool f=record_mode(s,0);
     std::set<std::int32_t> pool;
@@ -169,7 +169,7 @@ void update_stats(const MenuSources* s) {
 }
 extern "C" void dr_menu_open_shop(MenuState* menu,const MenuSources* s,const MenuHooks* h) {
     auto& m=*s->resources->match;
-    *s->open=1;menu->type=1;menu->timer=0.0f;menu->opening=1;menu->confirm_ready=menu->confirm_pressed=0;menu->first=menu->second=-1;
+    *s->open=1;menu->type=1;menu->timer=0.0f;menu->opening=1;menu->confirm_ready=menu->confirm_pressed=0;menu->first=menu->second=-1;menu->previous_phase=0;
     emit(h,MenuEventKind::Sound,11);
     std::set<std::int32_t> types{0,1,2,3,4};
     for(int i=0;i<3;++i) {
@@ -177,7 +177,7 @@ extern "C" void dr_menu_open_shop(MenuState* menu,const MenuSources* s,const Men
         const ItemRecord& existing=s->equipped[item_slot(t)];
         dr_item_make(s->stats,&menu->items[i],existing.type,&existing);types.erase(t);
     }
-    const float chance=s->classes[s->class_index].race==3?0.5f:0.25f;
+    const float chance=s->selection->character.race==3?0.5f:0.25f;   // the current class's race (Game+0x15564+388*index+8)
     if(!(chance<=dr_random_float(&m.random,0.0f,1.0f,2))) {
         menu->scroll_slot=dr_random_int(&m.random,0,2,2);
         const float r=dr_random_float(&m.random,0.0f,1.0f,2);
@@ -194,7 +194,7 @@ extern "C" void dr_menu_open_shop(MenuState* menu,const MenuSources* s,const Men
 }
 extern "C" void dr_menu_open_upgrade(MenuState* menu,const MenuSources* s,const MenuHooks* h) {
     auto& m=*s->resources->match;
-    *s->open=1;menu->type=2;menu->timer=0.0f;menu->opening=1;menu->confirm_ready=menu->confirm_pressed=0;menu->first=menu->second=-1;
+    *s->open=1;menu->type=2;menu->timer=0.0f;menu->opening=1;menu->confirm_ready=menu->confirm_pressed=0;menu->first=menu->second=-1;menu->previous_phase=0;
     emit(h,MenuEventKind::Sound,13);
     std::set<std::int32_t> types{0,1,2,3,4};
     for(int i=0;i<4;++i) {
@@ -248,7 +248,7 @@ extern "C" void dr_menu_process(MenuState* menu,const MenuSources* s,float dt,st
         update_stats(s);
         if(menu->scroll_slot>=0 && menu->scroll_slot==menu->first-14) {
             emit(h,MenuEventKind::ActivateScroll,menu->scroll.type);
-            if(s->classes[s->class_index].race==3)emit(h,MenuEventKind::Achievement,49,0x40000000);
+            if(s->selection->character.race==3)emit(h,MenuEventKind::Achievement,49,0x40000000);
         }
     } else if(menu->type==2) {
         const int k=menu->first-14;auto& v=s->equipped[menu->upgrade_items[k]].stats.upgrade[menu->upgrade_type[k]];

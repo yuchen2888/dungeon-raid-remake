@@ -129,7 +129,7 @@ class Native(FlowNative,ItemsNative):
         self.equipped=(MItem*5)(*[rec(x) for x in k['equipped']])
         for i,x in enumerate(k['options']):self.menu.items[i]=rec(x)
         sc=self.menu.scroll;sc.type,sc.level,sc.max,sc.current,sc.active=(k['scroll'][key] for key in ('type','level','max','current','active'))
-        self.menu.scroll_slot=k['scroll_slot'];self.classes[c['menu']['class_index']].race=k['race']
+        self.menu.scroll_slot=k['scroll_slot'];sel.character.race=k['race']   # the current class's race: the units' view
         for key in ('health','health_max','health_bonus','ui_health','ui_armour'):setattr(r,key,st[key])
         for key in ('armour_current','armour_max','healing_bonus','shield_bonus','xp_bonus','gold_bonus','upgrade_bonus'):setattr(p,key,st[key])
         for key in ('weapon_damage','base_damage','bonus_base_damage','leech'):setattr(sel,key,st[key])

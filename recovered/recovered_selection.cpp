@@ -124,3 +124,8 @@ extern "C" void dr_process_tile_selection(SelectionState* s,const SelectionHooks
         // This loop preserves its event order without consuming native stack.
     }
 }
+extern "C" void dr_update_dimming(const SelectionState* s,std::uint8_t dimmed[36]) {
+    const RuleTile* path[36];
+    for(std::size_t i=0;i<s->path_length;++i) path[i]=&s->tiles[s->path[i]].rule;
+    for(int i=0;i<36;++i) dimmed[i]=!dr_can_match(&s->tiles[i].rule,path,s->path_length,true);
+}

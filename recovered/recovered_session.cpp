@@ -87,6 +87,14 @@ struct Session {
     LabelHooks label_hooks{};
     GameFrameHooks frame_hooks{};
     NewGameHooks new_game_hooks{};
+    ItemRecord items[5]{};          // Game+0xbe88..0xbe98
+    MenuState menu{};
+    std::int32_t menu_button=-1;
+    std::uint8_t dimmed[36]{};      // Game::UpdateDimming: tiles that cannot continue the path (the renderer dims them)
+    std::uint32_t probe[40]{};      // the words at Game+0xbf90 the shop's scroll draw reads
+    MenuHooks menu_hooks{};
+    StatsTargets stats_targets{};
+    StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
     SkillHooks skill_hooks{};
 };
@@ -94,6 +102,7 @@ struct Session {
 namespace {
 Session& self(void* c) {return *static_cast<Session*>(c);}
 void forward(Session& s,SessionSource source,const void* e) {if(s.host.event)s.host.event(s.host.context,source,e);}
+void open_menu(Session& s,std::int32_t type);
 template<SessionSource source,class Event> void forward_event(void* c,const Event* e) {forward(self(c),source,e);}
 
 // Game::AddFlare: every unit's Flare event is one call (dr_add_flare: rotation from stream 0, count + 1).
@@ -101,6 +110,18 @@ void add_flare(Session& s) {dr_add_flare(&s.animation.flare_count,&s.match.rando
 // Game::AddParticles / Game::AddSimpleLabel: their random draws on stream 0 (dr_add_particles / dr_add_simple_label).
 void particles(Session& s,std::int32_t type) {dr_add_particles(&s.match.random,type);}
 void label(Session& s,std::int32_t type) {dr_add_simple_label(&s.match.random,type);}
+// Game::UpdateStats over the equipped items (the Item** vector Game+0xbe9c: slots 0..4 in order). The item parts of
+// the bonus chances (Game+0xbe1c / be24 / be2c / be34) are PlayerStats.chance_*; MatchState reads them as
+// bonus_chance_extra (Game+0xbe24 / be2c / be1c / be34 in its order), kept equal here.
+void sync_chances(Session& s) {
+    auto& x=s.match.bonus_chance_extra;const auto& p=s.player;
+    x[0]=p.chance_be24;x[1]=p.chance_be2c;x[2]=p.chance_be1c;x[3]=p.chance_be34;
+}
+void update_stats(Session& s) {
+    const ItemStats* items[5];for(int i=0;i<5;++i)items[i]=&s.items[i].stats;
+    dr_update_stats(&s.stats_targets,items,5,&s.stats_hooks);
+    sync_chances(s);
+}
 bool check_end_game(Session& s) {return dr_check_end_game(&s.resources,&s.end,&s.end_hooks);}
 void move_matched_tiles(Session& s) {dr_move_matched_tiles(&s.refill,&s.refill_hooks);}
 bool attack_skull(Session& s,std::int32_t tile,std::int32_t amount,bool effects) {
@@ -117,7 +138,8 @@ TokenMotion& motion(Session& s,std::uint32_t slot) {
 // SelectionHooks: the stroke's boundaries that are game rules run here.
 void selection_event(void* c,SelectionEvent kind,std::int32_t index,std::int32_t a,std::int32_t b) {
     Session& s=self(c);const SessionSmallEvent e{static_cast<std::int32_t>(kind),index,a,b};forward(s,SessionSource::Selection,&e);
-    if(kind==SelectionEvent::ResourceShadows)dr_preview_resources(&s.stroke,&s.preview,&s.selection_hooks);
+    if(kind==SelectionEvent::UpdateDimming)dr_update_dimming(&s.stroke.selection,s.dimmed);
+    else if(kind==SelectionEvent::ResourceShadows)dr_preview_resources(&s.stroke,&s.preview,&s.selection_hooks);
     else if(kind==SelectionEvent::ProcessRune)dr_process_rune(&s.stroke,&s.rune,a!=0,&s.selection_hooks);
     else if(kind==SelectionEvent::RuneMatchTile)dr_match_tile(&s.match,static_cast<std::uint32_t>(index),a,&s.match_hooks);
     else if(kind==SelectionEvent::CrossVisibility)dr_update_cross_visibility(&s.path,&s.cross_hooks);
@@ -155,6 +177,7 @@ void resource_event(void* c,const ResourceEvent* e) {
     if(e->kind==ResourceEventKind::Healing)dr_healing(&s.resources,&s.resource_hooks);
     else if(e->kind==ResourceEventKind::CheckEndGame)check_end_game(s);
     else if(e->kind==ResourceEventKind::Label)label(s,e->a);
+    else if(e->kind==ResourceEventKind::Menu)open_menu(s,e->a);
 }
 void encounter_event(void* c,const EncounterEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Encounter,e);
@@ -230,9 +253,50 @@ void turn_match_tile(void* c,std::int32_t tile,std::int32_t reward) {
     Session& s=self(c);dr_match_tile(&s.match,static_cast<std::uint32_t>(tile),reward,&s.match_hooks);
 }
 bool turn_check_end_game(void* c) {return check_end_game(self(c));}
-void turn_ability(void* c,std::int32_t kind,std::int32_t tile) {
-    // Game::DestroyUpgrade needs the item model (not yet recovered): reported to the embedding.
-    const SessionSmallEvent e{kind,tile,0,0};forward(self(c),SessionSource::Ability,&e);
+void turn_ability(void* c,std::int32_t kind,std::int32_t tile) {   // enemy 28: Game::DestroyUpgrade
+    Session& s=self(c);const SessionSmallEvent e{kind,tile,0,0};forward(s,SessionSource::Ability,&e);
+    ItemStats* items[5];for(int i=0;i<5;++i)items[i]=&s.items[i].stats;
+    dr_destroy_upgrade(&s.stats_targets,items,5,static_cast<std::uint32_t>(tile),&s.stats_hooks);
+    sync_chances(s);
+}
+// Game::UpdateStats / DestroyUpgrade / IncreaseStat presentation; DestroyUpgrade's label draws on stream 0.
+void stats_event(void* c,const StatsEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::Stats,e);if(e->kind==StatsEventKind::Label)label(s,e->a);
+}
+// FoldoutMenu: what it reads and writes. The scroll draw of the shop reads the 40 words at Game+0xbf90 (the
+// original reads past the four Skill pointers, docs/T040_MENU.md): pointers (non-zero), skill_count, matched_counts
+// 0..4, the bytes 0xbfb8..0xbfbb, next coin at 0xbfbc, then the leech SimpleLabel at Game+0xbfc0 (its active byte;
+// the rest of the label -- type, vertices -- is the renderer's and taken as 0 here).
+MenuSources menu_sources(Session& s) {
+    std::uint32_t* w=s.probe;
+    for(int t=0;t<4;++t)w[t]=1;
+    w[4]=static_cast<std::uint32_t>(s.resources.skill_count);
+    for(int t=0;t<5;++t)w[5+t]=static_cast<std::uint32_t>(s.match.matched_counts[t]);
+    w[10]=s.generation.filter_enabled|(s.generation.filter_swords<<8)|(s.animation.counterattack<<16)|
+          (static_cast<std::uint32_t>(s.path.battle.grant_coin_on_attack)<<24);
+    w[11]=s.turn_flags.next_coin_bfbc;w[12]=s.extra.label_active[0];
+    for(int t=13;t<40;++t)w[t]=0;
+    return MenuSources{&s.resources,&s.skills,s.classes,static_cast<std::int32_t>(s.scroll.current),&s.screens.menus[0],&s.preview,
+                       &s.stroke.selection,&s.player,s.extra.base_bde8,s.items,&s.stats_targets,&s.stats_hooks,&s.skill_state,s.probe};
+}
+void open_menu(Session& s,std::int32_t type) {   // Interface::ShowMenu -> FoldoutMenu::Initialise
+    const MenuSources src=menu_sources(s);
+    if(type==0)dr_menu_open_level(&s.menu,&src,&s.menu_hooks);
+    else if(type==1)dr_menu_open_shop(&s.menu,&src,&s.menu_hooks);
+    else if(type==2)dr_menu_open_upgrade(&s.menu,&src,&s.menu_hooks);
+}
+void menu_event(void* c,const MenuEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::Menu,e);
+    if(e->kind==MenuEventKind::ActivateScroll) {   // the bought scroll: Skill::Activate on the unequipped object
+        sync_chances(s);   // after the shop's Game::UpdateStats
+        dr_skill_activate(&s.skill_state,e->a,-1,&s.menu.scroll.active,&s.skill_hooks);
+    }
+}
+// Game::InitNewGame's items: Item(Game, type) in each slot, then Game::UpdateStats.
+void new_game_event(void* c,const NewGameEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::NewGame,e);
+    if(e->kind==NewGameEventKind::Item)dr_item_make(&s.stats_targets,&s.items[e->a],e->b,nullptr);
+    else if(e->kind==NewGameEventKind::UpdateStats)update_stats(s);
 }
 void turn_swap(void* c,std::int32_t x1,std::int32_t y1,std::int32_t x2,std::int32_t y2) {
     Session& s=self(c);dr_swap_tiles(&s.refill,x1,y1,x2,y2,&s.refill_hooks);
@@ -266,6 +330,8 @@ void release_event(void* c,const ReleaseEvent* e) {
     SelectionState& sel=s.stroke.selection;
     switch(e->kind) {
     case ReleaseEventKind::Label:label(s,e->a);break;
+    case ReleaseEventKind::IncreaseStat:dr_item_increase_stat(&s.stats_targets,&s.items[2].stats,2,e->a,&s.stats_hooks);break;   // Game+0xbe90
+    case ReleaseEventKind::UpdateStats:update_stats(s);break;
     case ReleaseEventKind::CrossVisibility:dr_update_cross_visibility(&s.path,&s.cross_hooks);break;
     case ReleaseEventKind::MatchTiles: {   // Game::MatchTiles: the path without its fake tiles
         std::uint8_t excluded[36];std::size_t n=0;
@@ -291,6 +357,7 @@ void skill_event(void* c,const SkillEvent* e) {
     case SkillEventKind::SwapTiles:dr_swap_tiles(&s.refill,e->a,e->b,e->c,e->d,&s.refill_hooks);break;
     case SkillEventKind::SetSpecialType:dr_set_special_type(&s.generation,tile,e->a,&s.generation_hooks);break;
     case SkillEventKind::FlameVisibility:dr_set_flame_visibility(&s.path,tile,true,e->a,true,&s.turn_hooks);break;
+    case SkillEventKind::Menu:open_menu(s,e->a);break;   // Game::Upgrade (skill 10): the upgrade menu
     default:break;
     }
 }
@@ -303,7 +370,10 @@ void frame_event(void* c,const GameFrameEvent* e) {
     Session& s=self(c);forward(s,SessionSource::GameFrame,e);
     if(e->kind!=GameFrameEventKind::InterfaceProcess)return;
     const auto& m=s.screens.menus;
-    if(m[0] || m[1] || m[2] || !e->a)return;
+    if(m[0]) {   // the shop and upgrade menus end in Game::UpdateStats
+        const MenuSources src=menu_sources(s);dr_menu_process(&s.menu,&src,s.dt,s.touch.phase,s.menu_button,&s.menu_hooks);sync_chances(s);return;
+    }
+    if(m[1] || m[2] || !e->a)return;
     dr_skill_input(&s.skill_state,&s.skill_input,s.touch.phase,s.skill_button,&s.skill_hooks,&s.generation_hooks);
 }
 // Frame steps
@@ -396,7 +466,10 @@ void link(Session& s) {
     s.label_hooks={c,forward_event<SessionSource::Label,LabelEvent>,label_check_end_game};
     s.frame_hooks={c,frame_event,frame_input,frame_effects,frame_falling,frame_tokens,frame_pools,
                    frame_flare_fade,frame_damage_label,frame_damage_labels,frame_attack};
-    s.new_game_hooks={c,forward_event<SessionSource::NewGame,NewGameEvent>,&s.generation_hooks};
+    s.new_game_hooks={c,new_game_event,&s.generation_hooks};
+    s.stats_targets=StatsTargets{&s.resources,&s.preview,&s.stroke,&s.path.battle,&s.attack_inputs,&s.end_of_turn.regen,&s.player};
+    s.stats_hooks={c,stats_event};
+    s.menu_hooks={c,menu_event};
     s.cross_hooks={c,forward_event<SessionSource::Cross,CrossEvent>};
     s.skill_hooks={c,skill_event,skill_action,&s.match_hooks,&s.path_hooks};
 }
@@ -412,7 +485,7 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->damage,&s->animation,&s->overlay_alpha,&s->attack_inputs,&s->skills,&s->turn_flags,&s->finish,&s->end,s->activated,
         &s->end_of_turn,&s->flights,&s->release_inputs,s->classes,&s->scroll,&s->player,&s->extra,&s->shatter,&s->touch,&s->screens,
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
-        s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input};
+        s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 extern "C" void dr_session_set_falling(Session* s,const std::int32_t* tiles,std::uint32_t count) {s->falling.assign(tiles,tiles+count);}

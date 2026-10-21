@@ -39,4 +39,8 @@ struct SelectionState {
 extern "C" {
 void dr_select_tile(dungeonraid::SelectionTile*, std::int32_t, const dungeonraid::SelectionHooks*);
 void dr_process_tile_selection(dungeonraid::SelectionState*, const dungeonraid::SelectionHooks*);
+// Original Game::UpdateDimming 0x9c78 (SelectionEvent::UpdateDimming): every tile that cannot continue the path
+// (Tile::CanMatchType(path, true), dr_can_match) is dimmed (Tile::Dim), the others undimmed (Tile::Undim); both only
+// change the tile's quad and label alphas, so the result is dimmed[i] for the renderer.
+void dr_update_dimming(const dungeonraid::SelectionState*, std::uint8_t dimmed[36]);
 }

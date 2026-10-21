@@ -42,6 +42,8 @@ struct MenuState {
 // writes preview (healing_value Game+0xbe08, shield_value 0xbe10), selection (base_damage 0xbdc0, read
 // bonus_base_damage 0xbdc4), player (ui_health_ceiling_5998, ui_skull_59c8, read skill_cooldown_be64) and
 // stat_counts (Game+0xbde8 / bdf0 / bdf8 / be00, NewGameExtra.base_bde8); perk 3 is read from match->perks.
+// The current class's race (the shop's scroll chance) is read from selection->character, the view every unit
+// reads (Shapeshift changes it there), not from classes[class_index].
 struct MenuSources {
     ResourceState* resources;
     SkillSlots* slots;

@@ -4,6 +4,8 @@
 #include "recovered_encounters.hpp"
 #include "recovered_refill.hpp"
 #include "recovered_skills.hpp"
+#include "recovered_items.hpp"
+#include "recovered_menu.hpp"
 namespace dungeonraid {
 // One game: every recovered state object, each Game field owned once, and the recovered units wired
 // to each other as Game does it (see docs/T040_SESSION_PLAN.md). No original instruction runs here.
@@ -48,14 +50,18 @@ struct SessionObjects {
     std::uint32_t falling_count;
     std::int32_t* skill_button;          // renderer-owned: the equipped skill button under the touch (-1 none)
     SkillInput* skill_input;             // the pressed skill button and the previous touch phase (Interface)
+    ItemRecord* items;                   // the five equipped items (Game+0xbe88..0xbe98, the Item** vector Game+0xbe9c in order)
+    MenuState* menu;                     // FoldoutMenu (Interface+0xd10): the level-up, shop and upgrade menus
+    std::int32_t* menu_button;           // renderer-owned: the menu button under the touch (14..17 options, 7 confirm, -1 none)
+    std::uint8_t* dimmed;                // 36 tiles: dimmed by Game::UpdateDimming (cannot continue the path)
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
 enum class SessionSource : std::int32_t { Selection=1, Match, Token, Motion, Resource, Path, Refill, Generation, Encounter,
     AttackFlare, AttackAnim, AttackAbsorb, AttackShield, AttackWeaken, AttackHealth, AttackFade, AttackAll, Vampires,
     Turn, EndGame, GameOver, Score, Release, BoardEffect, Frame, Label, GameFrame, NewGame,
-    Ability, Cross, Skill };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), Game::DestroyUpgrade needs the item model;
-                        // Cross: a CrossEvent of Game::UpdateCrossVisibility; Skill: a SkillEvent
+    Ability, Cross, Skill, Stats, Menu };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), wired to dr_destroy_upgrade; Stats: a StatsEvent;
+                        // Cross: a CrossEvent of Game::UpdateCrossVisibility; Skill: a SkillEvent; Menu: a MenuEvent
 struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 struct SessionHost {
     void* context;

@@ -481,3 +481,12 @@
 - 新 verify_menu_shop：原 FoldoutMenu::Initialise(1) 与逐帧 Process（Game::SetItem、Game::UpdateStats）执行，500 组、20489 帧一致，卷轴出现 210 次、买下 77 次；错误副本 18 个，17 个 exit 1、1 个等价。
 - 新 verify_menu_upgrade：原 Initialise(2)（ItemUpgrade::Initialise）与逐帧 Process（Item::AddUpgrade、UpdateStats），500 组、20510 帧一致，20 种属性都出现；错误副本 7 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：79 步通过。运行目录 `.relay/runs/20261020T234343.725631Z`，inputs_unchanged true。
+
+## 2026-10-20 T040-K5 / C3：装备、三种菜单与变暗显示接入会话（Claude）
+
+- verify_session（整局）：新增装备阶段；菜单打开时原版 FoldoutMenu 作为原代码执行；装备与技能阶段随机抽取当前职业，技能阶段槽位顺序每 10 局轮换。32065 帧一致（新局 9 局、残局 15 局、装备 10 局、技能 62 局；菜单打开：升级 62、商店 93、装备升级 5；40 种技能都被实际使用）。单独运行约 15 分钟，全量检查中 1057 秒；该步时限由 600 秒放宽到 2400 秒（scripts/verify.py LONG_STEPS）。
+- 测试发现并改正：菜单打开时“上一帧触摸阶段”清零；商店读当前职业种族改为 selection.character（verify_menu_shop 相应修改后仍 500 组、20489 帧一致）。
+- K5a 错误副本 7 个：6 个 exit 1；几率同步对应关系换错的副本在 K5a 测试中未被发现，K5b 加入商店与装备升级后 exit 1。K5b 错误副本 17 个：14 个 exit 1，1 个等价，2 个本测试不可达（见 T040_MENU.md）。
+- 新 verify_dimming：1500 组一致；3 个错误副本 exit 1。
+- 此前一次全量检查（`.relay/runs/20261021T030607.845443Z`，K5a 状态）78/79 通过，verify_session 超过当时 600 秒时限（exit 124，未出现不一致）；同一测试单独运行通过。
+- `./scripts/relay.sh verify --full` → exit 0：80 步通过。运行目录 `.relay/runs/20261021T050537.779420Z`，inputs_unchanged true。

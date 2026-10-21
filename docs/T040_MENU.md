@@ -1,6 +1,6 @@
 # T040-K：升级 / 商店 / 装备升级菜单（FoldoutMenu）
 
-状态：K1..K4 完成（三种菜单与物品生成），K5 会话接线进行中（Claude，2026-10-20）。本文件记录原版行为与恢复进度，供接手者继续。
+状态：K1..K5 完成（Claude，2026-10-20，待复核）；剩一项低优先的已知差异（商店卷轴读到的吸血标签顶点，T040-K6）。本文件记录原版行为与恢复进度，供接手者继续。
 
 ## 触发
 
@@ -108,9 +108,31 @@ Item::GenerateStats（有原物品时，原物品的正属性按升序逐个处�
 
 验证 `recovered/verify_menu_upgrade.py`：在商店测试的宿主上执行原 Initialise(2)（ItemUpgrade::Initialise、GetRandomStat、GetStatUpgrade 为原代码，升级文字跳过）与逐帧 Process（Item::AddUpgrade、UpdateStats 为原代码）。500 组、20510 帧一致，20 种属性都出现在升级方案中。错误副本 7 个全部 exit 1。
 
+## K5a：装备与属性接入会话（完成）
+
+会话新增 5 件装备（ItemRecord，Game+0xbe88..0xbe98；原版 Game 构造时把这 5 个槽的地址按 0..4 放进 Item** 向量 Game+0xbe9c，Game::UpdateStats 按此顺序遍历）、StatsTargets 与 StatsHooks。接线：InitNewGame 的 Item(Game, type) 事件 → dr_item_make（新物品），UpdateStats 事件 → dr_update_stats；松手的 IncreaseStat（种族 6、一次连线击杀 > 14）→ dr_item_increase_stat（Game+0xbe90 即槽 2），随后的 UpdateStats；敌人 28 的能力 → dr_destroy_upgrade（原先是边界）；属性事件中的标签施加流 0 抽取。属性的物品部分 Game+0xbe1c / be24 / be2c / be34 在原生侧有两份（PlayerStats.chance_* 由 UpdateStats 写入，MatchState.bonus_chance_extra 在匹配时读取），会话在每次 UpdateStats 后让后者等于前者。SessionObjects 增加 items。
+
+验证：verify_session 每个用例带 5 件装备与 UpdateStats 写入的各字段并加以比较；原版侧 InitNewGame 的 Item 构造（Item::InitialiseNames 事先跑一次）、UpdateStats、IncreaseStat、DestroyUpgrade 都作为原代码执行（界面刷新、物品文字、图标、音效跳过，std::vector<int> 由宿主模拟，DestroyUpgrade 的标签施加流 0 抽取）。新增“装备”阶段 10 局：种族 6 走 15 格以上的血量 1 骷髅路径（IncreaseStat 4 次），或敌人 28 下回合发动能力（DestroyUpgrade 32 次）。四个阶段共 26876 帧一致。错误副本 7 个：新局物品类型、新局 UpdateStats、IncreaseStat 的槽、松手 UpdateStats、DestroyUpgrade、属性标签抽取 6 个 exit 1；两份几率同步的错误副本（对应关系换错）在 K5a 的测试中未被发现（那时对局中装备属性很少变化），K5b 加入商店与装备升级后被拒。
+
+## K5b：菜单接入会话（完成）
+
+会话新增 MenuState、menu_button（渲染层写入的菜单按钮：14..17 选项、7 确认、−1 无，SessionObjects.menu_button）与 probe（商店卷轴读取的 Game+0xbf90 起 40 个字）。接线：ResourceEvent Menu（经验 / 金币 / 升级点满 100）与技能 Upgrade 的 SkillEvent Menu 打开对应菜单（dr_menu_open_level / shop / upgrade）；每帧 InterfaceProcess 时若 FoldoutMenu 打开则 dr_menu_process（本帧 dt、触摸阶段、菜单按钮），否则（GameMenu / StatsMenu 打开时不处理）在输入就绪时处理技能按钮；买下的卷轴（ActivateScroll）→ dr_skill_activate（未装备对象，槽 −1）。商店 / 装备升级结束时的 UpdateStats 之后、卷轴激活之前同步两份几率副本。
+
+probe 的组成：t=0..3 为非零（技能对象指针），4 为 skill_count，5..9 为 matched_counts[0..4]，10 为 Game+0xbfb8..bb 四个字节（filter_enabled、filter_swords、counterattack、coin），11 为 next_coin，12 为吸血标签的激活字节；13..39 落在吸血标签 SimpleLabel 的类型与顶点数据里，原生侧取 0（标签顶点属渲染层，尚无模型）——这与原版在显示过吸血标签之后的行为可能不同，记为已知差异（见下节怪行为）。
+
+测试发现并改正两处：
+- FoldoutMenu::Initialise 会把“上一帧触摸阶段”（+0x2c）清零，三个打开函数原先漏了这一步（单元测试里每次都是新菜单，所以没有暴露）。
+- 商店的卷轴概率（种族 3 时 0.5）与成就 49 原先读 classes[class_index].race；原版读当前职业记录的种族（Game+0x15564 + 388 × Game+0x1648c + 8），原生各单元读的是 selection.character.race（同一字段的视图，Shapeshift 改的也是它），会话并不维护职业表里的种族。现改为读 selection.character.race，verify_menu_shop 相应把种族写到 selection（仍 500 组、20489 帧一致）。随机职业的整局测试暴露了这一处。
+
+验证：verify_session 的原版侧不再跳过 Interface::ShowMenu：FoldoutMenu::Initialise 作为原代码执行（std::set<int> / std::set<ItemType> / std::vector<int> 由宿主模拟，十个职业的基础技能与替换技能数组写入职业对象，菜单的 Skill / Item / ItemUpgrade 对象指回 Game；界面、文字、提示跳过）；菜单打开时 Interface::Process 改为执行 FoldoutMenu::Process（FoldoutMenu::CursorInButton / CursorInQuad 按本帧菜单按钮回答），其中 Game::SetSkill、SetItem、Item::AddUpgrade、UpdateStats 为原代码，卷轴的 Skill::Activate 按技能按钮那套方式执行。对局中菜单打开后，测试等开场动画结束，随机点按几次，再选择（升级菜单两个）并确认，直到关闭动画结束。比较内容增加菜单状态（类型、选择、确认、计时位、动画方向、上一帧阶段、技能选项数、4 个选项、3 件商店物品、卷轴、4 个升级方案）。技能阶段现在也按技能 10（Upgrade，打开装备升级菜单）；装备与技能阶段的当前职业（Game+0x1648c）从 0..9 随机抽取（菜单的技能池按职业）：原版测试宿主的载入函数把当前职业的数据（种族、特性、缺陷）写在 0 号职业记录，测试把这条记录整条搬到抽中的位置、0 号换成另一个职业，并按当前职业读出 Game::MatchTile 用到的职业类型、等级与种族（原版指令 0xc33c 起按 Game+0x1648c 计算记录地址，确认原版读的是当前职业）。升级方案只在当前菜单是装备升级菜单时比较：商店的 SetItem 会搬动原版残留升级方案所指的物品对象，而 Initialise(2) 会重写全部四个方案，这些残留不会被读到。结果：四个阶段共 32065 帧一致（新局 9 局、残局 15 局、装备 10 局、技能 62 局；菜单打开：升级 62 次、商店 93 次、装备升级 5 次；40 种技能都被实际使用）。为让每种技能都落到不同槽位，技能阶段的槽位顺序每 10 局轮换一次（40 种技能每局 4 个时，否则同一种技能总在同一槽，第 4 槽只有装满时才有）。错误副本 17 个：14 个 exit 1（菜单事件打开菜单、技能 Upgrade 打开菜单、每帧处理的 dt、触摸阶段、卷轴激活、卷轴前同步几率、几率同步的对应关系、probe 的 skill_count / matched_counts / 第 10 / 11 个字、上一帧阶段清零、当前职业序号、商店读种族的位置）；1 个等价（probe 第 10 个字里 counterattack 的移位：只用到是否为 0）；2 个本测试不可达：GameMenu / StatsMenu 打开时不处理技能按钮（测试不打开这两个界面），probe 第 12 个字（吸血标签激活字节，商店打开时这些对局里吸血标签都未显示）。
+
+## C3：UpdateDimming（完成，随 K5b 提交）
+
+`dr_update_dimming`（recovered_selection）：原 Game::UpdateDimming 0x9c78 对每格调用 Tile::CanMatchType(路径, true)，能接上的 Undim、不能的 Dim（只改格子与标签的透明度）。原生结果为 36 格的 dimmed 表；会话在 SelectionEvent::UpdateDimming 时更新它，经 SessionObjects.dimmed 交给渲染层。验证 `recovered/verify_dimming.py`：原函数从入口执行（CanMatchType 为原代码，Dim / Undim 按格记录），1500 组（含无路径、各种类型 / 特殊类型 / 标志）一致；错误副本 3 个全部 exit 1。
+
 ## 原版怪行为：商店卷轴候选读到了 Game+0xbf90 之后的内存
 
-FoldoutMenu::Initialise(1) 0x25526：卷轴候选循环 t = 0..39 中，Rand(0,1,流 2) ≥ 0.1 时检查 *(Game + 0xbf90 + 4t) 是否为 0，非 0 则不选该类型。Game+0xbf90 只有 4 个已装备技能指针，后面依次是 skill_count（t=4）、matched_counts[0..4]（t=5..9）、字节 0xbfb8..0xbfbb（t=10）、0xbfbc..0xbfbf（t=11），t=12..39 落在“吸血”伤害标签 SimpleLabel（Game+0xbfc0：+0 激活字节、+4 类型、+8 起为顶点数据）里。所以 t=0..3 永不入选；其余取决于这些字段与标签的顶点内容（标签显示过之后大多为非零浮点）。这像是原版的越界错误，但影响卷轴出现哪种技能。恢复时须按这些字段的实际值判断；标签顶点需要 SimpleLabel 的生成模型（RegenerateLabel），在 K3b 里作为单独输入，待查明后补上。
+FoldoutMenu::Initialise(1) 0x25526：卷轴候选循环 t = 0..39 中，Rand(0,1,流 2) ≥ 0.1 时检查 *(Game + 0xbf90 + 4t) 是否为 0，非 0 则不选该类型。Game+0xbf90 只有 4 个已装备技能指针，后面依次是 skill_count（t=4）、matched_counts[0..4]（t=5..9）、字节 0xbfb8..0xbfbb（t=10）、0xbfbc..0xbfbf（t=11），t=12..39 落在“吸血”伤害标签 SimpleLabel（Game+0xbfc0：+0 激活字节、+4 类型、+8 起为顶点数据）里。所以 t=0..3 永不入选；其余取决于这些字段与标签的顶点内容（标签显示过之后大多为非零浮点）。这像是原版的越界错误，但影响卷轴出现哪种技能。恢复时须按这些字段的实际值判断；标签顶点需要 SimpleLabel 的生成模型（RegenerateLabel），在 K3b 单元测试里作为单独输入；会话（K5b）里 t = 13..39 暂取 0，即只在吸血标签从未显示过时与原版一致，记为已知差异，待补 SimpleLabel 模型（T040-K6，低优先：只影响商店卷轴出现哪种技能的概率）。
 
 ## 计划
 
