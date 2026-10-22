@@ -50,6 +50,15 @@ StartTutorial or StartChallenge from their entries (in turn; InitNewGame with th
 MainMenu::SetActive and HelpMenu::ResetHelp / ClearHelp as original code; NameScreen::Show, StartCyclingGamesColour,
 Interface::Process(0, false) and GameMenu's help button skipped), the main menu open and the help switch and queued help
 random beforehand; the native dr_session_start_game. The record mode, difficulty, help switch and main menu are compared.
+New-game setup (T040-M3): NameScreen::Show runs as original code from the start functions (its libc calls modelled,
+its display calls -- UpdateName's width check included -- skipped); then a few setup presses run NameScreen::ProcessInput
+as original code (touch down, QuadStrip::ContainsPoint answering the pressed button: random name, a class, a mode or a
+difficulty, Start at the bottom; GenerateRandomName, SetMode, SetDifficulty, SetCurrentClass, SetName and InitNewGame as
+original code, sprintf / strlen / strncpy / strcmp / memcpy modelled, IntroScreen::Initialise skipped with the fields
+IntroScreen::Process reads written as it leaves them; Start's button counted as shown -- NameScreen::Process's fade-in
+done -- with a name entered), and two IntroScreen::Process frames (fade-in, then Continue: the save); the native
+dr_session_setup_* and dr_session_intro_done. The setup fields, name, mode, changed flags, screens, current class and
+random streams are compared after every press.
 High scores (T030-N5d): a game's end runs ScoreScreen::AddScore (the GameMode or Difficulty overload) and SetSkills as
 original code (strcpy modelled); the whole table memory (ScoreScreen+0x1e0..+0x132e) is compared every frame. In the
 skill phase a press mostly takes the equipped skill used least so far, so that every type gets used.
@@ -127,7 +136,8 @@ class Objects(C.Structure):
     _fields_=[(k,C.c_void_p) for k in NAMES]+[('motion_count',C.c_uint32),('falling',C.c_void_p),('falling_count',C.c_uint32),
               ('skill_button',C.c_void_p),('skill_input',C.c_void_p),('items',C.c_void_p),('menu',C.c_void_p),('menu_button',C.c_void_p),('dimmed',C.c_void_p),
               ('save',C.c_void_p),('name',C.c_void_p),('settings',C.c_void_p),('class_save',C.c_void_p),('scores',C.c_void_p),
-              ('damage_labels',C.c_void_p)]
+              ('damage_labels',C.c_void_p),('setup',C.c_void_p)]
+class Setup(C.Structure):_fields_=[('challenge',U8),('name',U8*19),('length',I32),('named',U8)]
 EVENT=C.CFUNCTYPE(None,C.c_void_p,I32,C.c_void_p)
 TARGET=C.CFUNCTYPE(None,C.c_void_p,I32,I32,C.POINTER(Point))
 START=C.CFUNCTYPE(None,C.c_void_p,I32,C.POINTER(Point))
@@ -213,9 +223,17 @@ LABEL_CTOR,LABEL_COLOUR,LABEL_DIGITS,DIVSI3,MODSI3=0x22194,0x221c4,0x313c,0x194d
 LABEL_CALLS={}        # by function: the damage labels' calls in play
 # The main menu's new games (T040-M1): Game::NewGame / StartTutorial / StartChallenge from their entries
 START_ENTRIES,START_LO,START_HI,INIT_NEW_GAME,HELP_STATE_RETURN=(0x16590,0x164c0,0x1652c),0x164c0,0x165f4,0x15c50,0x95e8
-START_SKIP=('__ZN10NameScreen4ShowEPKcb','__ZN8MainMenu23StartCyclingGamesColourEv','__ZN9Interface7ProcessEfb','__ZN8GameMenu12SetHelpStateEb')
+START_SKIP=('__ZN8MainMenu23StartCyclingGamesColourEv','__ZN9Interface7ProcessEfb','__ZN8GameMenu12SetHelpStateEb')
 RECORD,DIFFICULTY,MAIN_MENU,HELP_QUEUE=0x14aed,0x14ae0,0xc400,0x102d0
 STARTS={}             # new games by kind (0 NewGame, 1 StartTutorial, 2 StartChallenge)
+# The new-game setup screen (NameScreen, Game+0x102dc) and the story screen (IntroScreen, Game+0xc330), T040-M3
+NAME_SCREEN,INTRO,NAME_SHOW,NAME_INPUT,NAME_INPUT_END,INTRO_PROCESS,INTRO_INIT=0x102dc,0xc330,0x3bd60,0x3bff8,0x3cac0,0x2dd04,0x2de90
+RANDOM_NAME,SET_NAME,SET_CURRENT,SET_MODE,SET_DIFFICULTY=(0x3882c,0x38920),(0x8470,0x84a4),(0x1a390,0x1a3ec),0x83e8,0x842c
+STRLEN,STRNCPY,MEMCPY,SPRINTF,STRCMP=0x194fbc,0x194fc4,0x194ef0,0x194f60,0x194fac
+SETUP_BUTTONS=dict(random=lambda a:0x2e0,klass=lambda a:0x8ec+76*a,difficulty=lambda a:0x3e8+76*a,mode=lambda a:(0x6b4,0x700)[a])
+NAME_NAME,NAME_LENGTH,NAME_NAMED,NAME_CHALLENGE,NAME_START_ALPHA,NAME_PREVIOUS=0x2935,0x2948,0x294c,0x3bbc,0x2993,0x2960
+MODE,MODE_CHANGED,NAME_CHANGED,CURRENT_CLASS,NAME_OPEN,INTRO_OPEN=0x14ae8,0x14aec,0xbe49,0x1648c,0x12c09,0xc3f0
+SETUPS={}             # setup presses by kind and result
 CONTINUES=[0]         # games continued from their save (new-game phase)
 MENU_OBJECTS,CLASS_ARRAYS,SET_NODES_K5=0x3280000,0x3290000,0x32a0000
 ITEM_SET_OPS={'__ZNSt8_Rb_treeI8ItemTypeS0_St9_IdentityIS0_ESt4lessIS0_ESaIS0_EE13_Rb_tree_implIS4_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS0_EERKS4_':'init',
@@ -254,6 +272,13 @@ class OriginalMixin:
         self.score_functions={addr(n):n for n in SCORE_FUNCTIONS};self.scoring=False
         self.label_functions={addr(n):n for n in LABEL_FUNCTIONS};self.label_running=False;self.digits_ready=False
         self.start_skip={addr(n):n for n in START_SKIP};self.starting=False
+        self.func_starts={int(a,16) for a in re.findall(r'^[^\s][^\n]*:\n\s+([0-9a-f]+):',text,re.M)};self.setting_up=False;self.setup_target=None
+        self.strip_contains=addr('__ZN9QuadStrip13ContainsPointERK8GLfloat2')
+        self.setup_run={RANDOM_NAME[0],SET_MODE,SET_DIFFICULTY,SET_CURRENT[0],SET_NAME[0],SERIALISE,addr('__Z11Interpolatefff')}
+        assert [addr(n) for n in ('__ZN10NameScreen4ShowEPKcb','__ZN10NameScreen12ProcessInputEf','__ZN11IntroScreen7ProcessEf',
+                                  '__ZN11IntroScreen10InitialiseEv','__ZN10NameScreen18GenerateRandomNameEv','__ZN4Game7SetNameEPKc',
+                                  '__ZN4Game15SetCurrentClassE9ClassType','__ZN4Game7SetModeEi','__ZN4Game13SetDifficultyEi')]==[
+                                  NAME_SHOW,NAME_INPUT,INTRO_PROCESS,INTRO_INIT,RANDOM_NAME[0],SET_NAME[0],SET_CURRENT[0],SET_MODE,SET_DIFFICULTY]
         assert [addr(n) for n in ('__ZN4Game7NewGameEv','__ZN4Game13StartTutorialEv','__ZN4Game14StartChallengeEv')]==list(START_ENTRIES)
         assert addr('__ZN4Game16DeserialiseStateEv')==DESERIALISE and addr('__ZN4Game22CalculateTilePositionsEv')==TILE_POSITIONS
         # T040-K5: items, UpdateStats, Item::IncreaseStat and DestroyUpgrade run as original code
@@ -287,10 +312,23 @@ class OriginalMixin:
                 a,b=(C.c_int32(u.reg_read(r)).value for r in self.regs[:2]);q=abs(a)//abs(b)*(1 if (a<0)==(b<0) else -1)
                 u.reg_write(self.regs[0],(q if address==DIVSI3 else a-q*b)&0xffffffff);u.reg_write(self.PC,lr|1)
             return
-        if self.starting:   # a main-menu new game: InitNewGame with the new-game harness; the setup screen and presentation skipped
+        if self.starting:   # a main-menu new game: InitNewGame with the new-game harness; NameScreen::Show with the setup harness
             if address==INIT_NEW_GAME and START_LO<=lr<START_HI:self.until_return(u,'initialising');self.until_return(u,'gen_active');return
+            if address==NAME_SHOW and START_LO<=lr<START_HI:self.until_return(u,'setting_up');return
             if address in self.start_skip and (START_LO<=lr<START_HI or lr==HELP_STATE_RETURN):
                 self.start_skipped.append(self.start_skip[address]);u.reg_write(self.PC,lr|1);return
+        if self.setting_up:   # the setup and story screens (T040-M3)
+            inside=lambda *ranges:any(a<=lr<b for a,b in ranges)
+            if address in (STRLEN,STRNCPY,MEMCPY,SPRINTF,STRCMP) and inside((NAME_SHOW,NAME_INPUT),RANDOM_NAME,SET_NAME):self.libc(u,address,lr);return
+            if address==self.strip_contains and inside((NAME_INPUT,NAME_INPUT_END)):   # the pressed button
+                u.reg_write(self.regs[0],int(u.reg_read(self.regs[0])==self.setup_target));u.reg_write(self.PC,lr|1);return
+            if address==self.contains and inside((NAME_INPUT,NAME_INPUT_END)):u.reg_write(self.regs[0],0);u.reg_write(self.PC,lr|1);return   # the keyboard's keys
+            if address==INIT_NEW_GAME and inside((NAME_INPUT,NAME_INPUT_END)):self.until_return(u,'initialising');self.until_return(u,'gen_active');return
+            if address==INTRO_INIT and inside((NAME_INPUT,NAME_INPUT_END)):   # presentation; the fields IntroScreen::Process reads, as it leaves them
+                I=self.GAME+INTRO;u.mem_write(I+0xc0,b'\1\0');self.write(I+0xc4,0);self.write(I+0xc8,1);self.write(I+0xbc,0)
+                self.setup_skipped.append(INTRO_INIT);u.reg_write(self.PC,lr|1);return
+            if address in self.func_starts and address not in self.setup_run and inside((NAME_SHOW,NAME_INPUT_END),SET_CURRENT,(INTRO_PROCESS,INTRO_INIT)):
+                self.setup_skipped.append(address);u.reg_write(self.PC,lr|1);return   # display, sounds, the ClassScreen / ModeScreen / MainMenu
         if address==SERIALISE:SAVE_CALLS[0]+=1;self.until_return(u,'saving');return   # the save: original code (not the units' boundary)
         if address==SERIALISE_CLASSES:CLASS_SAVES[0]+=1;self.until_return(u,'classing');return   # the class records' save: original code
         if getattr(self,'classing',False):return
@@ -357,7 +395,9 @@ class OriginalMixin:
                 u.reg_write(self.PC,lr|1);return
             if address==0x194d30:u.reg_write(self.regs[0],self.read(r[0]));u.reg_write(self.PC,lr|1);return
             if address in (0x194cec,0x194cf0,0x194cf4):u.reg_write(self.PC,lr|1);return
-        if address==SHOW_MENU and not self.menu_running:self.until_return(u,'menu_running');self.until_return(u,'skill_input',False)   # (Game::Upgrade from a skill)
+        if address==SHOW_MENU:   # (Game::Upgrade from a skill button, or from a scroll bought in the shop: a menu opened inside the menu)
+            if not self.menu_running:self.until_return(u,'menu_running')
+            self.until_return(u,'skill_input',False)
         if address==IFACE_PROCESS and PROCESS<=lr<PROCESS_END and u.mem_read(self.GAME+0x59f4,1)[0]:   # an open FoldoutMenu: its Process
             u.reg_write(self.regs[0],self.GAME+FM);self.until_return(u,'menu_running');u.reg_write(self.PC,FM_PROCESS|1);return
         if self.menu_running and not self.skill_input:
@@ -447,6 +487,9 @@ class OriginalMixin:
         super().load(c);G=self.GAME;I=G+INTERFACE
         self.u.mem_write(G+SAVE_BUFFER,bytes(0x800));self.u.mem_write(G+NAME,bytes(c['name'])+bytes(17-len(c['name'])))   # no save yet; the name
         self.u.mem_write(G+HELP_SWITCH,b'\0')   # help off (a new session's setting)
+        N=G+NAME_SCREEN;self.write(N,G);self.write(G+INTRO,G)   # NameScreen / IntroScreen -> Game; their fields as a new session's
+        self.u.mem_write(N+NAME_NAME,bytes(19));self.write(N+NAME_LENGTH,0);self.u.mem_write(N+NAME_NAMED,b'\0');self.u.mem_write(N+NAME_CHALLENGE,b'\0')
+        for a in (MODE_CHANGED,DIFFICULTY_CHANGED,NAME_CHANGED):self.u.mem_write(G+a,b'\0')
         sc=c.get('release',{}).get('scroll',{});self.class_current=sc.get('current',0)
         if self.class_current:   # with_class: record 0 (as the loaders wrote it) is the current class's
             rec=G+CLASSES+CLASS_STRIDE*self.class_current;self.u.mem_write(rec,bytes(self.u.mem_read(G+CLASSES,CLASS_STRIDE)))
@@ -496,10 +539,9 @@ class OriginalMixin:
         self.write(I+0xbd0,0xffffffff);self.write(I+0x1034,0)       # no skill button pressed, previous touch phase 0
     def set_button(self,button):self.button=button
     def match_status(self):   # the current class's type, level and race (Game::MatchTile reads them at Game+0x1648c's index)
-        r=super().match_status()
-        if getattr(self,'class_current',0):
-            rec=self.GAME+CLASSES+CLASS_STRIDE*self.read(self.GAME+CLASS_INDEX_ADDR)
-            r.update(class_type=C.c_int32(self.read(rec+4)).value,class_level=self.u.mem_read(rec+0x54,1)[0],race=self.read(rec+8))
+        r=super().match_status()   # (the unit harness reads record 0; the setup screen can change the current class)
+        rec=self.GAME+CLASSES+CLASS_STRIDE*self.read(self.GAME+CLASS_INDEX_ADDR)
+        r.update(class_type=C.c_int32(self.read(rec+4)).value,class_level=self.u.mem_read(rec+0x54,1)[0],race=self.read(rec+8))
         return r
     def set_menu_button(self,button):self.menu_button=button
     def k5_write_set(self,tree):
@@ -530,15 +572,54 @@ class OriginalMixin:
                     menu=self.menu_state(),save=self.save_state(),scores=bytes(self.u.mem_read(G+SCORE_SCREEN+SCORE_TABLES,SCORE_SIZE)).hex(),
                     labels=[bytes(self.u.mem_read(G+a,LABEL_SIZE)).hex() for a in DAMAGE_LABELS],flow=self.flow_state())
     def start_game(self,kind):   # Game::NewGame / StartTutorial / StartChallenge from the entry (as NewGameOriginal.run for InitNewGame)
-        self.new_events=[];self.items_made=0;self.gen_events=[];self.pending_gen=None;self.start_skipped=[];u=self.u
+        self.new_events=[];self.items_made=0;self.gen_events=[];self.pending_gen=None;self.start_skipped=[];self.setup_skipped=[];u=self.u
         u.reg_write(self.regs[0],self.GAME);u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1);self.starting=True
         try:u.emu_start(START_ENTRIES[kind]|1,self.STOP,timeout=0,count=3000000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
         finally:self.starting=self.initialising=self.gen_active=False
         assert sorted(self.start_skipped)==sorted(START_SKIP),self.start_skipped
         return dict(new_events=self.new_events,**self.gen_status())
-    def flow_state(self):   # the main-menu flow fields (T040-M1)
-        G=self.GAME;b=lambda a:self.u.mem_read(G+a,1)[0]
-        return dict(record=b(RECORD),difficulty=C.c_int32(self.read(G+DIFFICULTY)).value,help=b(HELP_SWITCH),main_menu=b(MAIN_MENU))
+    def flow_state(self):   # the main-menu flow fields (T040-M1) and the setup screen's (T040-M3)
+        G=self.GAME;N=G+NAME_SCREEN;b=lambda a:self.u.mem_read(G+a,1)[0];i32=lambda a:C.c_int32(self.read(a)).value
+        return dict(record=b(RECORD),difficulty=i32(G+DIFFICULTY),help=b(HELP_SWITCH),main_menu=b(MAIN_MENU),mode=i32(G+MODE),
+                    changed=[b(DIFFICULTY_CHANGED),b(MODE_CHANGED),b(NAME_CHANGED)],name=bytes(self.u.mem_read(G+NAME,17)).hex(),
+                    screens=[b(NAME_OPEN),b(INTRO_OPEN)],current=i32(G+CURRENT_CLASS),seeds=list(struct.unpack('<6I',self.u.mem_read(SEEDS,24))),
+                    setup=[self.u.mem_read(N+NAME_CHALLENGE,1)[0],bytes(self.u.mem_read(N+NAME_NAME,19)).hex(),i32(N+NAME_LENGTH),self.u.mem_read(N+NAME_NAMED,1)[0]])
+    def libc(self,u,address,lr):   # strlen / strncpy / memcpy / strcmp / sprintf (%s only) for the setup screen
+        r=[u.reg_read(x) for x in self.regs];cstr=lambda a:bytes(u.mem_read(a,64)).split(b'\0')[0]
+        if address==STRLEN:res=len(cstr(r[0]))
+        elif address==STRNCPY:src=cstr(r[1])[:r[2]];u.mem_write(r[0],src+bytes(r[2]-len(src)));res=r[0]
+        elif address==MEMCPY:u.mem_write(r[0],bytes(u.mem_read(r[1],r[2])));res=r[0]
+        elif address==STRCMP:x,y=cstr(r[0]),cstr(r[1]);res=(x>y)-(x<y)
+        else:
+            sp=u.reg_read(self.SP);fmt=cstr(r[1]);args=[r[2],r[3],self.read(sp),self.read(sp+4)];out=b'';i=k=0
+            while i<len(fmt):
+                if fmt[i:i+2]==b'%s':out+=cstr(args[k]);k+=1;i+=2
+                else:out+=fmt[i:i+1];i+=1
+            u.mem_write(r[0],out+b'\0');res=len(out)
+        u.reg_write(self.regs[0],res&0xffffffff);u.reg_write(self.PC,lr|1)
+    def setup_press(self,kind,arg=0):   # a touch down on the setup screen: NameScreen::ProcessInput from its entry (T040-M3)
+        G=self.GAME;N=G+NAME_SCREEN;u=self.u
+        if kind=='type':   # a name typed on the keyboard (the renderer's): the box as the keyboard leaves it
+            u.mem_write(N+NAME_NAME,arg+b'\0');self.write(N+NAME_LENGTH,len(arg));u.mem_write(N+NAME_NAMED,b'\1');return {}
+        self.setup_target=None if kind=='start' else N+SETUP_BUTTONS[kind](arg)
+        if kind=='start':   # Start is shown (alpha 255) once NameScreen::Process's fade-in ends with a name entered
+            u.mem_write(N+NAME_START_ALPHA,bytes([0xff if u.mem_read(N+NAME_NAMED,1)[0] and C.c_int32(self.read(N+NAME_LENGTH)).value>0 else 0]))
+        self.write(G+0x10,1);u.mem_write(G+0x14,struct.pack('<ff',0.5,1.4 if kind=='start' else 0.5));self.write(N+NAME_PREVIOUS,0)
+        self.new_events=[];self.items_made=0;self.gen_events=[];self.pending_gen=None;self.setup_skipped=[]
+        u.reg_write(self.regs[0],N);u.reg_write(self.regs[1],struct.unpack('<I',struct.pack('<f',1/60))[0])
+        u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1);self.setting_up=True
+        try:u.emu_start(NAME_INPUT|1,self.STOP,timeout=0,count=3000000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
+        finally:self.setting_up=self.initialising=self.gen_active=False
+        self.write(G+0x10,0);return dict(new_events=self.new_events,**self.gen_status())
+    def intro_finish(self):   # IntroScreen::Process: a frame fading in, then Continue (its fade-out ends in that frame: the save)
+        G=self.GAME;u=self.u;self.setup_skipped=[];self.setting_up=True
+        try:
+            for phase,y in ((0,0.5),(1,1.4)):
+                self.write(G+0x10,phase);u.mem_write(G+0x14,struct.pack('<ff',0.5,y))
+                u.reg_write(self.regs[0],G+INTRO);u.reg_write(self.regs[1],0x3f800000);u.reg_write(self.SP,0x140fe00);u.reg_write(self.LR,self.STOP|1)
+                u.emu_start(INTRO_PROCESS|1,self.STOP,timeout=0,count=3000000);assert u.reg_read(self.PC)==self.STOP,hex(u.reg_read(self.PC))
+        finally:self.setting_up=False
+        self.write(G+0x10,0);assert u.mem_read(G+INTRO_OPEN,1)[0]==0
     def set_flow(self,help_queue,help,main_menu):
         G=self.GAME;self.write(G+HELP_QUEUE,help_queue);self.u.mem_write(G+HELP_SWITCH,bytes([help]));self.u.mem_write(G+MAIN_MENU,bytes([main_menu]))
     def run_label(self,entry,*args):   # a SimpleLabel function (or the digit tables' initialiser) from its entry to its return
@@ -644,8 +725,27 @@ class SessionMixin:
                     labels=[bytes((U8*LABEL_SIZE).from_address(self.session_lib.dr_session_objects(self.session).damage_labels+LABEL_SIZE*i)).hex() for i in range(3)],
                     flow=self.flow_state())
     def flow_state(self):
-        settings=(U8*2).from_address(self.session_lib.dr_session_objects(self.session).settings)
-        return dict(record=self.state.record,difficulty=self.m.spawn_enabled_14ae0,help=settings[0],main_menu=self.screens.main_menu_c400)
+        o=self.session_lib.dr_session_objects(self.session);settings=(U8*4).from_address(o.settings);n=Setup.from_address(o.setup)
+        return dict(record=self.state.record,difficulty=self.m.spawn_enabled_14ae0,help=settings[0],main_menu=self.screens.main_menu_c400,mode=self.state.mode,
+                    changed=[settings[1],settings[2],settings[3]],name=bytes((U8*17).from_address(o.name)).hex(),
+                    screens=[self.screens.name_12c09,self.screens.intro_c3f0],current=self.scroll_state.current,seeds=list(self.m.random.seeds),
+                    setup=[n.challenge,bytes(n.name).hex(),n.length,n.named])
+    def setup_press(self,kind,arg=0):
+        lib=self.session_lib;s=self.session;self.new_events=[];self.gen_events=[]
+        for f,a in (('dr_session_setup_random_name',[]),('dr_session_setup_select_class',[I32]),('dr_session_setup_mode',[I32]),
+                    ('dr_session_setup_difficulty',[I32]),('dr_session_setup_start',[C.c_uint32])):
+            getattr(lib,f).argtypes=[C.c_void_p,*a];getattr(lib,f).restype=C.c_bool if a else None
+        if kind=='type':   # a name typed on the keyboard (the renderer's)
+            n=Setup.from_address(lib.dr_session_objects(s).setup);C.memmove(n.name,arg+b'\0',len(arg)+1);n.length=len(arg);n.named=1;result=True
+        elif kind=='random':lib.dr_session_setup_random_name(s);result=True
+        elif kind=='klass':result=lib.dr_session_setup_select_class(s,arg)
+        elif kind=='mode':result=lib.dr_session_setup_mode(s,arg)
+        elif kind=='difficulty':result=lib.dr_session_setup_difficulty(s,arg)
+        else:result=lib.dr_session_setup_start(s,self.case_time)
+        self.sync();return result
+    def intro_finish(self):
+        lib=self.session_lib;lib.dr_session_intro_done.argtypes=[C.c_void_p];lib.dr_session_intro_done.restype=None
+        lib.dr_session_intro_done(self.session);self.sync()
     def set_flow(self,help_queue,help,main_menu):
         settings=(U8*2).from_address(self.session_lib.dr_session_objects(self.session).settings)
         self.fin_flags.help_flags_102d0=help_queue;settings[0]=help;self.screens.main_menu_c400=main_menu
@@ -776,6 +876,23 @@ def main():
         old.set_flow(*flow);new.set_flow(*flow);STARTS[kind]=STARTS.get(kind,0)+1
         a=old.start_game(kind);new.start_game(kind,c['new_game']['time'])
         compare('init events',[a['new_events'],a['events']],[new.new_events,new.gen_events],game=game)
+        compare('setup',old.flow_state(),new.flow_state(),game=game)
+        # T040-M3: the setup screen's buttons in some order (a wrong-kind or locked press does nothing), then Start
+        naming=[('random',0)]*rng.choice([0,0,1,2])
+        if rng.random()<.5 or game%3==0:   # a typed name (up to 17 characters: SetName keeps 16), last in some games
+            naming.insert(len(naming) if game%3==0 else 0,('type',bytes(rng.randrange(65,91) for _ in range(17 if game%3==0 else rng.choice([1,8,16])))))
+        unlocked=[i for i in range(1,10) if c['new_game']['classes'][i][2]]   # an unlocked class first, then any (a locked one: no change)
+        classes=([('klass',rng.choice(unlocked))] if unlocked else [])+[('klass',rng.randrange(10)) for _ in range(rng.choice([1,2]))]
+        others=[('mode',rng.randrange(2)) if kind==2 else ('difficulty',rng.randrange(4))]
+        if rng.random()<.3:others.append(('difficulty',rng.randrange(4)) if kind==2 else ('mode',rng.randrange(2)))
+        rng.shuffle(others);setup_presses=naming+classes+others
+        if not c['name']:setup_presses=[('start',0)]+setup_presses+([] if any(k in ('random','type') for k,_ in setup_presses) else [('random',0)])   # Start without a name: nothing
+        for press in setup_presses+[('start',0)]:
+            a=old.setup_press(*press);result=new.setup_press(*press);key=f'{press[0]}:{int(result)}';SETUPS[key]=SETUPS.get(key,0)+1
+            compare('setup',old.flow_state(),new.flow_state(),game=game,press=press)
+        assert result,'started'
+        compare('init events',[a['new_events'],a['events']],[new.new_events,new.gen_events],game=game)
+        old.intro_finish();new.intro_finish();compare('intro',old.flow_state(),new.flow_state(),game=game)
         old.moving_list=[old.index(v) for v in old.list_values(old.GAME+0xb3f8)]
         if game%3==1:set_health(old,new,rng.choice([2,4,6]))   # weakened after the start: enemies end the game early
         elif game%3==2:set_health(old,new,1000,1000)            # strengthened: long games, later enemies
@@ -833,7 +950,7 @@ def main():
     assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
     assert all(LABEL_CALLS.get(n,0)>0 for n in LABEL_FUNCTIONS),LABEL_CALLS   # the damage labels shown, moved, renumbered, dimmed, faded
     assert SAVE_CALLS[0]>100 and CONTINUES[0]>0 and CLASS_SAVES[0]>0 and len(SCORE_CALLS)==3,(SAVE_CALLS,CONTINUES,CLASS_SAVES,SCORE_CALLS)   # saves; continued games; class saves; scores
-    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],starts=STARTS,label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
+    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],starts=STARTS,setup_presses=dict(sorted(SETUPS.items())),label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',

@@ -529,3 +529,11 @@
 - 新 verify_class_init：原 CharacterClass::Initialise（十种职业各 40 次，记录预先填随机字节，std::vector 的 push_back 为模型）与 Game::SetCurrentClass（随机等级，400 次，其中 111 次退回职业 0）对照原生 dr_class_initialise / dr_current_class 一致；错误副本 13 个全部 exit 1。
 - session_demo 改用会话自带的职业名单，三局依次以普通 / 教程 / 挑战开局，均打到结束。
 - `./scripts/relay.sh verify --full` → exit 0：87 步通过。运行目录 `.relay/runs/20261021T171728.864092Z`，inputs_unchanged true。
+
+## 2026-10-21 T040-M3 / M4a：开局设置画面与职业编辑规则（Claude）
+
+- verify_session 新局阶段：原版 NameScreen::Show 随开局运行，随后由原版 NameScreen::ProcessInput 逐键处理随机名字、键盘输入的名字（最长 17 个字符）、选职业（含锁住的）、模式或难度（含不响应的按钮）、开始（含没有名字时不响应），再由原版 IntroScreen::Process 处理故事画面的“继续”（此时存档）；每一步比较设置画面的字段、名字、模式、已改变标志、画面开关、当前职业与随机流。按键统计 {'difficulty:0': 1, 'difficulty:1': 6, 'klass:0': 8, 'klass:1': 15, 'mode:0': 2, 'mode:1': 3, 'random:1': 3, 'start:0': 2, 'start:1': 9, 'type:1': 5}。整局 36914 帧一致。会话错误副本 26 个：23 个 exit 1，3 个在实际流程中不可达（同一会话第二次打开设置画面前有过 17 个字符的名字、名字长度大于 0 却未输入、设置时单元视图与职业记录不一致——这三种状态在原版流程中不会出现）。
+- 对照中发现并补上一条规则：原版各单元直接读当前职业记录，换当前职业后种族、天赋、缺陷立即按新职业生效——会话换职业时让单元视图跟随新记录。还发现测试工具的一处缺口：在商店买到“升级”卷轴会在菜单里再打开装备升级菜单，测试工具原先没处理这种嵌套，补上后原版与新代码一致。
+- 新 verify_setup_names：原 NameScreen::GenerateRandomName 4000 次（两张字表的每一项、两种格式都出现），名字框 19 个字节、长度与随机流一致；随机名字的字表与格式两个错误副本由它拒绝。
+- 新 verify_class_screen：原 CharacterClass::CanChooseRace / IsPerkUnlocked / GetReplacementSkillsAllowed / SetPerk / SetFlaw / SetReplacementSkill、Game::IsRaceUnlocked / IsPerkUnlocked 与 ClassScreen::UpdatePerks / UpdateAbilities（显示调用跳过）对照原生，300 组随机职业名单（规则 3000 次、修改 3600 次、可拖图标 300 次）；错误副本 28 个全部 exit 1。
+- `./scripts/relay.sh verify --full` → exit 0：89 步通过。运行目录 `.relay/runs/20261022T021815.241203Z`，inputs_unchanged true。此前两次全量检查只有 verify_session 失败：一次是测试脚本变量重名（技能阶段的计数被覆盖），一次是上面说的嵌套菜单，均为测试工具问题，已修正。

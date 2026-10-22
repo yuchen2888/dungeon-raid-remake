@@ -81,6 +81,16 @@ std::int32_t dr_skill_base_cooldown(std::int32_t type);
 // Original Game::IsSkillUnlocked 0x8ddc: types up to 30 always; otherwise when the first of the classes 1..9
 // whose first base skill it is has reached level 10.
 bool dr_skill_unlocked(const dungeonraid::ClassProfile* classes,std::int32_t type);
+// The other 20 skills of a class type 0..9 (CharacterClass::Initialise's list at Class+0x3c): the types 0..39 that are
+// not its base skills, in order.
+void dr_class_other_skills(std::int32_t type,std::int32_t out[20]);
+// What the class screen lets the current class take (ClassScreen::UpdatePerks 0x10a974 / UpdateAbilities 0x109b90,
+// T040-M4), nothing being dragged: perk / flaw i (0..9) when the perk is unlocked in the game (dr_perk_unlocked), the
+// class is not class 0, its slot 1 is open (level 3 or more) and it does not hold that perk (flaw) yet; its other skill
+// i (dr_class_other_skills) when the skill is unlocked (dr_skill_unlocked), the class is not class 0, may replace
+// skills at its level and does not use that skill yet.
+void dr_class_choices(const dungeonraid::ClassProfile* classes,std::size_t current,std::uint8_t perks[10],std::uint8_t flaws[10],
+                      std::uint8_t skills[20]);
 // Original CharacterClass::GetSkillPool 0x111ad4: class type 0 offers every unlocked type 0..39; any other
 // class its 20 skills, each the replacement skill (ClassProfile.replacement_skills, 255 none) or else the
 // base skill. pool[type] is set for each type in it.

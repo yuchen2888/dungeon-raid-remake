@@ -35,6 +35,8 @@
 
 - M1（2026-10-21）：dr_session_start_game，与原版三个入口逐帧对照一致（verify_session 新局阶段）。
 - M2（2026-10-21）：dr_class_initialise 与 dr_current_class，dr_session_create 自建职业名单（verify_class_init.py）。
+- M4a（2026-10-21）：职业编辑的规则函数与“哪些图标可拖”（recovered_progression、dr_class_choices；verify_class_screen.py）。会话接口（M4b）其后。
+- M3（2026-10-21）：开局设置画面的规则与接口（dr_session_set_mode / set_difficulty / set_name、dr_session_setup_random_name / select_class / mode / difficulty / start、dr_session_intro_done，SessionObjects.setup）。屏幕键盘、按钮布局、淡入淡出、按原版字体宽度截短名字归前端；名字最多 16 个字符（随机名字可能是 17 个，SetName 只存 16 个）。
 
 ## 归前端或平台（后端不补）
 

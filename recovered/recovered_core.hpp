@@ -117,6 +117,14 @@ bool dr_is_selected(const dungeonraid::TileGeometry*, const dungeonraid::Point*)
 std::size_t dr_replacement_skill_count(const dungeonraid::ClassProfile*);
 bool dr_class_initialise(dungeonraid::ClassProfile*, std::int32_t, std::int32_t*);
 std::int32_t dr_current_class(const dungeonraid::ClassProfile*, std::int32_t);
+bool dr_class_can_choose_race(const dungeonraid::ClassProfile*);
+bool dr_class_slot_unlocked(const dungeonraid::ClassProfile*, std::int32_t);
+std::size_t dr_class_replacements_allowed(const dungeonraid::ClassProfile*);
+void dr_class_set_perk(dungeonraid::ClassProfile*, std::int32_t, std::int32_t);
+void dr_class_set_flaw(dungeonraid::ClassProfile*, std::int32_t, std::int32_t);
+void dr_class_set_replacement(dungeonraid::ClassProfile*, std::int32_t, std::int32_t);
+bool dr_race_unlocked(const dungeonraid::ClassProfile*, std::int32_t);
+bool dr_perk_unlocked(const dungeonraid::ClassProfile*, std::int32_t);
 bool dr_class_validate(dungeonraid::ClassProfile*);
 std::size_t dr_class_write_game(const dungeonraid::ClassProfile*, std::uint8_t*, std::size_t);
 std::size_t dr_class_read_game(dungeonraid::ClassProfile*, const std::uint8_t*, std::size_t);

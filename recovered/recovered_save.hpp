@@ -25,10 +25,12 @@ struct SaveSources {
     PlayerStats* player;              // DeserialiseState: the interface values it refreshes (ui_skull, ui_health_ceiling, ui_armour_max)
     struct SaveSettings* settings;    // DeserialiseState: the help setting and the difficulty-changed flag
 };
-// Game settings DeserialiseState writes (the platform stores them when they change).
+// Game settings (the platform stores them when they change; DeserialiseState writes the first two).
 struct SaveSettings {
     std::uint8_t help_13ec8;                 // Game::SetHelpState: help shown (the game menu's switch)
     std::uint8_t difficulty_changed_14ae4;   // Game::SetDifficulty: set when the difficulty changed
+    std::uint8_t mode_changed_14aec;         // Game::SetMode: set when the mode changed
+    std::uint8_t name_changed_be49;          // Game::SetName: set when the name changed
 };
 // Achievement: a = achievement, b = value float bits (Item::Serialise). DeserialiseState's presentation: Freeze (a = tile,
 // Tile::SetFreezeVisibility), Skull / HealthCeiling / Health / ArmourMax / Armour / XP / UP / Gold (the Interface update of

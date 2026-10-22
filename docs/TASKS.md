@@ -93,8 +93,8 @@
 | T040-M | 盘点完成 / Claude；M1..M7 待做 | 后端收尾盘点：从 iOS 层调用的入口出发，列出原版能走到、尚未恢复的函数，分成规则 / 显示 / 平台与旧版兼容；结论：一局之内已全部恢复，一局之外的规则分 7 项补做 | docs/T040_BACKEND_INVENTORY.md |
 | T040-M1 | 完成 / Claude，待复核 | 主菜单的三种开局：dr_session_start_game（Game::NewGame / StartTutorial：难度 0、帮助打开并重置 23 条 / StartChallenge：记录模式；HelpMenu::ResetHelp / ClearHelp、MainMenu::SetActive） | verify_session 新局阶段改由原版三个入口开局（各 3 局）；9 个错误副本被拒 |
 | T040-M2 | 完成 / Claude，待复核 | 开机职业名单：dr_class_initialise（CharacterClass::Initialise：种族、自带天赋 / 缺陷、1 号职业 1 级其余锁住、替换技能位）由 dr_session_create 对十个职业执行；dr_current_class / dr_session_set_current_class（Game::SetCurrentClass：未解锁退回职业 0）；整局演示不再自编职业名单 | verify_class_init.py；13 个错误副本被拒 |
-| T040-M3 | 待做 | 开局设置：NameScreen（名字、随机名字、职业、模式、难度）、ModeScreen、IntroScreen（结束时存档）；确认后 InitNewGame | 原函数对照 + 会话接口 |
-| T040-M4 | 待做 | 职业编辑：ClassScreen 的规则部分与 CharacterClass 的 CanChooseRace / IsPerkUnlocked / SetPerk / SetFlaw / SetReplacementSkill 等，Game::IsRaceUnlocked / IsPerkUnlocked | 原函数对照 + 会话接口 |
+| T040-M3 | 完成 / Claude，待复核 | 开局设置：dr_session_set_mode / set_difficulty / set_name（带“已改变”标志）、dr_session_setup_*（随机名字两张字表、只能选已解锁职业、挑战只有模式按钮 / 其余只有难度按钮、有名字才能开始；开始 = SetName → 故事画面 → InitNewGame）、dr_session_intro_done（故事画面结束存档）；开新局时打开设置画面（NameScreen::Show）；换当前职业时单元视图跟随新职业记录 | verify_session 新局阶段由原版 NameScreen::ProcessInput / IntroScreen::Process 逐键对照；verify_setup_names.py（随机名字 4000 次）；26 个错误副本中 23 个被拒，3 个在实际流程中不可达 |
+| T040-M4 | 规则完成（M4a）/ Claude，待复核；会话接口待做（M4b） | 职业编辑：CharacterClass 的 CanChooseRace / IsPerkUnlocked / GetReplacementSkillsAllowed / SetPerk / SetFlaw / SetReplacementSkill、Game::IsRaceUnlocked / IsPerkUnlocked（recovered_progression），ClassScreen::UpdatePerks / UpdateAbilities 的“哪些图标可拖”（dr_class_choices，recovered_menu）；M4b：会话的职业编辑接口（选职业、改种族、放天赋 / 缺陷 / 替换技能、切换分页与完成时保存） | verify_class_screen.py（原函数从入口执行）；28 个错误副本全部被拒 |
 | T040-M5 | 待做 | 游戏中菜单：GameMenu::Process 的设置开关与退出，Game::UpdateHelpState | 原函数对照 + 会话接口 |
 | T040-M6 | 待做 | 帮助提示队列：HelpMenu::QueueHelp / Show / Process（待显示与已看过的帮助） | 原函数对照 + 会话接口 |
 | T040-M7 | 待做 | 局后流程：GameOverScreen / ScoreScreen / MainMenu 的切换与按钮、最高分页码 | 原函数对照 + 会话接口 |

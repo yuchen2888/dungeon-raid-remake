@@ -5,6 +5,7 @@
 #include "recovered_tokens.hpp"
 #include "recovered_path.hpp"
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <utility>
 #include <vector>
@@ -102,6 +103,7 @@ struct Session {
     ScoreBoard scores{};                  // ScoreScreen's high-score tables (Game+0xef68)
     SimpleLabelState damage_labels[3]{};  // leech, flame, spike SimpleLabels (Game+0xbfc0 / 0x14afc / 0x14e70)
     std::int32_t class_replacements[10][20]{};   // the class records' replacement skill lists
+    SetupScreen setup{};                  // the new-game setup screen (NameScreen)
     StatsTargets stats_targets{};
     StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
@@ -471,6 +473,23 @@ void label_event(void* c,const LabelEvent* e) {
     forward(s,SessionSource::Label,e);
 }
 void follow_label_active(Session& s) {for(int i=0;i<3;++i)s.damage_labels[i].active=s.extra.label_active[i];}
+// NameScreen::GenerateRandomName's parts (five-byte entries at 0x18da29 and 0x18d934).
+constexpr const char* name_starts[50]={"Ar","Ang","Bal","Bee","Clen","Coy","Def","Dil","En","Eck","Fan","Fen","Gam","Gil","Hel",
+    "Har","Il","Ink","Jos","Jen","Kart","Kea","Lid","Lin","Mer","Mond","Neg","Non","Orn","Oart","Pey","Put","Quo","Quin","Rin",
+    "Roz","So","Sit","Tec","Tint","Vin","Vam","Wel","Wit","Xer","Xin","Ye","Yon","Zil","Zar"};
+constexpr const char* name_ends[49]={"","and","aar","bole","bea","cor","cut","din","dier","een","ell","fet","fall","gren","gap",
+    "het","hob","inn","ire","jat","jel","kenn","kaf","lyt","lack","mon","mud","ney","nant","ons","ore","pol","pent","rew","rog",
+    "sear","sen","ten","treb","un","ure","ved","vie","wim","wed","yet","yore","zim","zes"};
+void set_name(Session& s,const char* name) {   // Game::SetName
+    char* own=reinterpret_cast<char*>(s.name);
+    s.settings.name_changed_be49=std::strcmp(own,name)!=0;std::strncpy(own,name,16);own[16]=0;
+}
+void show_setup(Session& s,bool challenge) {   // NameScreen::Show(Game's name, challenge)
+    SetupScreen& n=s.setup;n.challenge=challenge;s.screens.name_12c09=1;
+    const char* name=reinterpret_cast<const char*>(s.name);n.length=static_cast<std::int32_t>(std::strlen(name));
+    if(!n.length){std::memcpy(n.name,"Enter name",11);n.named=0;}
+    else {std::strncpy(n.name,name,16);n.name[16]=0;n.named=1;}
+}
 void frame_attack(void* c) {
     Session& s=self(c);dr_process_attack(&s.damage,&s.path,&s.animation,&s.overlay_alpha,s.dt,&s.attack_inputs,&s.process_hooks);
 }
@@ -551,7 +570,7 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->end_of_turn,&s->flights,&s->release_inputs,s->classes,&s->scroll,&s->player,&s->extra,&s->shatter,&s->touch,&s->screens,
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
         s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
-        s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels};
+        s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels,&s->setup};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 // Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
@@ -583,7 +602,58 @@ extern "C" void dr_session_set_motions(Session* s,const TokenMotion* motions,std
 extern "C" void dr_session_new_game(Session* s,std::uint32_t time) {
     dr_init_new_game(&s->new_game,time,&s->new_game_hooks);follow_label_active(*s);
 }
-extern "C" void dr_session_set_current_class(Session* s,std::int32_t type) {s->scroll.current=static_cast<std::size_t>(dr_current_class(s->classes,type));}
+extern "C" void dr_session_set_mode(Session* s,std::int32_t mode) {
+    const std::int32_t v=std::clamp(mode,0,1);s->settings.mode_changed_14aec=s->stroke.mode_14ae8!=v;s->stroke.mode_14ae8=v;
+}
+extern "C" void dr_session_set_difficulty(Session* s,std::int32_t difficulty) {
+    const std::int32_t v=std::clamp(difficulty,0,3);s->settings.difficulty_changed_14ae4=s->match.spawn_enabled_14ae0!=v;
+    s->match.spawn_enabled_14ae0=v;
+}
+extern "C" void dr_session_set_name(Session* s,const char* name) {set_name(*s,name);}
+extern "C" void dr_session_setup_random_name(Session* s) {
+    SetupScreen& n=s->setup;RandomState* r=&s->match.random;
+    if(dr_random_int(r,0,1,0)==0) {
+        const std::int32_t a=dr_random_int(r,0,49,0),b=dr_random_int(r,0,48,0);
+        std::snprintf(n.name,sizeof n.name,"%s%s",name_starts[a],name_ends[b]);
+    } else {
+        const std::int32_t a=dr_random_int(r,0,49,0),b=dr_random_int(r,0,48,0),c=dr_random_int(r,0,49,0),d=dr_random_int(r,0,48,0);
+        std::snprintf(n.name,sizeof n.name,"%s%s %s%s",name_starts[a],name_ends[b],name_starts[c],name_ends[d]);
+    }
+    n.length=static_cast<std::int32_t>(std::strlen(n.name));n.named=1;
+}
+extern "C" bool dr_session_setup_select_class(Session* s,std::int32_t type) {
+    if(type<0 || type>9 || !s->classes[type].level)return false;
+    dr_session_set_current_class(s,type);return true;
+}
+extern "C" bool dr_session_setup_mode(Session* s,std::int32_t mode) {
+    if(!s->setup.challenge || mode<0 || mode>1)return false;
+    dr_session_set_mode(s,mode);return true;
+}
+extern "C" bool dr_session_setup_difficulty(Session* s,std::int32_t difficulty) {
+    if(s->setup.challenge || difficulty<0 || difficulty>3)return false;
+    dr_session_set_difficulty(s,difficulty);return true;
+}
+extern "C" bool dr_session_setup_start(Session* s,std::uint32_t time) {
+    if(!s->setup.named || s->setup.length<=0)return false;
+    set_name(*s,s->setup.name);
+    s->screens.intro_c3f0=1;          // IntroScreen::Initialise
+    dr_session_new_game(s,time);
+    s->screens.name_12c09=0;
+    return true;
+}
+extern "C" void dr_session_intro_done(Session* s) {s->screens.intro_c3f0=0;save_state(*s);}
+// The units read the current class record through views (SelectionState.character, MatchState.perks / class_type /
+// class_level; the original reads the record itself): the old record first takes the views' values, then the views
+// follow the new current record.
+extern "C" void dr_session_set_current_class(Session* s,std::int32_t type) {
+    auto& sel=s->stroke.selection;MatchState& m=s->match;
+    ClassProfile& old=s->classes[s->scroll.current];
+    old.race=sel.character.race;std::copy(m.perks,m.perks+4,old.perks);std::copy(sel.character.flaws,sel.character.flaws+4,old.flaws);
+    s->scroll.current=static_cast<std::size_t>(dr_current_class(s->classes,type));
+    const ClassProfile& c=s->classes[s->scroll.current];
+    sel.character.race=c.race;std::copy(c.perks,c.perks+4,m.perks);std::copy(c.flaws,c.flaws+4,sel.character.flaws);
+    m.class_type=c.class_type;m.class_level=c.level;
+}
 extern "C" void dr_session_start_game(Session* s,std::int32_t kind,std::uint32_t time) {
     s->stroke.record_14aed=kind==2;
     dr_session_new_game(s,time);
@@ -591,6 +661,7 @@ extern "C" void dr_session_start_game(Session* s,std::int32_t kind,std::uint32_t
     s->screens.main_menu_c400=0;                     // MainMenu::SetActive(false)
     s->settings.help_13ec8=kind==1;                  // Game::SetHelpState
     s->finish.help_flags_102d0=kind==1?s->finish.help_flags_102d0|0x7fffffu:0u;   // HelpMenu::ResetHelp / ClearHelp
+    show_setup(*s,kind==2);
 }
 // Game::DeserialiseState now: the saved game in SessionObjects.save over the current state (false: no 0xff header).
 extern "C" bool dr_session_deserialise(Session* s) {const SaveSources src=save_sources(*s);return dr_deserialise_state(&src,s->save,&s->save_hooks);}

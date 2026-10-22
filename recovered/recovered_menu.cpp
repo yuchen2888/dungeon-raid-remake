@@ -40,6 +40,24 @@ extern "C" bool dr_skill_unlocked(const ClassProfile* classes,std::int32_t type)
     for(int i=1;i<=9;++i)if(dr_class_base_skills[classes[i].class_type][0]==type)return classes[i].level==10;   // class i's first base skill
     return false;
 }
+extern "C" void dr_class_other_skills(std::int32_t type,std::int32_t out[20]) {
+    const std::int32_t* base=dr_class_base_skills[type];int n=0;
+    for(std::int32_t k=0;k<40 && n<20;++k)if(std::find(base,base+20,k)==base+20)out[n++]=k;
+}
+extern "C" void dr_class_choices(const ClassProfile* classes,std::size_t current,std::uint8_t perks[10],std::uint8_t flaws[10],
+                                 std::uint8_t skills[20]) {
+    const ClassProfile& c=classes[current];
+    const bool open=c.class_type!=0 && dr_class_slot_unlocked(&c,1);
+    for(int i=0;i<10;++i) {
+        const bool unlocked=open && dr_perk_unlocked(classes,i);
+        perks[i]=unlocked && std::find(c.perks,c.perks+4,i)==c.perks+4;
+        flaws[i]=unlocked && std::find(c.flaws,c.flaws+4,i)==c.flaws+4;
+    }
+    std::int32_t others[20];dr_class_other_skills(c.class_type,others);
+    const bool replace=c.class_type!=0 && dr_class_replacements_allowed(&c)>0;
+    const std::int32_t* used=c.replacement_skills;const std::size_t n=used?c.replacement_skill_count:0;
+    for(int i=0;i<20;++i)skills[i]=replace && dr_skill_unlocked(classes,others[i]) && std::find(used,used+n,others[i])==used+n;
+}
 extern "C" void dr_class_skill_pool(const ClassProfile* classes,std::int32_t index,bool pool[40]) {
     std::fill(pool,pool+40,false);const ClassProfile& c=classes[index];
     if(c.class_type==0) {for(int t=0;t<40;++t)pool[t]=dr_skill_unlocked(classes,t);return;}

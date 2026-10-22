@@ -45,6 +45,67 @@ extern "C" std::int32_t dr_current_class(const ClassProfile* states, std::int32_
     return type >= 0 && type <= 9 && states[type].level ? type : 0;
 }
 
+// CharacterClass::CanChooseRace, original Thumb entry 0x110a54: not class 0, level 5 or more.
+extern "C" bool dr_class_can_choose_race(const ClassProfile* state) {
+    return state->class_type != 0 && state->level > 4;
+}
+
+// CharacterClass::IsPerkUnlocked(int), 0x111548: perk / flaw slot 0 from level 1, slot 1 above level 2, slot 2
+// above 6, slot 3 above 8; no other slot.
+extern "C" bool dr_class_slot_unlocked(const ClassProfile* state, std::int32_t slot) {
+    static constexpr std::uint8_t above[4] = {0, 2, 6, 8};
+    return slot >= 0 && slot <= 3 && state->level > above[slot];
+}
+
+// CharacterClass::GetReplacementSkillsAllowed, 0x111590: none up to level 1, 2 up to level 3, 4 up to 5, 6 up to
+// 7, 8 at levels 8 and 9, 10 at level 10.
+extern "C" std::size_t dr_class_replacements_allowed(const ClassProfile* state) {
+    const std::uint8_t level = state->level;
+    if (level <= 1) return 0;
+    if (level <= 3) return 2;
+    if (level <= 5) return 4;
+    if (level <= 7) return 6;
+    return level == 10 ? 10 : 8;
+}
+
+// CharacterClass::SetPerk / SetFlaw, 0x1115e0 / 0x111628: slots 1..3 only, when the slot is unlocked and the class
+// does not hold the perk (flaw) already (HavePerk / HaveFlaw: 255, none, is never held).
+extern "C" void dr_class_set_perk(ClassProfile* state, std::int32_t slot, std::int32_t perk) {
+    if (slot <= 0 || !dr_class_slot_unlocked(state, slot)) return;
+    if (perk != 255 && std::find(state->perks, state->perks+4, perk) != state->perks+4) return;
+    state->perks[slot] = perk;
+}
+extern "C" void dr_class_set_flaw(ClassProfile* state, std::int32_t slot, std::int32_t flaw) {
+    if (slot <= 0 || !dr_class_slot_unlocked(state, slot)) return;
+    if (flaw != 255 && std::find(state->flaws, state->flaws+4, flaw) != state->flaws+4) return;
+    state->flaws[slot] = flaw;
+}
+
+// CharacterClass::SetReplacementSkill, 0x111b80: slots 1..count-1 (slot 0 is the class's own skill); a slot holding
+// a replacement takes any skill; an empty one (255) only while fewer replacements than allowed are held.
+extern "C" void dr_class_set_replacement(ClassProfile* state, std::int32_t slot, std::int32_t skill) {
+    if (!valid(state) || slot <= 0 || static_cast<std::size_t>(slot) >= state->replacement_skill_count) return;
+    if (state->replacement_skills[slot] == 255 && dr_replacement_skill_count(state) >= dr_class_replacements_allowed(state)) return;
+    state->replacement_skills[slot] = skill;
+}
+
+// Game::IsRaceUnlocked, 0x8d88: the first record (of 10) whose base race it is decides: class 0 always, another class
+// at level 5 or more; a race no record has is locked.
+extern "C" bool dr_race_unlocked(const ClassProfile* states, std::int32_t race) {
+    for (int i = 0; i < 10; ++i)
+        if (states[i].base_race == race) return states[i].class_type == 0 || states[i].level > 4;
+    return false;
+}
+
+// Game::IsPerkUnlocked, 0x8f60: perk 0 always; otherwise the first record whose first perk it is decides
+// (CharacterClass::IsPerkUnlocked(0): the class is unlocked); a perk no record has is locked.
+extern "C" bool dr_perk_unlocked(const ClassProfile* states, std::int32_t perk) {
+    if (perk == 0) return true;
+    for (int i = 0; i < 10; ++i)
+        if (states[i].perks[0] == perk) return dr_class_slot_unlocked(states+i, 0);
+    return false;
+}
+
 // CharacterClass::GetReplacementSkillCount, original Thumb entry 0x111844.
 extern "C" std::size_t dr_replacement_skill_count(const ClassProfile* state) {
     if (!state || !state->replacement_skills) return 0;

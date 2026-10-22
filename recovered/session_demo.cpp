@@ -9,7 +9,8 @@ using namespace dungeonraid;
 // longest of a few random paths that follow the game's linking rule, or a ready skill's button), the menu buttons
 // (options, then confirm) and the layout targets of flying tokens (demonstration constants). Each game runs until
 // the game-over screen or a turn limit; the games start as the main menu's new game, tutorial and challenge in
-// turn (dr_session_start_game, on the session's own class roster); the first game quits at turn 40 and continues
+// turn (dr_session_start_game, on the session's own class roster), through the setup screen (a random name, Start) and
+// the story screen; the first game quits at turn 40 and continues
 // from its save (dr_session_continue_game). DEMO_TRACE=1 prints every turn.
 namespace {
 struct Demo { long events=0; int menus[3]{},skills_used=0,continued=0; };
@@ -51,7 +52,14 @@ int main() {
         Session* s=dr_session_create(&host,1);SessionObjects o=dr_session_objects(s);
         auto& sel=o.stroke->selection;sel.geometry.pitch=1.0f/6;sel.half_spacing=1.0f/12;
         for(int k=0;k<4;++k){sel.character.flaws[k]=255;o.match->perks[k]=255;}
-        dr_session_start_game(s,game,20261020u+static_cast<std::uint32_t>(game));
+        const std::uint32_t seed=20261020u+static_cast<std::uint32_t>(game);
+        dr_session_start_game(s,game,seed);
+        // the setup screen: a random name, a difficulty (a challenge: the mode), Start, then the story screen's Continue
+        dr_session_setup_random_name(s);
+        if(game==2)dr_session_setup_mode(s,1);else dr_session_setup_difficulty(s,1);
+        if(!dr_session_setup_start(s,seed)) {std::printf("game %d: the setup screen did not start\n",game);return 1;}
+        dr_session_intro_done(s);
+        o=dr_session_objects(s);std::printf("game %d: %s\n",game,reinterpret_cast<const char*>(o.name));
         int turns=0;long frames=0;bool over=false;
         while(!over && turns<400) {
             if(game==0 && turns==40) {   // quit and continue from the saved game (the end of the last turn saved it)

@@ -13,6 +13,14 @@ namespace dungeonraid {
 // One game: every recovered state object, each Game field owned once, and the recovered units wired
 // to each other as Game does it (see docs/T040_SESSION_PLAN.md). No original instruction runs here.
 struct Session;
+// The new-game setup screen (NameScreen, Game+0x102dc; T040-M3): what its rules use. Its on-screen keyboard, layout and
+// fades are the renderer's (the original also shortens a name that is wider than its box, by the font's widths).
+struct SetupScreen {
+    std::uint8_t challenge;   // NameScreen+0x3bbc: a challenge game (mode buttons instead of difficulty buttons)
+    char name[19];            // +0x2935: the name being entered (a random name can be 17 characters)
+    std::int32_t length;      // +0x2948
+    std::uint8_t named;       // +0x294c: a name was entered (else the box shows "Enter name" and Start stays hidden)
+};
 // The objects of a session. Pointers stay valid for the session's lifetime; the embedding may read
 // them every frame and write the renderer-owned inputs (release_inputs->health_target, current_label_active,
 // screens, input_target).
@@ -67,6 +75,7 @@ struct SessionObjects {
                                          // changed table (dr_session_save_changed_scores) and gives them back at start-up
     SimpleLabelState* damage_labels;     // the leech, flame and spike SimpleLabels (3; Game+0xbfc0 / 0x14afc / 0x14e70), drawn
                                          // at their position and scale; their active bytes are extra->label_active[0..2]
+    SetupScreen* setup;                  // the new-game setup screen (open while screens->name_12c09 is set)
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
@@ -99,16 +108,39 @@ void dr_session_set_falling(dungeonraid::Session*,const std::int32_t* tiles,std:
 void dr_session_set_motions(dungeonraid::Session*,const dungeonraid::TokenMotion*,std::uint32_t count);
 // Game::InitNewGame (dr_init_new_game) on the session's objects; time seeds the random streams.
 void dr_session_new_game(dungeonraid::Session*,std::uint32_t time);
-// Game::SetCurrentClass (T040-M2): the class (0..9) becomes the current one when it is unlocked, else class 0. A new
+// Game::SetCurrentClass (T040-M2): the class (0..9) becomes the current one when it is unlocked, else class 0; the
+// units' views of the current record (race, perks, flaws, type, level) follow it (T040-M3). A new
 // session already holds Game::Start's roster (CharacterClass::Initialise of the ten classes: class 0 at level 1, the
 // others locked) with class 0 current; the platform then gives the stored records back (dr_session_restore_classes).
 void dr_session_set_current_class(dungeonraid::Session*,std::int32_t type);
+// Game::SetMode 0x83e8 / SetDifficulty 0x842c / SetName 0x8470 (T040-M3): the mode (0..1, StrokeState.mode_14ae8), the
+// difficulty (0..3, MatchState.spawn_enabled_14ae0) or the name (16 characters at most) and its changed flag
+// (SaveSettings) when it differs.
+void dr_session_set_mode(dungeonraid::Session*,std::int32_t mode);
+void dr_session_set_difficulty(dungeonraid::Session*,std::int32_t difficulty);
+void dr_session_set_name(dungeonraid::Session*,const char* name);
+// The setup screen's buttons (NameScreen::ProcessInput 0x3bff8, T040-M3). The name the renderer's keyboard edits is
+// SessionObjects.setup (name, length, named). Random name: NameScreen::GenerateRandomName 0x3882c (stream 0: "%s%s" of
+// a start and an end part, or "%s%s %s%s" of two pairs) and the name counts as entered. A class button selects an
+// unlocked class only (Game::SetCurrentClass); a challenge game's two mode buttons Game::SetMode, the other games' four
+// difficulty buttons Game::SetDifficulty (false when the screen has no such button). Start (shown only with an entered
+// name): Game::SetName(the name), the story screen opens (IntroScreen::Initialise; its random draws come before the
+// new game re-seeds), Game::InitNewGame (time seeds the random streams), the setup screen closes; false without a name.
+void dr_session_setup_random_name(dungeonraid::Session*);
+bool dr_session_setup_select_class(dungeonraid::Session*,std::int32_t type);
+bool dr_session_setup_mode(dungeonraid::Session*,std::int32_t mode);
+bool dr_session_setup_difficulty(dungeonraid::Session*,std::int32_t difficulty);
+bool dr_session_setup_start(dungeonraid::Session*,std::uint32_t time);
+// The story screen's end (IntroScreen::Process 0x2dd04: Continue pressed and the fade done): it closes and
+// Game::SerialiseState saves the new game.
+void dr_session_intro_done(dungeonraid::Session*);
 // The main menu's three new games (T040-M1): kind 0 Game::NewGame 0x16590, 1 StartTutorial 0x164c0, 2 StartChallenge
 // 0x1652c. The record mode (Game+0x14aed) is set for the challenge only; InitNewGame (time seeds the random streams);
 // the tutorial's difficulty is 0 (Game+0x14ae0); the main menu closes; the help switch is on for the tutorial only; the
 // queued help topics (Game+0x102d0) are HelpMenu::ResetHelp's (tutorial: topics 0..22 added) or ClearHelp's (none). The
 // new-game setup screen (NameScreen::Show) follows; StartCyclingGamesColour and Interface::Process(0, false) are
-// presentation.
+// presentation. The new-game setup screen opens (NameScreen::Show(the name, challenge), T040-M3): the name (16
+// characters at most, counted as entered) or, without one, the placeholder "Enter name".
 void dr_session_start_game(dungeonraid::Session*,std::int32_t kind,std::uint32_t time);
 // One Game::Process frame (dr_process_frame with every step wired) for the touch (phase, position).
 dungeonraid::FrameRoute dr_session_frame(dungeonraid::Session*,float dt,std::int32_t touch_phase,dungeonraid::Point touch);
