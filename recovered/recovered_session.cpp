@@ -104,6 +104,10 @@ struct Session {
     SimpleLabelState damage_labels[3]{};  // leech, flame, spike SimpleLabels (Game+0xbfc0 / 0x14afc / 0x14e70)
     std::int32_t class_replacements[10][20]{};   // the class records' replacement skill lists
     SetupScreen setup{};                  // the new-game setup screen (NameScreen)
+    OverlayMenu game_menu{0,-1,0,0.0f};   // GameMenu (Interface+0xe24)
+    OverlayMenu stats_menu{0,-1,0,0.0f};  // StatsMenu (Interface+0xeb4)
+    InterfaceButtons interface_buttons{}; // Interface+0xcb4 / +0xcb5
+    MainMenuScreen main_menu{};           // MainMenu+0x8 / +0xc
     StatsTargets stats_targets{};
     StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
@@ -324,6 +328,9 @@ void new_game_event(void* c,const NewGameEvent* e) {
     Session& s=self(c);forward(s,SessionSource::NewGame,e);
     if(e->kind==NewGameEventKind::Item)dr_item_make(&s.stats_targets,&s.items[e->a],e->b,nullptr);
     else if(e->kind==NewGameEventKind::UpdateStats)update_stats(s);
+    else if(e->kind==NewGameEventKind::InterfaceReset) {   // Interface::Reset 0x204a4: its input state (the rest is presentation)
+        s.skill_input.pressed=-1;s.interface_buttons=InterfaceButtons{};s.screens.menus[1]=s.screens.menus[2]=0;
+    }
 }
 void turn_swap(void* c,std::int32_t x1,std::int32_t y1,std::int32_t x2,std::int32_t y2) {
     Session& s=self(c);dr_swap_tiles(&s.refill,x1,y1,x2,y2,&s.refill_hooks);
@@ -402,17 +409,92 @@ void skill_event(void* c,const SkillEvent* e) {
 void skill_action(void* c,SkillAction action,std::int32_t a,std::int32_t b) {
     Session& s=self(c);dr_skill_action(&s.skill_state,action,a,b,&s.skill_hooks,&s.generation_hooks);
 }
-// Interface::Process: with an in-game menu open the menu runs (the renderer's); otherwise, with input ready,
-// Interface::ProcessInput's skill buttons.
-void frame_event(void* c,const GameFrameEvent* e) {
-    Session& s=self(c);forward(s,SessionSource::GameFrame,e);
-    if(e->kind!=GameFrameEventKind::InterfaceProcess)return;
+// The game menu, the stats menu and Interface's buttons (T040-M5)
+void interface_event(Session& s,InterfaceEventKind kind,std::int32_t index,std::int32_t a) {
+    const SessionSmallEvent e{static_cast<std::int32_t>(kind),index,a,0};forward(s,SessionSource::Interface,&e);
+}
+void menu_sound(Session& s) {interface_event(s,InterfaceEventKind::Sound,-1,0);}
+// Game::UpdateHelpState 0x9edc
+void update_help_state(Session& s) {
+    std::uint32_t& queued=s.finish.help_flags_102d0;
+    if(queued) {if(!s.settings.help_13ec8)queued=0;}   // HelpMenu::ClearHelp
+    else if(s.settings.help_13ec8)queued|=0x7fffffu;    // HelpMenu::ResetHelp: topics 0..22
+}
+// GameMenu's switches: Game::SetSoundState / SetHelpState / SetClockState / SetAttackDimmingState / SetHighFramerate with
+// the switch flipped (its byte xor 1); the changed flag is whether it changed (SetHelpState has none).
+void flip_switch(Session& s,std::int32_t button,std::uint8_t& value,std::uint8_t* changed) {
+    const std::uint8_t to=value^1;
+    if(changed)*changed=value!=to;
+    value=to;interface_event(s,InterfaceEventKind::Setting,button,to);
+}
+// GameMenu::Show 0x31b88 / StatsMenu::Show 0x3381c
+void show_menu(OverlayMenu& m,std::uint8_t& open) {m.pressed=-1;m.previous_phase=0;m.closing=0;m.timer=0.2f;open=1;}
+// The menus' fade: true while it runs; a closing menu closes when it runs out.
+bool menu_fade(Session& s,OverlayMenu& m,std::uint8_t& open) {
+    if(!(m.timer>0.0f))return false;
+    m.timer-=s.dt;
+    if(!(m.timer>0.0f)) {m.timer=0.0f;if(m.closing)open=0;}
+    return true;
+}
+// GameMenu::Process 0x32580
+void game_menu_process(Session& s) {
+    OverlayMenu& m=s.game_menu;SaveSettings& set=s.settings;
+    if(menu_fade(s,m,s.screens.menus[1]))return;
+    const std::int32_t phase=s.touch.phase,button=s.menu_button;
+    if(phase==1) {
+        if(m.previous_phase==0 && button>=9 && button<=15) {m.pressed=button;menu_sound(s);}
+    } else if((phase==2 || phase==3) && m.pressed>=0) {
+        if(button==m.pressed)switch(button) {
+        case 9:m.timer=0.2f;m.closing=1;update_help_state(s);break;
+        case 10:flip_switch(s,10,set.sound_13ec6,&set.sound_changed_13ec7);if(set.sound_13ec6)menu_sound(s);break;
+        case 11:flip_switch(s,11,set.help_13ec8,nullptr);break;
+        case 12:flip_switch(s,12,set.clock_13ec9,&set.clock_changed_13ecc);break;
+        case 13:flip_switch(s,13,set.dimming_13eca,&set.dimming_changed_13ecd);break;
+        case 14:flip_switch(s,14,set.framerate_13ecb,&set.framerate_changed_13ece);break;
+        case 15:   // MainMenu::FadeIn 0x2e214
+            s.screens.main_menu_c400=1;s.main_menu.fading=1;s.main_menu.timer=0.5f;
+            interface_event(s,InterfaceEventKind::MainMenu,-1,0);break;
+        default:break;
+        }
+        m.pressed=-1;
+    }
+    m.previous_phase=phase;
+}
+// StatsMenu::Process 0x33c0c (the shown tab's labels and the menu's height are the renderer's)
+void stats_menu_process(Session& s) {
+    OverlayMenu& m=s.stats_menu;
+    if(menu_fade(s,m,s.screens.menus[2]))return;
+    const std::int32_t phase=s.touch.phase,button=s.menu_button;
+    if(phase==1 && m.previous_phase==0) {
+        if(button==-1) {menu_sound(s);m.timer=0.2f;m.closing=1;return;}   // StatsMenu::CursorOutsideMenu (the phase is not kept)
+        if(button>=10 && button<=15 && button!=m.pressed) {m.pressed=button;menu_sound(s);}
+    }
+    m.previous_phase=phase;
+}
+// Interface::ProcessInput 0x209e4: the skill buttons (dr_skill_input), then the menu and stats buttons
+void interface_input(Session& s) {
+    const std::int32_t previous=s.skill_input.previous_phase,phase=s.touch.phase,button=s.skill_button;
+    dr_skill_input(&s.skill_state,&s.skill_input,phase,button,&s.skill_hooks,&s.generation_hooks);
+    InterfaceButtons& b=s.interface_buttons;
+    if(phase==1) {
+        if(previous==0 && (button==4 || button==5)) {menu_sound(s);(button==4?b.menu_pressed:b.stats_pressed)=1;}
+    } else if(phase==2 || phase==3) {
+        if(b.menu_pressed) {show_menu(s.game_menu,s.screens.menus[1]);b.menu_pressed=0;}
+        if(b.stats_pressed) {show_menu(s.stats_menu,s.screens.menus[2]);b.stats_pressed=0;}
+    }
+}
+// Interface::Process 0x20c64: an open menu runs, else (with input ready) Interface::ProcessInput.
+void interface_process(Session& s,bool input_ready) {
     const auto& m=s.screens.menus;
     if(m[0]) {   // the shop and upgrade menus end in Game::UpdateStats
-        const MenuSources src=menu_sources(s);dr_menu_process(&s.menu,&src,s.dt,s.touch.phase,s.menu_button,&s.menu_hooks);sync_chances(s);return;
-    }
-    if(m[1] || m[2] || !e->a)return;
-    dr_skill_input(&s.skill_state,&s.skill_input,s.touch.phase,s.skill_button,&s.skill_hooks,&s.generation_hooks);
+        const MenuSources src=menu_sources(s);dr_menu_process(&s.menu,&src,s.dt,s.touch.phase,s.menu_button,&s.menu_hooks);sync_chances(s);
+    } else if(m[1])game_menu_process(s);
+    else if(m[2])stats_menu_process(s);
+    else if(input_ready)interface_input(s);
+}
+void frame_event(void* c,const GameFrameEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::GameFrame,e);
+    if(e->kind==GameFrameEventKind::InterfaceProcess)interface_process(s,e->a!=0);
 }
 // Frame steps
 void step_input(Session& s) {
@@ -496,6 +578,10 @@ void frame_attack(void* c) {
 
 void link(Session& s) {
     void* c=&s;
+    for(int i=0;i<10;++i)if(!s.classes[i].replacement_skills) {   // a record given without its replacement list: the session's (none)
+        std::fill(s.class_replacements[i],s.class_replacements[i]+20,255);
+        s.classes[i].replacement_skills=s.class_replacements[i];s.classes[i].replacement_skill_count=20;
+    }
     s.match.stroke=&s.stroke;s.match.preview=&s.preview;
     s.resources.match=&s.match;
     s.path.match=&s.match;s.path.queue=s.tokens;
@@ -570,7 +656,8 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->end_of_turn,&s->flights,&s->release_inputs,s->classes,&s->scroll,&s->player,&s->extra,&s->shatter,&s->touch,&s->screens,
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
         s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
-        s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels,&s->setup};
+        s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels,&s->setup,&s->game_menu,&s->stats_menu,
+        &s->interface_buttons,&s->main_menu};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 // Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
@@ -645,6 +732,43 @@ extern "C" void dr_session_intro_done(Session* s) {s->screens.intro_c3f0=0;save_
 // The units read the current class record through views (SelectionState.character, MatchState.perks / class_type /
 // class_level; the original reads the record itself): the old record first takes the views' values, then the views
 // follow the new current record.
+namespace {
+// The class screen's edits: the current record takes the units' views first, the views follow it afterwards.
+void record_from_views(Session& s) {
+    ClassProfile& c=s.classes[s.scroll.current];const auto& sel=s.stroke.selection;
+    c.race=sel.character.race;std::copy(s.match.perks,s.match.perks+4,c.perks);std::copy(sel.character.flaws,sel.character.flaws+4,c.flaws);
+}
+void views_from_record(Session& s) {
+    const ClassProfile& c=s.classes[s.scroll.current];auto& sel=s.stroke.selection;
+    sel.character.race=c.race;std::copy(c.perks,c.perks+4,s.match.perks);std::copy(c.flaws,c.flaws+4,sel.character.flaws);
+    s.match.class_type=c.class_type;s.match.class_level=c.level;
+}
+template<class Edit> void edit_current(Session& s,Edit edit) {record_from_views(s);edit(s.classes[s.scroll.current]);views_from_record(s);}
+}
+extern "C" void dr_session_class_choices(Session* s,std::uint8_t perks[10],std::uint8_t flaws[10],std::uint8_t skills[20]) {
+    record_from_views(*s);dr_class_choices(s->classes,s->scroll.current,perks,flaws,skills);
+}
+extern "C" bool dr_session_class_select(Session* s,std::int32_t type) {return dr_session_setup_select_class(s,type);}
+extern "C" bool dr_session_class_set_race(Session* s,std::int32_t race) {
+    record_from_views(*s);
+    if(!dr_race_unlocked(s->classes,race) || !dr_class_can_choose_race(&s->classes[s->scroll.current]))return false;
+    edit_current(*s,[race](ClassProfile& c){c.race=race;});return true;
+}
+extern "C" void dr_session_class_set_perk(Session* s,std::int32_t slot,std::int32_t perk) {
+    edit_current(*s,[=](ClassProfile& c){dr_class_set_perk(&c,slot,perk);});
+}
+extern "C" void dr_session_class_set_flaw(Session* s,std::int32_t slot,std::int32_t flaw) {
+    edit_current(*s,[=](ClassProfile& c){dr_class_set_flaw(&c,slot,flaw);});
+}
+extern "C" void dr_session_class_set_skill(Session* s,std::int32_t slot,std::int32_t skill) {
+    edit_current(*s,[=](ClassProfile& c){dr_class_set_replacement(&c,slot,skill);});
+}
+extern "C" void dr_session_class_tab(Session* s) {dr_session_save_classes(s);}
+extern "C" void dr_session_class_done(Session* s) {
+    edit_current(*s,[](ClassProfile& c){dr_class_validate(&c);});
+    dr_session_set_current_class(s,s->classes[s->scroll.current].class_type);
+    dr_session_save_classes(s);
+}
 extern "C" void dr_session_set_current_class(Session* s,std::int32_t type) {
     auto& sel=s->stroke.selection;MatchState& m=s->match;
     ClassProfile& old=s->classes[s->scroll.current];
@@ -674,6 +798,7 @@ extern "C" bool dr_session_continue_game(Session* s,std::uint32_t time) {
     dr_calculate_tile_positions(&s->stroke,&s->new_game_hooks);
     return true;
 }
+extern "C" void dr_session_interface_process(Session* s,float dt,bool input_ready) {s->dt=dt;interface_process(*s,input_ready);}
 extern "C" FrameRoute dr_session_frame(Session* s,float dt,std::int32_t touch_phase,Point touch) {
     s->touch.phase=touch_phase;s->touch.position=touch;s->dt=dt;s->input_route=-1;
     return dr_process_frame(&s->frame,dt,&s->frame_hooks);

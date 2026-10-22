@@ -537,3 +537,12 @@
 - 新 verify_setup_names：原 NameScreen::GenerateRandomName 4000 次（两张字表的每一项、两种格式都出现），名字框 19 个字节、长度与随机流一致；随机名字的字表与格式两个错误副本由它拒绝。
 - 新 verify_class_screen：原 CharacterClass::CanChooseRace / IsPerkUnlocked / GetReplacementSkillsAllowed / SetPerk / SetFlaw / SetReplacementSkill、Game::IsRaceUnlocked / IsPerkUnlocked 与 ClassScreen::UpdatePerks / UpdateAbilities（显示调用跳过）对照原生，300 组随机职业名单（规则 3000 次、修改 3600 次、可拖图标 300 次）；错误副本 28 个全部 exit 1。
 - `./scripts/relay.sh verify --full` → exit 0：89 步通过。运行目录 `.relay/runs/20261022T021815.241203Z`，inputs_unchanged true。此前两次全量检查只有 verify_session 失败：一次是测试脚本变量重名（技能阶段的计数被覆盖），一次是上面说的嵌套菜单，均为测试工具问题，已修正。
+
+## 2026-10-22 T040-M4b / M5：职业编辑接口、游戏中菜单与统计菜单（Claude）
+
+- verify_session 新局阶段：七成的局在开始前按 ClassScreen::Process 的调用顺序做职业编辑（选高等级职业、选锁住的职业、随机放种族 / 天赋 / 缺陷 / 替换技能、切换分页、完成；另有一次按原版判定挑一个已解锁的不同种族），每一步后对照当前职业记录与职业存档；14 个错误副本中 12 个被拒，2 个为等价写法（先回写再编辑的顺序、完成时的校验在当前流程里不改变结果）。
+- 新 verify_game_menu：原 GameMenu::Process / StatsMenu::Process / Interface::ProcessInput（按 Interface::Process 的分派从入口执行，显示调用跳过，按钮命中由测试给出）对照 dr_session_interface_process，400 组随机初始状态 × 200 帧共 8 万帧：两个菜单的打开、上一帧阶段、按下按钮 / 分页、关闭、计时，界面按钮，九个设置字节，待显示帮助位，主菜单淡入，以及每帧的音效、开关变化、退出调用顺序全部一致；五个开关、关闭（含帮助状态更新的清空与重置）、退出、统计菜单六个分页都出现。
+- verify_session：局中随机按菜单 / 统计按钮（松开在按钮上、别处或取消），菜单里拨开关、翻页、点菜单外关闭，部分“继续游戏”后的第一回合退出到主菜单，再从主菜单开新局（原版 InitNewGame 的 Interface::Reset 作为原代码执行，残留的游戏菜单被关掉）；两个菜单、界面按钮、设置字节与主菜单淡入随流程字段逐帧对照。
+- 错误副本：游戏菜单与统计菜单 28 个（verify_game_menu）全部被拒；Interface::Reset 的两个：关菜单的被拒（经“退出后从主菜单开新局”），清按钮的在实际流程中走不到（开新局时不可能正按着界面按钮）。
+- 第一次全量检查只有 verify_session 失败：完整配置下“退出到主菜单”恰好一次都没触发（那几局在最后一回合前就结束了），属测试覆盖问题；改为在继续游戏后的第一回合退出并接着开新局。
+- `./scripts/relay.sh verify --full` → exit 0：91 步通过。运行目录 `.relay/runs/20261022T154634.915532Z`，inputs_unchanged true。

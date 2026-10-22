@@ -35,7 +35,11 @@
 
 - M1（2026-10-21）：dr_session_start_game，与原版三个入口逐帧对照一致（verify_session 新局阶段）。
 - M2（2026-10-21）：dr_class_initialise 与 dr_current_class，dr_session_create 自建职业名单（verify_class_init.py）。
-- M4a（2026-10-21）：职业编辑的规则函数与“哪些图标可拖”（recovered_progression、dr_class_choices；verify_class_screen.py）。会话接口（M4b）其后。
+- M4a（2026-10-21）：职业编辑的规则函数与“哪些图标可拖”（recovered_progression、dr_class_choices；verify_class_screen.py）。
+- M4b（2026-10-22）：会话的职业编辑接口 dr_session_class_*（选职业、改种族、放天赋 / 缺陷 / 替换技能、切换分页、完成）。拖放手势、分页、文字归前端。
+- 新发现（M6）：帮助提示弹出时原版会划掉待显示标记、全部看完时关掉帮助开关、弹出期间暂停游戏、点提示框才关闭；新代码原先把它当显示跳过，打开帮助的局会和原版逐渐不同——M6 补上。
+- M5（2026-10-22）：游戏中菜单与统计菜单 dr_session_interface_process（五个设置开关、关闭、退出到主菜单、统计菜单换页与关闭、界面上的菜单 / 统计按钮、新局时 Interface::Reset 关菜单）。按钮位置、淡入淡出画面、统计菜单的数字与文字归前端。
+- M6 范围补充（2026-10-22 盘点）：帮助共 23 种（0..22），弹出点分布在拿到代币（2、3、5、6）、消除（1、22）、回合结束（15、21）、敌人攻击（16、17、18）、松手（4）、每帧随机格子（0）、伤害数字（8、9、10）、拿资源（7、11、12、13）、技能按钮刷新（19 / 20：技能就绪或冷却为 0 时）、低血心跳（14：显示的血量 / 上限 ≤ 0.35）。此外开局设置画面的“?”按钮排队 5 条说明，职业编辑画面的“?”按钮按当前分页排队 4～5 条。弹出期间游戏暂停（Game::Process 只跑 HelpMenu::Process），淡入 0.2 秒后需要“松开再按下”提示框才开始淡出，淡出后接着弹队列里的下一条。
 - M3（2026-10-21）：开局设置画面的规则与接口（dr_session_set_mode / set_difficulty / set_name、dr_session_setup_random_name / select_class / mode / difficulty / start、dr_session_intro_done，SessionObjects.setup）。屏幕键盘、按钮布局、淡入淡出、按原版字体宽度截短名字归前端；名字最多 16 个字符（随机名字可能是 17 个，SetName 只存 16 个）。
 
 ## 归前端或平台（后端不补）

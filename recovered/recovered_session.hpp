@@ -21,6 +21,19 @@ struct SetupScreen {
     std::int32_t length;      // +0x2948
     std::uint8_t named;       // +0x294c: a name was entered (else the box shows "Enter name" and Start stays hidden)
 };
+// The in-game menu (GameMenu, Interface+0xe24) and the statistics menu (StatsMenu, Interface+0xeb4) (T040-M5): open while
+// screens->menus[1] / menus[2] (their +0xc). Their quads, labels, texts and fades are the renderer's.
+struct OverlayMenu {
+    std::int32_t previous_phase;   // +0x10: the touch phase of the last frame that took input
+    std::int32_t pressed;          // +0x14: GameMenu: the pressed button 9..15 (-1 none); StatsMenu: the page's tab 10..15
+                                   // (-1: the first page)
+    std::uint8_t closing;          // +0x18: fading out (the menu closes when the timer runs out)
+    float timer;                   // +0x1c: the 0.2 s fade (no input until it runs out)
+};
+// Interface's menu and stats buttons (Interface+0xcb4 / +0xcb5): touched; their menu opens when the touch ends.
+struct InterfaceButtons { std::uint8_t menu_pressed, stats_pressed; };
+// The main menu (MainMenu, Game+0xc3fc; open while screens->main_menu_c400): MainMenu::FadeIn's fade (+0x8, +0xc).
+struct MainMenuScreen { float timer; std::uint8_t fading; };
 // The objects of a session. Pointers stay valid for the session's lifetime; the embedding may read
 // them every frame and write the renderer-owned inputs (release_inputs->health_target, current_label_active,
 // screens, input_target).
@@ -59,11 +72,14 @@ struct SessionObjects {
     std::uint32_t motion_count;
     std::int32_t* falling;               // the moving-tile list Game+0xb3f8 in order (count: falling_count)
     std::uint32_t falling_count;
-    std::int32_t* skill_button;          // renderer-owned: the equipped skill button under the touch (-1 none)
+    std::int32_t* skill_button;          // renderer-owned: the equipped skill button under the touch (0..3), Interface's
+                                         // menu button (4) or stats button (5), -1 none
     SkillInput* skill_input;             // the pressed skill button and the previous touch phase (Interface)
     ItemRecord* items;                   // the five equipped items (Game+0xbe88..0xbe98, the Item** vector Game+0xbe9c in order)
     MenuState* menu;                     // FoldoutMenu (Interface+0xd10): the level-up, shop and upgrade menus
-    std::int32_t* menu_button;           // renderer-owned: the menu button under the touch (14..17 options, 7 confirm, -1 none)
+    std::int32_t* menu_button;           // renderer-owned: the menu button under the touch. FoldoutMenu: 14..17 options, 7
+                                         // confirm, -1 none; game menu: 9..15, -1 none; stats menu: tabs 10..15, -1 outside
+                                         // the menu, any other value inside it
     std::uint8_t* dimmed;                // 36 tiles: dimmed by Game::UpdateDimming (cannot continue the path)
     std::uint8_t* save;                  // the saved game (save_capacity bytes, Game+0x13ecf): length end->flag_146d0 (0: none),
                                          // end->flag_146d4 set when it changed -- the platform stores it then and clears the flag
@@ -76,16 +92,26 @@ struct SessionObjects {
     SimpleLabelState* damage_labels;     // the leech, flame and spike SimpleLabels (3; Game+0xbfc0 / 0x14afc / 0x14e70), drawn
                                          // at their position and scale; their active bytes are extra->label_active[0..2]
     SetupScreen* setup;                  // the new-game setup screen (open while screens->name_12c09 is set)
+    OverlayMenu* game_menu;              // GameMenu (open while screens->menus[1])
+    OverlayMenu* stats_menu;             // StatsMenu (open while screens->menus[2])
+    InterfaceButtons* interface_buttons;
+    MainMenuScreen* main_menu;
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
 enum class SessionSource : std::int32_t { Selection=1, Match, Token, Motion, Resource, Path, Refill, Generation, Encounter,
     AttackFlare, AttackAnim, AttackAbsorb, AttackShield, AttackWeaken, AttackHealth, AttackFade, AttackAll, Vampires,
     Turn, EndGame, GameOver, Score, Release, BoardEffect, Frame, Label, GameFrame, NewGame,
-    Ability, Cross, Skill, Stats, Menu, Save };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), wired to dr_destroy_upgrade; Stats: a StatsEvent;
+    Ability, Cross, Skill, Stats, Menu, Save, Interface };   // Ability: TurnHooks.ability (kind = enemy type 28, index = tile), wired to dr_destroy_upgrade; Stats: a StatsEvent;
                         // Cross: a CrossEvent of Game::UpdateCrossVisibility; Skill: a SkillEvent; Menu: a MenuEvent;
-                        // Save: Game::SerialiseState's achievement (kind 1, a = achievement, b = value bits)
+                        // Save: Game::SerialiseState's achievement (kind 1, a = achievement, b = value bits);
+                        // Interface: an InterfaceEventKind (a SessionSmallEvent)
 struct SessionSmallEvent { std::int32_t kind,index,a,b; };
+// The game menu, the stats menu and Interface's two buttons (T040-M5). Sound: Game::QueueSound(a). Setting: a game menu
+// switch changed (index = its button: 10 sound, 11 help, 12 clock, 13 attack dimming, 14 high frame rate; a = the new
+// state): GameMenu::Set*State, Interface::SetClockState (12) and MainMenu::SetSoundState (10) are presentation.
+// MainMenu: the game menu's quit button (15) ran MainMenu::FadeIn.
+enum class InterfaceEventKind : std::int32_t { Sound=1, Setting, MainMenu };
 struct SessionHost {
     void* context;
     void (*event)(void*,SessionSource,const void*);
@@ -134,6 +160,22 @@ bool dr_session_setup_start(dungeonraid::Session*,std::uint32_t time);
 // The story screen's end (IntroScreen::Process 0x2dd04: Continue pressed and the fade done): it closes and
 // Game::SerialiseState saves the new game.
 void dr_session_intro_done(dungeonraid::Session*);
+// The class screen (ClassScreen, T040-M4b; opened from the setup screen): its dragging, tabs and texts are the
+// renderer's. Edits act on the current class record (SessionObjects.classes[scroll->current]) and the units' views
+// follow it. Choices: what may be dragged now (dr_class_choices: perks / flaws 0..9, the class's other skills 0..19,
+// dr_class_other_skills). A class icon selects an unlocked class (Game::SetCurrentClass); a race icon can be dropped on
+// the class when the race is unlocked and the class can choose (dr_race_unlocked / dr_class_can_choose_race: the
+// record's race is set); perk, flaw and skill slots take CharacterClass::SetPerk / SetFlaw / SetReplacementSkill (255
+// takes one off). A tab change saves the records (Game::SerialiseClasses); Done validates the current record
+// (CharacterClass::Validate), makes its type the current class (Game::SetCurrentClass) and saves the records.
+void dr_session_class_choices(dungeonraid::Session*,std::uint8_t perks[10],std::uint8_t flaws[10],std::uint8_t skills[20]);
+bool dr_session_class_select(dungeonraid::Session*,std::int32_t type);
+bool dr_session_class_set_race(dungeonraid::Session*,std::int32_t race);
+void dr_session_class_set_perk(dungeonraid::Session*,std::int32_t slot,std::int32_t perk);
+void dr_session_class_set_flaw(dungeonraid::Session*,std::int32_t slot,std::int32_t flaw);
+void dr_session_class_set_skill(dungeonraid::Session*,std::int32_t slot,std::int32_t skill);
+void dr_session_class_tab(dungeonraid::Session*);
+void dr_session_class_done(dungeonraid::Session*);
 // The main menu's three new games (T040-M1): kind 0 Game::NewGame 0x16590, 1 StartTutorial 0x164c0, 2 StartChallenge
 // 0x1652c. The record mode (Game+0x14aed) is set for the challenge only; InitNewGame (time seeds the random streams);
 // the tutorial's difficulty is 0 (Game+0x14ae0); the main menu closes; the help switch is on for the tutorial only; the
@@ -142,6 +184,21 @@ void dr_session_intro_done(dungeonraid::Session*);
 // presentation. The new-game setup screen opens (NameScreen::Show(the name, challenge), T040-M3): the name (16
 // characters at most, counted as entered) or, without one, the placeholder "Enter name".
 void dr_session_start_game(dungeonraid::Session*,std::int32_t kind,std::uint32_t time);
+// Interface::Process 0x20c64 for one frame's input (T040-M5; dr_session_frame runs it as Game::Process does, with the
+// frame's dt and touch). An open FoldoutMenu runs (dr_menu_process), else an open game menu (GameMenu::Process 0x32580),
+// else an open stats menu (StatsMenu::Process 0x33c0c), else, with input ready, Interface::ProcessInput 0x209e4.
+// The menus first let their 0.2 s fade run out (a closing menu then closes). The game menu: a touch's start (phase 1
+// after phase 0) on a button (menu_button 9..15) presses it (sound 0); the touch's end (phase 2 or 3) still on the
+// pressed button acts: 9 closes it (fade-out, Game::UpdateHelpState: queued help topics dropped when help is off, all
+// 23 queued again when none are and help is on), 10..14 switch sound / help / clock / attack dimming / high frame rate
+// (sound 0 when the sound comes on), 15 MainMenu::FadeIn (the main menu opens, 0.5 s fade; the game menu stays open
+// beneath it until Interface::Reset). The stats menu: a touch's start outside the menu (menu_button -1) closes it
+// (sound 0, fade-out); on a tab other than the shown one (10..15) shows that tab (sound 0); other values: inside, on no
+// tab. Interface::ProcessInput: besides the skill buttons (dr_skill_input), a touch's start on the menu button
+// (skill_button 4) or the stats button (5) touches it (sound 0); the touch's end opens its menu (GameMenu::Show /
+// StatsMenu::Show: fade-in, nothing pressed, the first page). Interface::Reset (a new game) closes both menus and
+// clears the touched buttons and the pressed skill button.
+void dr_session_interface_process(dungeonraid::Session*,float dt,bool input_ready);
 // One Game::Process frame (dr_process_frame with every step wired) for the touch (phase, position).
 dungeonraid::FrameRoute dr_session_frame(dungeonraid::Session*,float dt,std::int32_t touch_phase,dungeonraid::Point touch);
 // Game::SerialiseState now: the saved game into SessionObjects.save, its length and changed flag into end (the

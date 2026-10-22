@@ -31,6 +31,12 @@ struct SaveSettings {
     std::uint8_t difficulty_changed_14ae4;   // Game::SetDifficulty: set when the difficulty changed
     std::uint8_t mode_changed_14aec;         // Game::SetMode: set when the mode changed
     std::uint8_t name_changed_be49;          // Game::SetName: set when the name changed
+    // The game menu's switches (T040-M5; the platform gives the stored ones back at start-up). Each Set* function sets
+    // its changed flag to whether the value changed; Game::SetHelpState has none.
+    std::uint8_t sound_13ec6, sound_changed_13ec7;        // Game::SetSoundState (Game::QueueSound drops sounds while off)
+    std::uint8_t clock_13ec9, clock_changed_13ecc;        // Game::SetClockState (Interface's clock)
+    std::uint8_t dimming_13eca, dimming_changed_13ecd;    // Game::SetAttackDimmingState (Game::Render dims the board in attacks)
+    std::uint8_t framerate_13ecb, framerate_changed_13ece;   // Game::SetHighFramerate (the platform's frame rate)
 };
 // Achievement: a = achievement, b = value float bits (Item::Serialise). DeserialiseState's presentation: Freeze (a = tile,
 // Tile::SetFreezeVisibility), Skull / HealthCeiling / Health / ArmourMax / Armour / XP / UP / Gold (the Interface update of
