@@ -1,0 +1,8 @@
+# Third-party and generated: godot-cpp is downloaded (10.0.0-stable), the rest is rebuilt by gdext/build.py or Godot.
+gdext/godot-cpp/
+gdext/build/
+godot/bin/
+godot/.godot/
+# The original game's art, fonts and sounds: local only (frontend/tools/import_original_assets.py), never in Git.
+godot/assets/original/
+dist/

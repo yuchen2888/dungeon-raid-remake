@@ -14,6 +14,26 @@
 !/rebuild.py
 !/build-framework.py
 !/package-app.py
+!/frontend/
+/frontend/*
+!/frontend/.gitignore
+!/frontend/README.md
+!/frontend/试玩 Dungeon Raid.command
+!/frontend/tools/
+!/frontend/gdext/
+/frontend/gdext/*
+!/frontend/gdext/src/
+!/frontend/gdext/test/
+!/frontend/gdext/build.py
+!/frontend/gdext/build_profile.json
+!/frontend/godot/
+/frontend/godot/*
+!/frontend/godot/project.godot
+!/frontend/godot/*.gd
+!/frontend/godot/*.tscn
+!/frontend/godot/*.uid
+!/frontend/godot/dungeon_raid.gdextension
+!/frontend/godot/tests/
 /recovered/*
 !/recovered/*.cpp
 !/recovered/*.hpp

@@ -1,0 +1,9 @@
+[configuration]
+
+entry_symbol = "dungeonraid_library_init"
+compatibility_minimum = "4.5"
+
+[libraries]
+
+macos.debug = "res://bin/libdungeonraid.macos.template_debug.arm64.dylib"
+macos.release = "res://bin/libdungeonraid.macos.template_debug.arm64.dylib"
