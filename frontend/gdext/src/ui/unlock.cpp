@@ -24,6 +24,18 @@ void UnlockView::set_size(float w,float h) {
 }
 void UnlockView::initialise_labels(const char* text) {   // cut at spaces into lines no wider than 6 (0.6 at scale 0.1)
     count_=0;
+    if(has_wide(text)) {   // (T050-D)
+        for(const TextLine& t:wrap_wide(*font_,text,6.0f)) {
+            if(static_cast<std::size_t>(count_)==lines_.size()) {
+                lines_.emplace_back(font_);
+                Label& l=lines_.back();l.space_scale=2.0f;l.scale=Point2{0.100000001f,0.100000001f};
+                l.colour.a=0;l.update_colour();
+            }
+            lines_[static_cast<std::size_t>(count_)].set_text(text+t.start,static_cast<int>(t.end-t.start));
+            ++count_;
+        }
+        return;
+    }
     float width=0.0f;
     std::int32_t i=0,start=0,space=0;
     for(;;) {

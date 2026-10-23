@@ -20,6 +20,21 @@ void IntroView::initialise(const Texts& t,std::int32_t story) {
     const char* s=text.c_str();
     // The story cut at spaces into lines no wider than 7.92 (0.95 of the screen at scale 0.12), each centred.
     count_=0;
+    if(has_wide(s)) {   // (T050-D) the same lines, cut around the Chinese characters too
+        for(const TextLine& t:wrap_wide(*font_,s,7.91666651f)) {
+            if(static_cast<std::size_t>(count_)==lines_.size()) {
+                lines_.emplace_back(font_);
+                Label& l=lines_.back();l.space_scale=2.0f;l.scale=Point2{0.119999997f,0.119999997f};
+            }
+            Label& l=lines_[static_cast<std::size_t>(count_)];
+            const float a=t.width*-0.119999997f;const float b=a+1.0f;l.position.x=b*0.5f;
+            const float k=static_cast<float>(count_+1);const float y=k*spacing;l.position.y=y+0.219999999f;
+            l.set_text(s+t.start,static_cast<int>(t.end-t.start));
+            ++count_;
+        }
+        for(std::int32_t k=0;k<count_;++k){Label& l=lines_[static_cast<std::size_t>(k)];l.colour.a=0;l.update_colour();}
+        return;
+    }
     float width=0.0f,at_space=0.0f;
     std::int32_t i=0,start=0,space=0;
     for(;;) {

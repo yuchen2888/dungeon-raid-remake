@@ -11,6 +11,17 @@
 
 iPhone 版需要：Xcode、`/Applications` 里的 Godot 4.7.2 和它的官方导出模板（2026-10-23 经用户同意下载安装到 `~/Library/Application Support/Godot/export_templates/4.7.2.stable/`）。Godot 官方模板里的“模拟器版引擎”只有 Intel 版，新版模拟器跑不了，所以模拟器用 `tools/sim_retarget.py` 把真机版引擎改标成模拟器版（只改平台标记，代码不变）；真机用官方引擎原样。
 
+## 语言（T050-D）
+
+主菜单原来的 OpenFeint 按钮（那个服务早已关闭）改成了“设置 / Settings”，里面可以选 English 或中文，选完画面会重新载入成新语言；第一次打开时跟随系统语言。中文是新做的内容：
+
+- 文字：`godot/assets/lang/zh/texts.txt`（约 1060 条，按原版文字的键覆盖；格式里的 %d / %s 与原文一一对应）。
+- 字体：思源黑体（Adobe，SIL OFL 1.1，免费可随游戏发布；2026-10-23 经用户同意下载到 `tools/fonts/`，不进 Git），`tools/make_cjk_font.py` 按游戏用到的字生成三种字体的字图（贴图编号 7–9）。
+- 图片里的英文字（主菜单按钮、“Level Up!”、弹出标签、游戏菜单按钮、确认框等 88 处）：`tools/localise_atlas.py zh` 在原图同样位置画成中文（`lang/zh/tiles.png`、`menus.png`）；英文只把 OpenFeint 改成 Settings（`lang/en/tiles.png`，用原版菜单字体拼出）。
+- 中文按字换行，句末标点不放行首；英文的排版与原版逐帧一致（对照台 `lockstep.py 80` 已复验）。
+
+这些文件和原版素材一样只在本机（`godot/assets/lang/` 不进 Git），iPhone 导出时一起打包。生成顺序：`python3 frontend/tools/localise_atlas.py zh`、`localise_atlas.py en`，再 `python3 frontend/tools/make_cjk_font.py zh`。
+
 ## 结构
 
 - `gdext/`：Godot 插件（C++）。`src/dr_bridge.*` 是不依赖 Godot 的转接层，`src/dungeon_raid_session.*` 把它包装成 Godot 对象 `DungeonRaidSession`。规则源码直接从 `recovered/` 编译（文件列表取自 `recovered/run_session_demo.sh`），不复制。

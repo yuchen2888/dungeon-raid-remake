@@ -6,3 +6,7 @@ godot/.godot/
 # The original game's art, fonts and sounds: local only (frontend/tools/import_original_assets.py), never in Git.
 godot/assets/original/
 dist/
+# Source Han Sans (SIL OFL 1.1, downloaded 2026-10-23 for the Chinese glyphs; tools/make_cjk_font.py) and the
+# languages' texts, glyph atlases and localised pictures (derived from the original's texts and art): local only.
+tools/fonts/
+godot/assets/lang/

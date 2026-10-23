@@ -214,6 +214,10 @@ std::vector<std::string> split_lines(const Font& font,const std::string& text,fl
     std::vector<std::string> out;
     const float limit=width/scale;
     const char* s=text.c_str();
+    if(has_wide(s)) {   // (T050-D)
+        for(const TextLine& l:wrap_wide(font,s,limit))out.emplace_back(s+l.start,l.end-l.start);
+        return out;
+    }
     std::size_t i=0,start=0,space=0;
     float w=0.0f;
     for(;;) {

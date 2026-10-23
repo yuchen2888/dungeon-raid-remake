@@ -16,13 +16,24 @@ extends Node2D
 # when the first menu has opened, "--over-shot=<file.png>" 20 seconds into the first game-over tally,
 # "--scores-shot=<file.png>" 2 seconds into the high scores after it (autoplay waits there 200 frames before Back);
 # "--taps=<frame>:<x>:<y>,..." touches the screen (x, y in screen units, 1 wide and 1.5 high) for two frames at those
-# frames.
+# frames; "--shots=<folder>:<n>" saves the window every n frames into the folder (frame number named; T050-D's look
+# checks); "--lang=<code>" plays in that language (the saved choice untouched).
 
 const SCALE := 640.0   # the original's screen is 1 wide, 1.5 high; the viewport is 640 x 960
 const STORE_KEYS := ["classes", "scores0", "scores1", "scores2", "scores3", "scores4", "scores5", "game", "spawn", "settings"]
 const TEXTURES := {1: "tiles", 2: "font", 3: "icons", 4: "menus", 5: "fontMenu", 6: "fontScore"}   # GetTextureName
 const RAW_FILES := ["tiles.png", "font.png", "icons.png", "menus.png", "fontMenu.png", "fontScore.png", "font.fnt",
 		"fontMenu.fnt", "fontScore.fnt", "texts.txt", "sounds.json"]   # see _asset_folder
+# T050-D: a language other than English is a folder assets/lang/<code> (frontend/tools/make_cjk_font.py,
+# localise_atlas.py): its texts over the original's, the fonts' wide glyphs (textures 7..9) and, where present, the
+# pictures with the original's English words redrawn (tiles, menus). The choice is kept in user://frontend.cfg.
+const LANGUAGES := ["en", "zh"]
+const LANG_FILES := ["texts.txt", "font.fnt", "font.png", "fontMenu.fnt", "fontMenu.png", "fontScore.fnt", "fontScore.png",
+		"tiles.png", "menus.png"]
+const WIDE_TEXTURES := {7: "font", 8: "fontMenu", 9: "fontScore"}
+const LOCALISED := [1, 4]   # tiles, menus
+const SETTINGS_FILE := "user://frontend.cfg"
+var language := "en"
 
 var session = null
 var textures := {}
@@ -42,6 +53,8 @@ var menu_shot := ""   # "--menu-shot=<file.png>": the window 45 frames after the
 var menu_frames := 0
 var over_shot := ""     # "--over-shot=<file.png>"
 var scores_shot := ""   # "--scores-shot=<file.png>"
+var shots_dir := ""     # "--shots=<folder>:<n>"
+var shots_every := 0
 var over_frames := 0    # frames the game-over tally / the high scores after it have been open
 var scores_frames := 0
 var frames := 0
@@ -72,6 +85,10 @@ func _ready() -> void:
 		elif a.begins_with("--over-shot="):
 			over_shot = a.substr(12)
 			get_window().always_on_top = true
+		elif a.begins_with("--shots="):
+			var p := a.substr(8).rsplit(":", true, 1)
+			shots_dir = p[0]
+			shots_every = int(p[1]) if p.size() > 1 else 300
 		elif a.begins_with("--scores-shot="):
 			scores_shot = a.substr(14)
 			get_window().always_on_top = true
@@ -87,14 +104,27 @@ func _ready() -> void:
 		error_text = "The game library did not load (frontend/godot/bin/).\nRun frontend/gdext/build.py extension."
 		return
 	var assets := _asset_folder()
+	language = _language(args)
+	var lang_dir := ""
+	if language != "en":
+		lang_dir = _plain_folder("res://assets/lang/" + language, "user://lang/" + language, LANG_FILES)
+		if not FileAccess.file_exists(lang_dir + "/texts.txt"):
+			lang_dir = ""   # (its files are not on this machine: English)
+	var pictures := lang_dir   # (English has a folder of pictures only: the settings button)
+	if language == "en":
+		pictures = _plain_folder("res://assets/lang/en", "user://lang/en", ["tiles.png", "menus.png"])
 	for id in TEXTURES:
-		var image := Image.load_from_file(assets + "/" + TEXTURES[id] + ".png")
-		if image == null:
+		var path: String = assets + "/" + TEXTURES[id] + ".png"
+		if pictures != "" and id in LOCALISED and FileAccess.file_exists(pictures + "/" + TEXTURES[id] + ".png"):
+			path = pictures + "/" + TEXTURES[id] + ".png"
+		if not _load_texture(id, path):
 			error_text = "The original pictures are missing (frontend/godot/assets/original).\nRun frontend/tools/import_original_assets.py."
 			return
-		image.convert(Image.FORMAT_RGBA8)
-		image.premultiply_alpha()
-		textures[id] = ImageTexture.create_from_image(image)
+	if lang_dir != "":
+		for id in WIDE_TEXTURES:
+			_load_texture(id, lang_dir + "/" + WIDE_TEXTURES[id] + ".png")
+	var names := _plain_folder("res://assets/lang", "user://lang", ["names.png"])   # (the settings page's)
+	_load_texture(10, names + "/names.png")
 	var table := FileAccess.get_file_as_string(assets + "/sounds.json")
 	if table != "":
 		sound_table = JSON.parse_string(table)
@@ -103,7 +133,7 @@ func _ready() -> void:
 		add_child(player)
 		players.append(player)
 	session = ClassDB.instantiate("DungeonRaidSession")
-	if not session.load_presentation(assets):
+	if not session.load_presentation(assets, lang_dir):
 		error_text = "The original fonts are missing (frontend/godot/assets/original)."
 		return
 	for key in STORE_KEYS:
@@ -115,13 +145,17 @@ func _ready() -> void:
 # the project's own folder when it is one on disk (the editor, the Mac app); in an exported game (iOS) they sit inside
 # the package, so they are copied out once into user://original/ (they are exported as is, importer "keep").
 func _asset_folder() -> String:
-	var folder := ProjectSettings.globalize_path("res://assets/original")
-	if FileAccess.file_exists(folder + "/texts.txt") and not OS.has_feature("template"):
+	return _plain_folder("res://assets/original", "user://original", RAW_FILES)
+
+# A folder of plain files: on disk as it is, or (an exported game) copied out of the package into user_dir.
+func _plain_folder(res_dir: String, user_dir: String, files: Array) -> String:
+	var folder := ProjectSettings.globalize_path(res_dir)
+	if FileAccess.file_exists(folder + "/" + files[0]) and not OS.has_feature("template"):
 		return folder
-	var copy := ProjectSettings.globalize_path("user://original")
+	var copy := ProjectSettings.globalize_path(user_dir)
 	DirAccess.make_dir_recursive_absolute(copy)
-	for file: String in RAW_FILES:
-		var bytes := FileAccess.get_file_as_bytes("res://assets/original/" + file)
+	for file: String in files:
+		var bytes := FileAccess.get_file_as_bytes(res_dir + "/" + file)
 		if bytes.is_empty():
 			continue
 		var target := copy + "/" + file
@@ -132,6 +166,32 @@ func _asset_folder() -> String:
 			f.store_buffer(bytes)
 			f.close()
 	return copy
+
+func _load_texture(id: int, path: String) -> bool:
+	var image := Image.load_from_file(path)
+	if image == null:
+		return false
+	image.convert(Image.FORMAT_RGBA8)
+	image.premultiply_alpha()
+	textures[id] = ImageTexture.create_from_image(image)
+	return true
+
+# The language (T050-D): "--lang=<code>" for the checks, else the saved choice, else the device's (Chinese for a
+# Chinese system, English otherwise).
+func _language(args: PackedStringArray) -> String:
+	for a in args:
+		if a.begins_with("--lang=") and a.substr(7) in LANGUAGES:
+			return a.substr(7)
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_FILE) == OK and cfg.get_value("settings", "language", "") in LANGUAGES:
+		return cfg.get_value("settings", "language")
+	return "zh" if OS.get_locale_language() == "zh" else "en"
+
+func _save_language(code: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_FILE)
+	cfg.set_value("settings", "language", code)
+	cfg.save(SETTINGS_FILE)
 
 # The bytes the session changed, written whole to a temporary file and renamed; an empty saved game is deleted.
 func _store() -> void:
@@ -191,9 +251,15 @@ func _physics_process(_delta: float) -> void:
 		pos = e[1]
 	elif held:
 		phase = 1
+	if session.settings_open():   # (T050-D) the settings page over the main menu takes the touches
+		var chosen: int = session.settings_touch(phase, pos)
+		if chosen >= 0 and chosen < LANGUAGES.size() and LANGUAGES[chosen] != language:
+			_save_language(LANGUAGES[chosen])
+			get_tree().call_deferred("reload_current_scene")   # (everything is saved as it changes)
+		phase = 0
 	var skill_button: int = session.skill_button_at(pos) if phase != 0 else -1
 	# (the main menu and the high scores act on the button under the last touch the frame after it ends)
-	var menu_button: int = session.menu_button_at(pos) if phase != 0 or session.main_menu_open() or session.scores_open() else -1
+	var menu_button: int = session.menu_button_at(pos) if not session.settings_open() and (phase != 0 or session.main_menu_open() or session.scores_open()) else -1
 	session.frame(minf(delta, 0.05), phase, pos, skill_button, menu_button)
 	_play_sounds()
 	_store()
@@ -214,6 +280,9 @@ func _physics_process(_delta: float) -> void:
 		get_viewport().get_texture().get_image().save_png(scores_shot)
 		print("saved " + scores_shot)
 		scores_shot = ""
+	if shots_dir != "" and shots_every > 0 and frames % shots_every == 0:
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("%s/%06d.png" % [shots_dir, frames])
 	if autoplay and frames % 600 == 0:
 		var st: Dictionary = session.state()
 		print("frame %d turn %d health %d gold %d xp %d tokens %d falling %d attack %d ready %s menu %s over %s" % [frames, st["turn"],

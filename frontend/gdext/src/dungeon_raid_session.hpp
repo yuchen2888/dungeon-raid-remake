@@ -40,14 +40,20 @@ public:
     godot::Array tokens();         // the flying tokens
     godot::Array labels();         // the leech, flame and spike labels that are showing
     godot::PackedInt32Array hint();
-    // The original game's drawing (frontend/gdext/src/ui): load_presentation(assets folder) reads the original
-    // fonts and attaches the presenter to the session's events (before any game); render(scale) draws a frame and
-    // returns it as batches [texture (GetTextureName: 0 none, 1 tiles .. 6 fontScore), points (screen units x scale),
+    // The original game's drawing (frontend/gdext/src/ui): load_presentation(assets folder, language folder or "")
+    // reads the original fonts (and a language's texts and wide glyphs, T050-D) and attaches the presenter to the
+    // session's events (before any game); render(scale) draws a frame and returns it as batches [texture
+    // (GetTextureName: 0 none, 1 tiles .. 6 fontScore; 7..9 the wide glyphs), points (screen units x scale),
     // colours, texture coordinates, triangle indices], consecutive draws of one texture merged.
-    bool load_presentation(const godot::String& assets);
+    bool load_presentation(const godot::String& assets,const godot::String& language);
     godot::Array render(double scale);
     int skill_button_at(godot::Vector2 touch);   // the skill button (0..3), menu button (4) or stats button (5); -1
     int menu_button_at(godot::Vector2 touch);    // the open menu's button under a touch (-1 none)
+    // The settings page (T050-D): open over the main menu (the touches are its own then: the game gets none); a touch
+    // on it gives -1 nothing, 0 / 1 a language chosen (English, 中文: the page stays until the embedding reloads in it),
+    // 100 Back (the page closes).
+    bool settings_open();
+    int settings_touch(int phase,godot::Vector2 touch);
 protected:
     static void _bind_methods();
 private:

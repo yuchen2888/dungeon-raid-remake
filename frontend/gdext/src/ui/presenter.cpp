@@ -29,7 +29,7 @@ TileView::TileView() {
     glow.set_uv(Point2{0.0009765625f,0.904296875f},Point2{0.052734375f,0.9609375f});
     glow.set_size(Point2{0.248437509f,0.267187476f});
 }
-bool Presenter::load(const std::string& assets) {
+bool Presenter::load(const std::string& assets,const std::string& language) {
     bool ok=font.load(assets+"/font.fnt",FontTexture);
     ok=menu_font.load(assets+"/fontMenu.fnt",FontMenu) && ok;
     menu_font.use_small_caps(0.75f);menu_font.spacing=-0.225f;
@@ -37,6 +37,13 @@ bool Presenter::load(const std::string& assets) {
     score_font.use_small_caps(0.75f);score_font.spacing=-0.05f;
     iface.set_fonts(&font,&score_font);iface.set_texts(texts);
     ok=texts.load(assets+"/texts.txt") && ok;
+    if(!language.empty()) {   // (T050-D)
+        language_index=language.size()>=3 && language.compare(language.size()-3,3,"/zh")==0?1:0;
+        ok=texts.load(language+"/texts.txt") && ok;
+        ok=font.load_wide(language+"/font.fnt",WideFont) && ok;
+        ok=menu_font.load_wide(language+"/fontMenu.fnt",WideMenu) && ok;
+        ok=score_font.load_wide(language+"/fontScore.fnt",WideScore) && ok;
+    }
     setup.initialise(texts);   // NameScreen::Initialise (Game::Start, once the fonts are made)
     scores.initialise(texts);  // ScoreScreen::Initialise
     return ok;
@@ -670,6 +677,7 @@ void Presenter::event(const SessionObjects& o,SessionSource source,const void* p
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MainMenu))main_menu.fade_in();   // MainMenu::FadeIn
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MainMenuShow))main_menu.show(o);   // MainMenu::Show
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MoreGames))main_menu.stop_cycling();   // ShowMoreGames
+        else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::Dashboard))settings.open(texts,language_index);   // (T050-D)
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MainMenuButton))main_menu.button_acted(o,e.index,dt);
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::GameOverLine)) {   // shown by finish_game_over
             game_over_before.ended_line=e.index;game_over_before.ended_value=e.a;
@@ -997,5 +1005,6 @@ void Presenter::render(const SessionObjects& o) {
     if(screens.unlock_165a0){gl.set_tag(UnlockTag);unlock.render(gl);gl.set_tag(GameTag);}   // Game::Render 0xd6b6
     if(screens.help_102a4){gl.set_tag(HelpTag);help.render(gl);gl.set_tag(GameTag);}   // Game::Render 0xd6ba
     if(o.end->game_over_screen){gl.set_tag(GameOverTag);game_over.render(gl,o);gl.set_tag(GameTag);}
+    if(settings.is_open() && screens.main_menu_c400)settings.render(gl);   // (T050-D, over the main menu)
 }
 }
