@@ -11,8 +11,11 @@ namespace drui {
 // The original's vertex (Quad+0x4 etc.: 0x14 bytes): position, RGBA, texture coordinates.
 struct Vertex { float x, y; std::uint8_t colour[4]; float u, v; };
 static_assert(sizeof(Vertex)==0x14,"vertex layout");
-// Texture names of the original (GetTextureName): 1 tiles, 2 font, 3 icons, 4 menus, 5 fontMenu, 6 fontScore.
-enum Texture : std::int32_t { NoTexture=0, Tiles=1, FontTexture, Icons, Menus, FontMenu, FontScore };
+// Texture names of the original (GetTextureName): 1 tiles, 2 font, 3 icons, 4 menus, 5 fontMenu, 6 fontScore; then the
+// three fonts' wide characters (T050-D: a language folder's font / fontMenu / fontScore glyph atlases).
+// 10: the languages' names (the settings page, T050-D).
+enum Texture : std::int32_t { NoTexture=0, Tiles=1, FontTexture, Icons, Menus, FontMenu, FontScore, WideFont, WideMenu, WideScore,
+                              LangNames };
 struct DrawVertex { double x, y; float u, v; std::uint8_t colour[4]; };
 // tag: which screen drew it (GL::set_tag; the checks compare one screen's draws on their own).
 struct Draw { std::int32_t texture, mode; std::uint8_t blend; std::uint32_t first, count; std::int32_t tag; };

@@ -183,9 +183,9 @@ struct Hooks {
     }
 };
 }
-bool DungeonRaidSession::load_presentation(const String& assets) {
+bool DungeonRaidSession::load_presentation(const String& assets,const String& language) {
     ui_=std::make_unique<drui::Presenter>();
-    const bool ok=ui_->load(assets.utf8().get_data());
+    const bool ok=ui_->load(assets.utf8().get_data(),language.utf8().get_data());
     ui_->main_menu.start_cycling();   // EAGLView startAnimation: "more games" cycles its colour
     link_=std::make_unique<std::pair<drfront::Bridge*,drui::Presenter*>>(bridge_.get(),ui_.get());
     bridge_->set_listener(link_.get(),Hooks::listen);
@@ -241,6 +241,14 @@ int DungeonRaidSession::menu_button_at(Vector2 touch) {
     return ui_->menu_button_at(bridge_->objects(),Point{touch.x,touch.y});
 }
 void DungeonRaidSession::leave_game_over() {bridge_->leave_game_over();}
+bool DungeonRaidSession::settings_open() {return ui_ && ui_->settings.is_open();}
+int DungeonRaidSession::settings_touch(int phase,Vector2 touch) {
+    if(!ui_)return -1;
+    const int r=ui_->settings.touch(phase,Point{touch.x,touch.y});
+    if(r>=0)ui_->queue_sound(0);   // (a button's sound, as the original's menus)
+    if(r==drui::SettingsView::Back)ui_->settings.close();
+    return r;
+}
 bool DungeonRaidSession::scores_open() {return bridge_->objects().screens->score_ef6c!=0;}
 bool DungeonRaidSession::main_menu_open() {
     const SessionObjects o=bridge_->objects();
@@ -270,11 +278,13 @@ void DungeonRaidSession::_bind_methods() {
     ClassDB::bind_method(D_METHOD("tokens"),&DungeonRaidSession::tokens);
     ClassDB::bind_method(D_METHOD("labels"),&DungeonRaidSession::labels);
     ClassDB::bind_method(D_METHOD("hint"),&DungeonRaidSession::hint);
-    ClassDB::bind_method(D_METHOD("load_presentation","assets"),&DungeonRaidSession::load_presentation);
+    ClassDB::bind_method(D_METHOD("load_presentation","assets","language"),&DungeonRaidSession::load_presentation,DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("render","scale"),&DungeonRaidSession::render);
     ClassDB::bind_method(D_METHOD("skill_button_at","touch"),&DungeonRaidSession::skill_button_at);
     ClassDB::bind_method(D_METHOD("menu_button_at","touch"),&DungeonRaidSession::menu_button_at);
     ClassDB::bind_method(D_METHOD("main_menu_open"),&DungeonRaidSession::main_menu_open);
+    ClassDB::bind_method(D_METHOD("settings_open"),&DungeonRaidSession::settings_open);
+    ClassDB::bind_method(D_METHOD("settings_touch","phase","touch"),&DungeonRaidSession::settings_touch);
     ClassDB::bind_method(D_METHOD("scores_open"),&DungeonRaidSession::scores_open);
     ClassDB::bind_method(D_METHOD("leave_game_over"),&DungeonRaidSession::leave_game_over);
 }

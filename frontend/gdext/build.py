@@ -40,7 +40,7 @@ GODOT_DEFINES = ["-DUNIX_ENABLED", "-DTHREADS_ENABLED", "-DDEBUG_ENABLED", "-DND
 GODOT_FLAGS = ["-std=c++17", "-O2", "-fno-exceptions", "-fvisibility=hidden", "-fPIC"] + GODOT_DEFINES
 
 
-UI_SOURCES = ["ui/gl.cpp", "ui/quad.cpp", "ui/text.cpp", "ui/interface.cpp", "ui/arrow.cpp", "ui/effects.cpp", "ui/texts.cpp", "ui/menu.cpp", "ui/help.cpp", "ui/screens.cpp", "ui/strip.cpp", "ui/setup.cpp", "ui/mode.cpp", "ui/class_screen.cpp", "ui/intro.cpp", "ui/gameover.cpp", "ui/scores.cpp", "ui/unlock.cpp", "ui/tooltip.cpp", "ui/presenter.cpp"]   # the recovered drawing (frontend/gdext/src/ui)
+UI_SOURCES = ["ui/gl.cpp", "ui/quad.cpp", "ui/text.cpp", "ui/interface.cpp", "ui/arrow.cpp", "ui/effects.cpp", "ui/texts.cpp", "ui/menu.cpp", "ui/help.cpp", "ui/screens.cpp", "ui/strip.cpp", "ui/setup.cpp", "ui/mode.cpp", "ui/class_screen.cpp", "ui/intro.cpp", "ui/gameover.cpp", "ui/scores.cpp", "ui/unlock.cpp", "ui/tooltip.cpp", "ui/presenter.cpp", "ui/settings.cpp"]   # the recovered drawing (frontend/gdext/src/ui)
 
 
 def recovered_sources():
