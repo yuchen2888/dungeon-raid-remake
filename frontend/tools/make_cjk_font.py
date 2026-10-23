@@ -21,9 +21,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FRONTEND = os.path.dirname(HERE)
 ORIGINAL = os.path.join(FRONTEND, "godot", "assets", "original")
 FONTS = os.path.join(HERE, "fonts")
-# name: (weight, pixels per em, outline in em, the Chinese em square over the original capitals' height: fontMenu's
-# English is mostly small capitals (0.75), so its Chinese is smaller)
-STYLES = {"font": ("Medium", 56, 0.0, 1.3), "fontMenu": ("Heavy", 56, 0.0, 0.95), "fontScore": ("Bold", 48, 0.07, 1.2)}
+# name: (weight, pixels per em, outline in em, the Chinese em square over the original capitals' height, the small
+# capitals' scale or 1: fontMenu's English is mostly small capitals (0.75, Font::UseSmallCaps), whose middle sits
+# lower, so its Chinese is smaller and centred where they are)
+STYLES = {"font": ("Medium", 56, 0.0, 1.3, 1.0), "fontMenu": ("Heavy", 56, 0.0, 0.95, 0.75),
+          "fontScore": ("Bold", 48, 0.07, 1.2, 1.0)}
 PAD = 4         # empty pixels around each glyph in the atlas
 WIDTH = 2048    # atlas width; the height is what the characters take
 EXTRA = "，。！？；：、（）《》「」『』…—·％＋－"
@@ -58,13 +60,14 @@ def characters(folder):
 
 
 def make(name, chars, out):
-    weight, px, outline, em_ratio = STYLES[name]
+    weight, px, outline, em_ratio, small = STYLES[name]
     font = ImageFont.truetype(os.path.join(FONTS, "SourceHanSansCN-%s.otf" % weight), px)
     lh, base, cap_top, cap_bottom = original_metrics(name)
     em_orig = em_ratio * (cap_bottom - cap_top)         # the em square in the original's pixels
     k = px / em_orig                                    # Chinese pixels per original pixel
     line_height, base_px = round(lh * k), round(base * k)
-    em_top = ((cap_top + cap_bottom) / 2 - em_orig / 2) * k   # the em square's top, from the line's top
+    middle = base + small * ((cap_top + cap_bottom) / 2 - base)   # (a small capital's middle: scaled about the base)
+    em_top = (middle - em_orig / 2) * k   # the em square's top, from the line's top
     stroke = round(outline * px)
     cell = px + 2 * PAD + 2 * stroke
     per_row = WIDTH // cell

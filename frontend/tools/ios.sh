@@ -29,7 +29,7 @@ if [ "$WHERE" = simulator ]; then
     ID="$(xcrun simctl list devices available | grep -F "$NAME (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
     [ -n "$ID" ] || { echo "no simulator named $NAME"; exit 1; }
     xcrun simctl boot "$ID" 2>/dev/null || true
-    open -a Simulator 2>/dev/null || true   # (its window, where this Xcode has the app)
+    # (no Simulator window is opened: screenshots come through simctl, and the owner keeps the screen)
     # Godot's simulator engine is x86_64 only; the arm64 simulator gets a copy of the device engine (sim_retarget.py).
     LIB="$OUT/DungeonRaid.xcframework"
     python3 "$HERE/sim_retarget.py" "$LIB/ios-arm64/libgodot.a" "$LIB/ios-arm64_x86_64-simulator/libgodot.a"
