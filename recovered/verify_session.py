@@ -104,6 +104,12 @@ setup screen's fade-in, and each press is a frame without a touch and one beginn
 closed (the help button's texts) -- the native takes a setup call only then; now and then a native-only call during
 the fade or after the frame without a touch must change nothing. A game the main menu starts sometimes presses Back
 (MainMenu::Show / SetActive as original code): the setup screen fades out and the menu chooses again.
+The unlock popup (T040-M8): a class scroll on the board is sometimes touched alone (ProcessInput's class-scroll branch:
+its MatchTile(7) with the path harness, MoveMatchedTiles with the refill / generation / encounter harnesses and
+CheckEndGame as original code); UnlockMenu::Show(ClassType, int) is taken as Show(const char*, const char*) leaves it
+(open, not closing, previous phase 1) and UnlockMenu::Process runs as original code from Game::Process (display skipped,
+its panel's vertices in scratch memory); the script waits for the popup to be fully shown, ends the touch, then taps.
+With fewer than two popups by the end, carried games holding a class scroll follow (their own draws).
 High scores (T030-N5d): a game's end runs ScoreScreen::AddScore (the GameMode or Difficulty overload) and SetSkills as
 original code (strcpy modelled); the whole table memory (ScoreScreen+0x1e0..+0x132e) is compared every frame. In the
 skill phase a press mostly takes the equipped skill used least so far, so that every type gets used.
@@ -126,6 +132,7 @@ from verify_new_game_play import Original as NewGameOriginal, Native as NewGameN
 from verify_game_frames import Original as FramesOriginal, Native as FramesNative
 from verify_full_turn import case as turn_case
 from verify_full_turn import f32
+from verify_turn_loop import Original as LoopOriginal
 from verify_stroke import HERE, I32, U8, Point, State as Stroke
 from verify_motion import Motion, target as motion_target
 from verify_abilities import TARGET_POINT
@@ -137,6 +144,7 @@ from verify_release import CLASSES,CLASS_STRIDE,CLASS_INDEX_ADDR
 GAMES,TURNS,LONG_TURNS=9,12,40
 CARRIED_GAMES,CARRIED_TURNS=15,5
 ITEM_GAMES=10
+SKILL_SEED=6   # the skill phase's draws (see main; 6 covers every skill type, the jump-down and the presses blocked)
 SKILL_GAMES,SKILL_TURNS,PROMOTE_GAMES=62,6,12   # the last games: PromoteNormalEnemy in every slot (an enemy 31 jumps down)
 BUTTON_TOUCH=[5.0,5.0]   # a skill button: no tile under the touch
 OVERLAY_CHANCE=.08       # T040-M5: a turn that opens the game menu or the stats menu first
@@ -184,7 +192,7 @@ class Objects(C.Structure):
               ('save',C.c_void_p),('name',C.c_void_p),('settings',C.c_void_p),('class_save',C.c_void_p),('scores',C.c_void_p),
               ('damage_labels',C.c_void_p),('setup',C.c_void_p),('game_menu',C.c_void_p),('stats_menu',C.c_void_p),
               ('interface_buttons',C.c_void_p),('main_menu',C.c_void_p),('help',C.c_void_p),
-              ('scores_screen',C.c_void_p),('game_over',C.c_void_p),('time',C.c_void_p)]
+              ('scores_screen',C.c_void_p),('game_over',C.c_void_p),('time',C.c_void_p),('unlock',C.c_void_p)]
 class Setup(C.Structure):_fields_=[('challenge',U8),('name',U8*19),('length',I32),('named',U8),('timer',C.c_float),('closing',U8),('previous_phase',I32)]
 class Overlay(C.Structure):_fields_=[('previous_phase',I32),('pressed',I32),('closing',U8),('timer',C.c_float)]
 class MainMenuScreen(C.Structure):
@@ -199,6 +207,7 @@ class GameOverTally(C.Structure):
               ('tick',C.c_float),('perks',I32),('flaws',I32),('enemies',I32),('previous_phase',I32)]
 class HelpPopup(C.Structure):_fields_=[('closing',U8),('timer',C.c_float),('previous_phase',I32),('text',I32),('at',Point),('width',C.c_float),
                                        ('height',C.c_float),('skill_slot',I32),('queued',C.c_uint32),('queue',I32*64)]
+class UnlockPopup(C.Structure):_fields_=[('closing',U8),('alpha',U8),('previous_phase',I32)]   # T040-M8
 SOURCE_INTERFACE=35   # SessionSource::Interface
 EVENT=C.CFUNCTYPE(None,C.c_void_p,I32,C.c_void_p)
 TARGET=C.CFUNCTYPE(None,C.c_void_p,I32,I32,C.POINTER(Point))
@@ -325,8 +334,12 @@ HELP_BOX=(0.1,0.5,0.8,0.5);HELP_IN,HELP_OUT=[0.5,0.75],[0.05,0.2]
 STRING_CTOR,STRING_COPY,STRING_DTOR=0x194d10,0x194d18,0x194d1c
 # T040-M7: after a game -- GameOverScreen (Game+0xcac0), ScoreScreen (Game+0xef68) and MainMenu as original code
 OVER,SCORE_OBJ,SCORE_PANELS,ROWS_TOP,ROWS_HEIGHT=0xcac0,0xef68,0x3410000,0.4,0.6
+UNLOCK_OBJ,UNLOCK_SHOW,UNLOCK_VERTICES=0x164d8,0x1096fc,0x3418000   # T040-M8: UnlockMenu, Show(ClassType, int), its panel's vertices
+UNLOCKS={}            # T040-M8: class scrolls touched, popups shown, frames, taps
+CLASS_SCROLL,CLASS_SCROLL_END,MATCH_TILE=0x16c1c,0x16d88,0xbe60   # ProcessInput's class-scroll branch: its MatchTile(7) / MoveMatchedTiles as original code
 POST_ENTRIES=('__ZN14GameOverScreen7ProcessEf','__ZN11ScoreScreen7ProcessEf','__ZN8MainMenu7ProcessEf','__ZN11ScoreScreen4ShowE8GameModeb',
-              '__ZN11ScoreScreen4ShowE10Difficultyb','__ZN10NameScreen7ProcessEf')   # T040-M7d: the setup screen's fades (its input skipped)
+              '__ZN11ScoreScreen4ShowE10Difficultyb','__ZN10NameScreen7ProcessEf',   # T040-M7d: the setup screen's fades (its input skipped)
+              '__ZN10UnlockMenu7ProcessEf')   # T040-M8: the unlock popup
 POST_RUN=POST_ENTRIES+('__ZN14GameOverScreen9InitIconsEv','__ZN4Game13GetEnemyCountE9EnemyType','__ZN4Game10GetTotalXPEv','__ZN4Game12GetTotalGoldEv',
           '__ZN4Game10GetTotalUPEv','__ZN4Game8GetScoreEv','__ZN4Game7GetItemE8ItemType','__Z11Interpolatefff','__Z5Clampfff','__Z6ClampIiii',
           '__ZN4Game12SetScorePageEi','__ZN11ScoreScreen4ShowEb','__ZN11ScoreScreen4ShowE9ScoreTypeb','__ZN8MainMenu4ShowEv','__ZN8MainMenu9SetActiveEb',
@@ -427,6 +440,21 @@ class OriginalMixin:
     def hook(self,u,address,size,context):
         for undo in self.returns.pop(address,[]):undo()
         lr=u.reg_read(self.LR)&~1
+        if getattr(self,'releasing',False) and CLASS_SCROLL<=lr<CLASS_SCROLL_END and address in (MATCH_TILE,MOVE_MATCHED,CHECK_END):
+            # T040-M8: the class scroll's Game::MatchTile(tile, 7) with the path harness, its MoveMatchedTiles with the refill /
+            # generation / encounter harnesses (as MatchTiles' in verify_full_turn.py) and its CheckEndGame as original code
+            # (as the units'), not the release records
+            if address==CHECK_END:
+                if not self.recording:self.until_return(u,'recording')
+            elif address==MATCH_TILE:
+                self.path_events=[];self.match_events=[];self.token_events=[];self.motion_events=[];self.int_sets={};self.until_return(u,'path_active')
+            else:
+                self.enc_events=[];self.gen_events=[];self.refill_events=[];self.until_return(u,'path_active',False)
+                for flag in ('refill_active','gen_active','enc_active'):self.until_return(u,flag)
+            UNLOCKS['scroll_calls']=UNLOCKS.get('scroll_calls',0)+1
+            return LoopOriginal.hook(self,u,address,size,context)
+        if address==UNLOCK_SHOW and not self.post_running:   # T040-M8: UnlockMenu::Show(ClassType, int) as Show(const char*, const char*)
+            M=self.GAME+UNLOCK_OBJ;self.write(M+0xd4,1);u.mem_write(M+0xc8,b'\1\0\0');UNLOCKS['shown']=UNLOCKS.get('shown',0)+1   # leaves it
         if address in self.post_entries and not self.post_running and PROCESS<=lr<PROCESS_END:self.until_return(u,'post_running')   # T040-M7
         if self.post_running:   # the game-over, score and main-menu screens: their display skipped, the touch answered
             if address in self.func_starts or 0x194000<=address<0x196000:
@@ -737,6 +765,8 @@ class OriginalMixin:
         S=G+SCORE_OBJ;self.write(S,G);self.u.mem_write(S+4,b'\0\0');self.write(S+8,0);self.u.mem_write(S+0x15c,bytes(0x20));self.u.mem_write(S+0x1cc,bytes(3))
         self.write(S+0x1d0,0);self.write(G+0x1660c,0);self.u.mem_write(G+0x16610,b'\0')
         for k in range(3):P=SCORE_PANELS+0x3000*k+0x100;self.write(S+0x1d4+4*k,P);self.write(P+0x340,fbits(ROWS_TOP));self.write(P+0x5ec,fbits(ROWS_TOP))
+        U=G+UNLOCK_OBJ;self.write(U+4,UNLOCK_VERTICES);self.write(U+8,G);self.write(U+0x54,0);self.u.mem_write(U+0xc8,bytes(3));self.write(U+0xd4,0)
+        self.u.mem_write(UNLOCK_VERTICES+0xb,b'\0')   # T040-M8: UnlockMenu closed, alpha 0 (Menu::SetQuadColour in its constructor), no labels
         M=G+MAIN_MENU_OBJ;self.write(M,G)
         for k in range(4):self.u.mem_write(M+0x80+0xf+0x14*k,b'\xff')   # the title shown, nothing touched, no confirmation
         self.write(M+0x4e0,0xffffffff);self.u.mem_write(M+0x4e6,b'\0');self.u.mem_write(M+0x6a8,bytes(0x1c));self.u.mem_write(M+0x6c0,b'\0')
@@ -803,7 +833,8 @@ class OriginalMixin:
                 [b(O+0x158),i32(O+0x160),self.read(O+0x164),self.read(O+0x168),self.read(O+0x16c),self.read(O+0x170)]+[i32(O+0x174+4*k) for k in range(5)]+
                 [self.read(O+0x188),i32(O+0x18c),i32(O+0x190),i32(O+0x194),i32(O+0x24a4),i32(O+0x15c)],
                 [b(S+4),b(S+5),self.read(S+8),i32(S+0x15c),b(S+0x160),self.read(S+0x164),self.read(S+0x168),self.read(S+0x16c),self.read(S+0x170),
-                 b(S+0x178),i32(S+0x17c),b(S+0x1cc),b(S+0x1cd),b(S+0x1ce),i32(S+0x1d0)],[i32(G+0x1660c),b(G+0x16610)]]
+                 b(S+0x178),i32(S+0x17c),b(S+0x1cc),b(S+0x1cd),b(S+0x1ce),i32(S+0x1d0)],[i32(G+0x1660c),b(G+0x16610)],
+                [b(G+UNLOCK_OBJ+0xc8),b(G+UNLOCK_OBJ+0xc9),b(UNLOCK_VERTICES+0xb),i32(G+UNLOCK_OBJ+0xd4)]]
     def help_state(self):   # T040-M6: the popup, its queued texts, the queued topics and the texts shown so far
         G=self.GAME;H=G+HELP_MENU;b=lambda a:self.u.mem_read(a,1)[0];queue=[];node=self.read(H+0x3c)
         while node!=H+0x3c and len(queue)<70:queue.append(HELP_TEXT_IDS.get(self.read(node+8),-1));node=self.read(node)
@@ -995,12 +1026,14 @@ class SessionMixin:
     def post_state(self):
         o=self.session_lib.dr_session_objects(self.session);bits=lambda x:struct.unpack('<I',struct.pack('<f',x))[0]
         m=MainMenuScreen.from_address(o.main_menu);g=GameOverTally.from_address(o.game_over);p=ScorePages.from_address(o.scores_screen)
+        un=UnlockPopup.from_address(o.unlock)
         page=C.c_int32.from_address(o.settings+12).value;changed=(U8*20).from_address(o.settings)[16]
         return [[m.splash,m.has_save,m.has_scores,m.bonus,m.pressed,m.confirm,m.chosen,m.closing,m.confirm_kind,bits(m.confirm_timer),m.previous_phase],
                 [g.win,g.line,bits(g.progress),bits(g.wait),bits(g.value),bits(g.rate)]+list(g.shown)+[bits(g.tick),g.perks,g.flaws,g.enemies,
                  g.previous_phase,self.screens.game_over_state_cc1c],
                 [self.screens.score_ef6c,p.closing,bits(p.timer),p.previous_phase,p.dragging,bits(p.last_x),bits(p.start_x),bits(p.velocity),
-                 bits(p.drag),p.sliding,p.direction,p.back,p.left,p.right,p.page],[page,changed]]
+                 bits(p.drag),p.sliding,p.direction,p.back,p.left,p.right,p.page],[page,changed],
+                [self.screens.unlock_165a0,un.closing,un.alpha,un.previous_phase]]
     def help_state(self):
         o=self.session_lib.dr_session_objects(self.session);h=HelpPopup.from_address(o.help);bits=lambda x:struct.unpack('<I',struct.pack('<f',x))[0]
         return [self.screens.help_102a4,h.closing,bits(h.timer),h.previous_phase,list(h.queue[:h.queued]),self.fin_flags.help_flags_102d0,
@@ -1013,6 +1046,7 @@ class SessionMixin:
     def scores_screen(self):return ScorePages.from_address(self.session_lib.dr_session_objects(self.session).scores_screen)
     def set_time(self,time):C.c_uint32.from_address(self.session_lib.dr_session_objects(self.session).time).value=time
     def setup_screen(self):return Setup.from_address(self.session_lib.dr_session_objects(self.session).setup)
+    def unlock_popup(self):return UnlockPopup.from_address(self.session_lib.dr_session_objects(self.session).unlock)
     def setup_press(self,kind,arg=0):
         lib=self.session_lib;s=self.session;self.new_events=[];self.gen_events=[]
         for f,a in (('dr_session_setup_random_name',[]),('dr_session_setup_select_class',[I32]),('dr_session_setup_mode',[I32]),
@@ -1109,7 +1143,7 @@ def set_health(old,new,health,maximum=None):
 
 def main():
     menus_seen={};items_rng=random.Random(0x14c04);rng=random.Random(0x5e55);overlay_rng=random.Random(0x32580);frames=turns=moves=ended=presses=busy_presses=busy_blocked=0;routes={};sources={};phases={};used={}
-    help_rng=random.Random(0x38128);post_rng=random.Random(0x30c28);setup_rng=random.Random(0x3cac0);case_time=None
+    help_rng=random.Random(0x38128);post_rng=random.Random(0x30c28);setup_rng=random.Random(0x3cac0);unlock_rng=random.Random(0x1090e8);case_time=None
     def with_help(c,game):   # T040-M6: every topic queued in some carried games
         if game%3==0 and game<SKILL_GAMES-PROMOTE_GAMES:c['release']['help_flags']=c['finish']['help_flags_102d0']=0x7fffff   # (both loaders)
         return c
@@ -1195,10 +1229,14 @@ def main():
             else:
                 path=first_path if first_path and turn==0 else new.pick_path(rng);moves+=len(path)>=3
                 script=[(1,i) for i in path]+[(2,path[-1])] if len(path)>=3 else []
+                scrolls=[i for i,t in enumerate(new.state.selection.tiles) if t.rule.type==6 and t.rule.special==1]
+                if scrolls and not skills and unlock_rng.random()<.6:   # T040-M8: a class scroll touched alone (a level-up or unlock: the popup;
+                    # not in the skill games, whose skill coverage depends on their course)
+                    i=unlock_rng.choice(scrolls);path=[i];script=[(1,i),(2,i)];UNLOCKS['scrolls']=UNLOCKS.get('scrolls',0)+1
             busy=len(script)+rng.randrange(1,12) if skills and count_>0 and len(path)>=3 and rng.random()<.6 else None   # a press while the turn runs
-            menu_plan=[];menu_taps=0;menu_open=False;overlay_plan=[];overlay_taps=0;help_plan=[];step=0
+            menu_plan=[];menu_taps=0;menu_open=False;overlay_plan=[];overlay_taps=0;help_plan=[];unlock_plan=[];step=0
             for frame in range(3000):
-                dt=f32((help_rng if new.screens.help_102a4 else rng).choice([1/60,1/30]))   # (the help popup's frames: their own draws)
+                dt=f32((help_rng if new.screens.help_102a4 else unlock_rng if new.screens.unlock_165a0 else rng).choice([1/60,1/30]))   # (popups: own draws)
                 button=-1;paused=False
                 new.set_label_active(old.u.mem_read(old.GAME+CURRENT_LABEL,1)[0])   # T040-M6: the renderer's current-damage label
                 if step<len(script):
@@ -1217,6 +1255,11 @@ def main():
                         help_plan+=[(0,HELP_OUT,-1)]+([(1,HELP_OUT,-1),(0,HELP_OUT,-1)] if help_rng.random()<.25 else [])+[(1,HELP_IN,0)]
                     phase,touch,menu_button=help_plan.pop(0) if help_plan else (0,HELP_OUT,-1)
                     if phase==1:k='tap_in' if menu_button>=0 else 'tap_out';HELP[k]=HELP.get(k,0)+1
+                elif new.screens.unlock_165a0:   # T040-M8: the unlock popup (the game pauses): once fully shown the touch ends, then a tap
+                    un=new.unlock_popup();button=-1;paused=True;touch=[0.5,0.5]
+                    if not unlock_plan and un.alpha==255 and not un.closing:unlock_plan=[(0,-1)]*unlock_rng.randrange(1,4)+[(1,-1)]
+                    phase,menu_button=unlock_plan.pop(0) if unlock_plan else (0,-1);UNLOCKS['frames']=UNLOCKS.get('frames',0)+1
+                    if phase==1:UNLOCKS['taps']=UNLOCKS.get('taps',0)+1
                 elif new.screens.menus[0]:   # the FoldoutMenu: wait for the animation, choose (two in the level-up menu), confirm
                     m=new.menu;touch=BUTTON_TOUCH;button=-1
                     if not menu_plan and m.timer<0:
@@ -1252,7 +1295,7 @@ def main():
                     return
                 if new.screens.main_menu_c400:assert quitting;return   # T040-M5: quit to the main menu (the game menu stays open beneath it)
                 if not paused:step+=1
-                if step>=len(script) and a['common']['input_ready'] and a['common']['phase']==0 and not new.moving_list and not a['common']['pending'] and not any(new.screens.menus) and not new.screens.help_102a4:break
+                if step>=len(script) and a['common']['input_ready'] and a['common']['phase']==0 and not new.moving_list and not a['common']['pending'] and not any(new.screens.menus) and not new.screens.help_102a4 and not new.screens.unlock_165a0:break
             else:raise AssertionError('turn did not finish')
             if script and isinstance(script[0][1],tuple) and pressed_type is not None and new.sources.get((SOURCE_SKILL,SKILL_USED),0)>used_before:
                 used[pressed_type]=used.get(pressed_type,0)+1
@@ -1375,6 +1418,8 @@ def main():
     for k,v in new.sources.items():sources[k]=sources.get(k,0)+v
     assert sources.get((23,7),0)>0 and sources.get((29,28),0)>0,(sources.get((23,7)),sources.get((29,28)))   # IncreaseStat, DestroyUpgrade
     rng=random.Random(0x2ad40)   # the skill phase's own sequence (independent of the phases before it)
+    for k,stream in enumerate((overlay_rng,help_rng,items_rng,class_rng,mana_rng,post_rng,NAME_RNG)):stream.seed(SKILL_SEED*16+k)   # (so are all its other
+    # draws: their use before depends on how the earlier games went; SKILL_SEED is chosen so that the phase covers every skill)
     old,new=CarriedSessionOriginal(),CarriedSession();mark=dict(turns=turns,frames=frames,ended=ended)
     for game in range(SKILL_GAMES):
         c=with_help(with_mana(with_class(with_items(skill_variant(turn_case(rng),rng,game),items_rng),class_rng),mana_rng),game);old.load(c);new.load(c);set_health(old,new,5000,5000)
@@ -1382,6 +1427,12 @@ def main():
         play(old,new,100+game,SKILL_TURNS if game<SKILL_GAMES-PROMOTE_GAMES else 5*SKILL_TURNS,skills=True)
     phases['skills']=dict(games=SKILL_GAMES,presses=presses,presses_while_busy=busy_presses,presses_input_not_ready=busy_blocked,used={k:used[k] for k in sorted(used)},**{k:v-mark[k] for k,v in dict(turns=turns,frames=frames,ended=ended).items()})
     for k,v in new.sources.items():sources[k]=sources.get(k,0)+v
+    for extra in range(8):   # T040-M8: fewer than two class-scroll popups so far: carried games holding a class scroll (own draws)
+        if UNLOCKS.get('shown',0)>=2 and UNLOCKS.get('taps',0)>=2:break
+        c=with_items(variant(turn_case(unlock_rng),3),unlock_rng);c['board'][unlock_rng.randrange(36)].update(type=6,special=1,enemy=0,enemy_state=0)
+        old.load(c);new.load(c);set_health(old,new,5000,5000);UNLOCKS['games']=UNLOCKS.get('games',0)+1
+        compare('load',old.game_state(),new.game_state(),game=1200+extra)
+        play(old,new,1200+extra,CARRIED_TURNS)
     assert phases['new_games']['ended'] and phases['carried']['ended'],phases
     assert REQUIRED<=set(sources),REQUIRED-set(sources)
     assert busy_blocked>20 and sources.get((SOURCE_SKILL,SKILL_JUMP),0)>0,(busy_blocked,sources.get((SOURCE_SKILL,SKILL_JUMP)))
@@ -1390,6 +1441,7 @@ def main():
     assert all(OVERLAY.get(k,0) for k in ('game_menu','stats_menu','closed','sound','help','clock','dimming','framerate','quit','tab','reset','restart')),OVERLAY
     assert {'over','scores','menu','nag','back','drags','arrows','menu4','menu5','confirm10','confirm11','start0','start1','start2','continue','setup','setup_back'}<=set(POST),POST
     assert len([k for k in SETUPS if k.startswith('refused:')])>=6,SETUPS   # T040-M7d: calls without a press, of most kinds
+    assert UNLOCKS.get('shown',0)>=2 and UNLOCKS.get('taps',0)>=2,UNLOCKS   # T040-M8: class scrolls' popups, closed by a tap
     assert set(range(23))|set(range(100,105))|{'tap_in','tap_out'}<=set(HELP) and len([k for k in HELP if isinstance(k,int) and k>=105])>=8,HELP
     assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
     assert all(LABEL_CALLS.get(n,0)>0 for n in LABEL_FUNCTIONS),LABEL_CALLS   # the damage labels shown, moved, renumbered, dimmed, faded

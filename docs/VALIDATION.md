@@ -563,3 +563,10 @@
 - 测试脚本问题（非代码差异）：确认框答“否”后菜单仍记着手指按下，下一次按键被忽略——原版与新代码相同，脚本改为先空一帧。
 - 错误副本：M7 单元级 29 个中 24 个被拒；其余 5 个中 3 个经整局（缩短配置）被拒，1 个等价（`button!=11` 与 `button==10` 在该分支内相同），1 个（主菜单 SetActive(true) 写上一帧阶段）在可达流程中值不变。M7d 18 个中单元级 12 个被拒、整局 5 个被拒；1 个（职业画面关闭后设置画面上一帧阶段置 1）无法用现有测试对照——测试宿主不经 ProcessInput 打开职业画面，依据为静态阅读，已记入 REVERSE_ENGINEERING。“有存档时新局先确认”的 MainMenuButton 事件属平台通知，原版无对应调用可对照。
 - `./scripts/relay.sh verify --full` → exit 0：94 步全部通过（新增 verify_main_menu、verify_score_screen、verify_setup_screen）。运行目录 `.relay/runs/20261023T053912.705577Z`，输入指纹 `10f9db48…73dd9c`，inputs_unchanged true。verify_session 用时 810 秒：局后 12 次，“覆盖存档？”否 / 是各 1，开局设置“返回”3 次，无效调用 27 次全部无变化。
+
+## 2026-10-23 T040-M8：解锁提示（Claude）
+
+- 新 verify_unlock_screen：原 UnlockMenu::Process（与 Show(const char*, const char*)）从入口执行对照原生 Unlock 路线，2000 组随机初始状态（透明度、淡入淡出、上一帧阶段，dt 含 0）约 1.9 万帧，256 种透明度全部出现，逐帧一致。错误副本 14 个中 11 个被拒；Show 的 3 个（上一帧阶段、淡出标志、音效）中“上一帧阶段”经整局测试被拒，“淡出标志”在可达流程中不变（提示打开时游戏暂停，不会再次 Show），音效编号由原版 Show 的单元对照给出。
+- verify_session：整局测试第一次点到职业卷轴（此前从未覆盖）：职业卷轴分支里的 MatchTile(7)、MoveMatchedTiles、CheckEndGame 改为原代码执行；提示弹出、暂停、完全显示后点掉，逐帧一致。技能局改用独立的随机序列（SKILL_SEED，挑选能覆盖全部技能类型、敌人跳下与忙时按键的种子），不再受前面各局走向影响。
+- 整局测试的覆盖改为不靠运气：技能局用独立随机序列（SKILL_SEED=6）；职业卷轴提示不足两次时补跑带卷轴的延续局（独立随机序列）。
+- `./scripts/relay.sh verify --full` → exit 0：95 步全部通过（新增 verify_unlock_screen）。运行目录 `.relay/runs/20261023T092857.503675Z`，输入指纹 `509f0f19…8a1c76`，inputs_unchanged true。

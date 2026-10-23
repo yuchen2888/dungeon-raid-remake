@@ -7,7 +7,8 @@ using namespace dungeonraid;
 // Headless source-only example: one native session plays whole games by itself -- no original instruction,
 // no test harness. The embedding does what a renderer would: the board layout, the touch (the
 // longest of a few random paths that follow the game's linking rule, or a ready skill's button), the menu buttons
-// (options, then confirm), a touch inside an open help popup's box and the layout targets of flying tokens
+// (options, then confirm), a touch inside an open help popup's box, a tap on the unlock popup and the layout targets of
+// flying tokens
 // (demonstration constants). Each game runs until
 // the game-over screen or a turn limit; the games start as the main menu's new game, tutorial and challenge in
 // turn (dr_session_start_game, on the session's own class roster), through the setup screen (after its fade, each button
@@ -15,7 +16,7 @@ using namespace dungeonraid;
 // the story screen; the first game quits at turn 40 and continues
 // from its save (dr_session_continue_game). DEMO_TRACE=1 prints every turn.
 namespace {
-struct Demo { long events=0; int menus[3]{},skills_used=0,continued=0,helps=0; };
+struct Demo { long events=0; int menus[3]{},skills_used=0,continued=0,helps=0,unlocks=0; };
 void event(void* c,SessionSource source,const void* e) {
     auto& d=*static_cast<Demo*>(c);++d.events;
     if(source==SessionSource::Skill && static_cast<const SkillEvent*>(e)->kind==SkillEventKind::UpdateSkills)++d.skills_used;
@@ -100,6 +101,10 @@ int main() {
                     const HelpPopup& h=*o.help;const bool tap=h.timer<=0.0f && !h.closing && h.previous_phase==0;
                     *o.menu_button=tap?0:-1;dr_session_frame(s,1.0f/60,tap?1:0,Point{0.5f,0.5f});++frames;++demo.helps;continue;
                 }
+                if(o.screens->unlock_165a0) {   // the unlock popup (a class scroll; the game waits): fully shown, a touch ends, then a tap
+                    const UnlockPopup& u=*o.unlock;const bool tap=u.alpha==255 && !u.closing && u.previous_phase==0;
+                    dr_session_frame(s,1.0f/60,tap?1:0,Point{0.5f,0.5f});++frames;++demo.unlocks;continue;
+                }
                 if(step<static_cast<int>(script.size()))phase=script[step].phase,touch=script[step].touch,*o.skill_button=script[step].button;
                 ++step;
                 if(o.screens->menus[0]) {   // the FoldoutMenu: after its animation, choose (two on the level-up menu), confirm
@@ -129,7 +134,7 @@ int main() {
                     o.resources->gold,o.resources->skill_count);
         ended+=over;total_turns+=turns;total_frames+=frames;dr_session_destroy(s);
     }
-    std::printf("%d games, %d ended, %d turns, %ld frames, %ld events; menus opened: level-up %d, shop %d, upgrade %d; skills used %d; continued %d; help frames %d\n",
-                3,ended,total_turns,total_frames,demo.events,demo.menus[0],demo.menus[1],demo.menus[2],demo.skills_used,demo.continued,demo.helps);
+    std::printf("%d games, %d ended, %d turns, %ld frames, %ld events; menus opened: level-up %d, shop %d, upgrade %d; skills used %d; continued %d; help frames %d; unlock frames %d\n",
+                3,ended,total_turns,total_frames,demo.events,demo.menus[0],demo.menus[1],demo.menus[2],demo.skills_used,demo.continued,demo.helps,demo.unlocks);
     return ended>0 && demo.menus[0]>0 && demo.menus[1]>0 && demo.skills_used>0 && demo.continued>0 ? 0 : 1;
 }

@@ -90,6 +90,15 @@ struct ScorePages {
     std::uint8_t back,left,right; // +0x1cc / +0x1cd / +0x1ce: buttons touched
     std::int32_t page;            // +0x1d0
 };
+// The unlock popup (UnlockMenu, Game+0x164d8; T040-M8): a class levelled up or unlocked by a class scroll
+// (UnlockMenu::Show(ClassType, level): sound 12). Open while screens->unlock_165a0 (+0xc8), and then Game::Process runs only
+// UnlockMenu::Process (the game pauses). Its texts, icon and layout are the renderer's; its alpha is state: the fade-in
+// starts from what the last fade-out left (0 at start-up).
+struct UnlockPopup {
+    std::uint8_t closing;         // +0xc9: fading out
+    std::uint8_t alpha;           // the panel's alpha (its first vertex's, +4 -> +0xb): 255 a second x 8 in / out
+    std::int32_t previous_phase;  // +0xd4: the touch phase when fully shown (1 after Show)
+};
 // The help popup (HelpMenu, Game+0x10298; T040-M6): open while screens->help_102a4 (+0xc), and then Game::Process runs only
 // HelpMenu::Process (the game pauses). The topics still to come are finish->help_flags_102d0 (+0x38): each shows once. Its
 // texts, box layout and fades are the renderer's.
@@ -178,6 +187,7 @@ struct SessionObjects {
     GameOverTally* game_over;            // the game-over screen (open while end->game_over_screen)
     std::uint32_t* time;                 // platform-owned (T040-M7): its time() -- the games the main menu starts seed their
                                          // random streams with it (as dr_session_start_game's time)
+    UnlockPopup* unlock;                 // the unlock popup (open while screens->unlock_165a0; T040-M8)
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
@@ -318,8 +328,9 @@ bool dr_session_class_help(dungeonraid::Session*,std::int32_t tab);
 // (Game::ContinueGame: dr_session_continue_game, the menu fading out), New game / Challenge / Tutorial (dr_session_start_game
 // with SessionObjects.time; over a saved game "overwrite?" asks first, its yes or no answering after its 0.3 s fade-in), High
 // scores (the saved page, a fade-in), the sound switch, Dashboard; "more games" and the bonus button), Name (T040-M7d:
-// the setup screen's 0.3 s fades; its buttons are the dr_session_setup_* calls). The story, class and unlock screens are
-// the API calls above and the renderer's.
+// the setup screen's 0.3 s fades; its buttons are the dr_session_setup_* calls) and Unlock (T040-M8: UnlockMenu::Process,
+// the unlock popup a class scroll shows; the game waits). The story and class screens are the API calls above and the
+// renderer's.
 dungeonraid::FrameRoute dr_session_frame(dungeonraid::Session*,float dt,std::int32_t touch_phase,dungeonraid::Point touch);
 // Game::SerialiseState now: the saved game into SessionObjects.save, its length and changed flag into end (the
 // session runs it itself where the original does: the end of a turn, ProcessInput's tail).

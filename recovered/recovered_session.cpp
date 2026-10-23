@@ -112,6 +112,7 @@ struct Session {
     HelpPopup help{0,0.0f,0,-1,{},0.0f,0.0f,-1,0,{}};   // HelpMenu (Game+0x10298)
     std::uint32_t clock=0;                // the platform's time() (SessionObjects.time)
     bool setup_press=false;               // the last frame began a touch the setup screen takes (T040-M7d)
+    UnlockPopup unlock{};                 // UnlockMenu (Game+0x164d8; T040-M8)
     ScorePages score_pages{};             // ScoreScreen (Game+0xef68)
     GameOverTally game_over{};            // GameOverScreen (Game+0xcac0)
     StatsTargets stats_targets{};
@@ -127,6 +128,7 @@ void open_menu(Session& s,std::int32_t type);
 void save_state(Session& s);
 void help_topic(Session& s,std::int32_t type,Point at,float width,float height,std::int32_t slot=-1);
 void update_skills(Session& s);
+void unlock_show(Session& s);
 float as_float(std::int32_t bits) {float f;std::memcpy(&f,&bits,4);return f;}
 Point tile_center(const Session& s,std::int32_t tile) {return s.stroke.selection.tiles[tile].geometry.center;}
 // Interface::ShowHelp* (fixed places): Gold 7, BaseDmg 9, WeaponDmg 10, Armour 11, UP 12, XP 13, Health 18
@@ -421,6 +423,7 @@ void release_event(void* c,const ReleaseEvent* e) {
     case ReleaseEventKind::SerialiseState:save_state(s);break;
     case ReleaseEventKind::SerialiseClasses: {const SaveSources src=save_sources(s);dr_serialise_classes(&src,&s.class_save);break;}
     case ReleaseEventKind::Help:help_topic(s,e->a,Point{e->x,e->y},as_float(e->d),as_float(e->d));break;
+    case ReleaseEventKind::UnlockMenu:unlock_show(s);break;
     default:break;
     }
 }
@@ -719,6 +722,26 @@ void setup_process(Session& s) {
 }
 // A setup call stands for a press in the last frame: taken when that frame began a touch the screen takes (one a frame)
 bool setup_ready(Session& s) {const bool ready=s.setup_press;s.setup_press=false;return ready;}
+// The unlock popup (T040-M8). UnlockMenu::Show(const char*, const char*) 0x1094b8 (from Show(ClassType, level); the
+// texts and icon are the renderer's): sound 12, open, not closing, the touch counted as down
+void unlock_show(Session& s) {
+    interface_event(s,InterfaceEventKind::Sound,-1,12);
+    s.unlock.previous_phase=1;s.screens.unlock_165a0=1;s.unlock.closing=0;
+}
+// UnlockMenu::Process 0x1090e8 (route Unlock): the alpha moves 255 x 8 a second (in: clamped to 0..255; out: unclamped);
+// at 0 or below the popup closes (its alpha left as it was); fully shown, a touch begun closes it
+void unlock_process(Session& s) {
+    UnlockPopup& u=s.unlock;
+    const float step=s.dt*255.0f;
+    std::int32_t a;
+    if(u.closing)a=static_cast<std::int32_t>(static_cast<float>(u.alpha)+step*-8.0f);
+    else a=std::clamp(static_cast<std::int32_t>(static_cast<float>(u.alpha)+step*8.0f),0,255);
+    if(a<=0) {u.closing=0;s.screens.unlock_165a0=0;return;}   // (Game::BonusPromptClosed for the bonus prompt: the platform's)
+    u.alpha=static_cast<std::uint8_t>(a);
+    if(a!=255)return;
+    if(s.touch.phase==1 && u.previous_phase==0)u.closing=1;
+    u.previous_phase=s.touch.phase;
+}
 // The help popup (T040-M6). HelpMenu::Show 0x37f04
 void help_show(Session& s,std::int32_t text,Point at,float width,float height,std::int32_t slot) {
     HelpPopup& p=s.help;p.timer=0.2f;p.closing=0;s.screens.help_102a4=1;p.previous_phase=1;
@@ -791,6 +814,7 @@ void frame_event(void* c,const GameFrameEvent* e) {
     else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::GameOver))game_over_process(s);
     else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Score))score_process(s);
     else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Name))setup_process(s);
+    else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Unlock))unlock_process(s);
     else if(e->kind==GameFrameEventKind::ScoreShow) {   // ScoreScreen::Show(GameMode / Difficulty, true) from the game-over screen
         std::int32_t page=s.score_pages.page;
         if(e->b) {if(e->a==0 || e->a==1)page=4+e->a;} else if(e->a>=0 && e->a<=3)page=e->a;
@@ -962,7 +986,7 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
         s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
         s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels,&s->setup,&s->game_menu,&s->stats_menu,
-        &s->interface_buttons,&s->main_menu,&s->help,&s->score_pages,&s->game_over,&s->clock};
+        &s->interface_buttons,&s->main_menu,&s->help,&s->score_pages,&s->game_over,&s->clock,&s->unlock};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 // Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
