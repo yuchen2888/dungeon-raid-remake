@@ -27,7 +27,7 @@ iPhone 版需要：Xcode、`/Applications` 里的 Godot 4.7.2 和它的官方导
 - `gdext/`：Godot 插件（C++）。`src/dr_bridge.*` 是不依赖 Godot 的转接层，`src/dungeon_raid_session.*` 把它包装成 Godot 对象 `DungeonRaidSession`。规则源码直接从 `recovered/` 编译（文件列表取自 `recovered/run_session_demo.sh`），不复制。
 - `godot/`：Godot 项目。`original.gd`（主场景 `original.tscn`）把插件交回的原版绘制画出来，并负责触摸输入、音效和存档读写（`user://`）；`main.gd` 是早期的简单图形原型。`export_presets.cfg` 是 iPhone 导出设置（开发者团队、App 标识 `com.yuchen.dungeonraid.remake`）。
 - `tools/ios.sh`：iPhone 版一条命令编译、导出、安装；`tools/sim_retarget.py` 见上。
-- 高清画面（T050-C）：`godot/assets/hd/` 里有和原图同名、尺寸是原图整数倍的图片时，游戏改用它（`original.gd` 的 `_texture_path`），图里各部分的位置不变；放大显示的图用更锐利的双三次取样（`godot/sharp.gdshader`）。高清图由 `tools/make_hd.py <Real-ESRGAN 文件夹>` 用 AI 放大 4 倍生成（逐块放大、个别地方按清单修正，见脚本说明），和原图一样只在本机，不进 Git；Real-ESRGAN 2026-10-23 经用户同意下载，放在项目外。
+- 高清画面（T050-C）：`godot/assets/hd/` 里有和原图同名、尺寸是原图整数倍的图片时，游戏改用它（`original.gd` 的 `_texture_path`），图里各部分的位置不变；放大显示的图用更锐利的双三次取样（`godot/sharp.gdshader`）。高清图由 `tools/make_hd.py <Real-ESRGAN 文件夹>` 用 AI 放大 4 倍生成（逐块放大、个别地方按清单修正，见脚本说明），和原图一样只在本机，不进 Git；Real-ESRGAN 2026-10-23 经用户同意下载，放在项目外。中文、英文各自的图片和语言名的高清版由 `tools/make_hd.py --lang` 生成（放在 `godot/assets/hd/lang/`）。
 - `gdext/godot-cpp/`：Godot 官方的 godot-cpp 10.0.0-stable（MIT，2026-10-21 经用户同意下载，不进 Git）。
 
 ## 检查命令
