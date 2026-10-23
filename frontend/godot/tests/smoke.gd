@@ -15,7 +15,11 @@ func _init() -> void:
 		push_error("the setup screen did not open")
 		quit(1)
 		return
+	for f in 30:   # its fade-in (0.3 s): no input
+		s.frame(1.0 / 60.0, 0, Vector2(0.5, 0.75), -1, -1)
+	_press(s)
 	s.setup_random_name()
+	_press(s)
 	if not s.setup_start(20261022):
 		push_error("Start was refused")
 		quit(1)
@@ -58,3 +62,8 @@ func _init() -> void:
 	var st: Dictionary = s.state()
 	print("smoke: %d turns, turn %d, level %d, health %d/%d, gold %d, saved %s, blobs %d" % [turns, st["turn"], st["level"], st["health"], st["health_max"], st["gold"], st["has_save"], s.take_changed().size()])
 	quit(0 if st["turn"] > 0 else 1)
+
+# A setup call counts only after a frame that began a touch (NameScreen::ProcessInput, T040-M7d): no touch, then one.
+func _press(s) -> void:
+	s.frame(1.0 / 60.0, 0, Vector2(0.5, 0.75), -1, -1)
+	s.frame(1.0 / 60.0, 1, Vector2(0.5, 0.75), -1, -1)

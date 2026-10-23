@@ -33,6 +33,7 @@
 !/frontend/godot/*.tscn
 !/frontend/godot/*.uid
 !/frontend/godot/dungeon_raid.gdextension
+!/frontend/godot/export_presets.cfg
 !/frontend/godot/tests/
 /recovered/*
 !/recovered/*.cpp

@@ -5,6 +5,8 @@
   python3 frontend/gdext/build.py extension   the GDExtension library into frontend/godot/bin/
   python3 frontend/gdext/build.py check       build/libdrf_check.dylib, the bridge's C face for the reference checks
   python3 frontend/gdext/build.py app         a stand-alone "Dungeon Raid.app" in frontend/dist/ (A5)
+  python3 frontend/gdext/build.py ios         the GDExtension for iPhone (device and simulator) as an xcframework in
+                                              frontend/godot/bin/, for Godot's iOS export (T050-B)
 
 The rules are compiled straight from recovered/ (the source list of recovered/run_session_demo.sh, so a module the
 backend adds there is picked up); nothing is copied. The extension also needs godot-cpp in frontend/gdext/godot-cpp
@@ -25,11 +27,16 @@ GODOT_CPP = os.path.join(HERE, "godot-cpp")
 BUILD = os.path.join(HERE, "build")
 BIN = os.path.join(ROOT, "frontend", "godot", "bin")
 API_VERSION = "4.5"   # the oldest Godot the library loads in (compatibility_minimum in dungeon_raid.gdextension)
-ARCH = ["-arch", "arm64"]
-MIN_MACOS = "-mmacosx-version-min=11.0"
+# Each target: its SDK, its compiler flags, the platform's define and its own object folder (macOS keeps build/'s top).
+TARGETS = {
+    "macos": ("macosx", ["-arch", "arm64", "-mmacosx-version-min=11.0"], "-DMACOS_ENABLED", ""),
+    "ios": ("iphoneos", ["-arch", "arm64", "-miphoneos-version-min=15.0"], "-DIOS_ENABLED", "ios"),
+    "ios-simulator": ("iphonesimulator", ["-arch", "arm64", "-mios-simulator-version-min=15.0"], "-DIOS_ENABLED", "ios-simulator"),
+}
+target = "macos"
 # The rules' own flags (run_session_demo.sh): strict float contraction keeps results identical to the tests.
 RULE_FLAGS = ["-std=c++17", "-O2", "-ffp-contract=off", "-Wall", "-Wextra"]
-GODOT_DEFINES = ["-DMACOS_ENABLED", "-DUNIX_ENABLED", "-DTHREADS_ENABLED", "-DDEBUG_ENABLED", "-DNDEBUG", "-DGDEXTENSION"]
+GODOT_DEFINES = ["-DUNIX_ENABLED", "-DTHREADS_ENABLED", "-DDEBUG_ENABLED", "-DNDEBUG", "-DGDEXTENSION"]
 GODOT_FLAGS = ["-std=c++17", "-O2", "-fno-exceptions", "-fvisibility=hidden", "-fPIC"] + GODOT_DEFINES
 
 
@@ -43,7 +50,15 @@ def recovered_sources():
 
 
 def clang():
-    return ["xcrun", "--sdk", "macosx", "clang++"]
+    return ["xcrun", "--sdk", TARGETS[target][0], "clang++"] + TARGETS[target][1]
+
+
+def godot_flags():
+    return GODOT_FLAGS + [TARGETS[target][2]]
+
+
+def build_dir():
+    return os.path.join(BUILD, TARGETS[target][3]) if TARGETS[target][3] else BUILD
 
 
 def stale(obj, dep):
@@ -63,7 +78,7 @@ def compile_all(jobs, label):
     def run(job):
         src, obj, flags = job
         os.makedirs(os.path.dirname(obj), exist_ok=True)
-        cmd = clang() + ARCH + [MIN_MACOS] + flags + ["-MMD", "-MF", obj + ".d", "-c", src, "-o", obj]
+        cmd = clang() + flags + ["-MMD", "-MF", obj + ".d", "-c", src, "-o", obj]
         r = subprocess.run(cmd, capture_output=True, text=True)
         return src, r
 
@@ -80,7 +95,7 @@ def compile_all(jobs, label):
 
 def obj_path(src, group):
     rel = os.path.relpath(src, ROOT if group != "godot-cpp" else GODOT_CPP)
-    return os.path.join(BUILD, group, rel.replace(os.sep, "_") + ".o")
+    return os.path.join(build_dir(), group, rel.replace(os.sep, "_") + ".o")
 
 
 def rule_objects(group, extra_flags=()):
@@ -94,7 +109,7 @@ def build_test():
     objs += compile_all([(os.path.join(HERE, "src", "dr_bridge.cpp"), obj_path(os.path.join(HERE, "src", "dr_bridge.cpp"), "test"), RULE_FLAGS + ["-Werror"] + inc),
                          (os.path.join(HERE, "test", "bridge_test.cpp"), obj_path(os.path.join(HERE, "test", "bridge_test.cpp"), "test"), RULE_FLAGS + ["-Werror"] + inc)], "bridge")
     exe = os.path.join(BUILD, "bridge_test")
-    subprocess.run(clang() + ARCH + [MIN_MACOS] + objs + ["-o", exe], check=True)
+    subprocess.run(clang() + objs + ["-o", exe], check=True)
     r = subprocess.run([exe])
     sys.exit(r.returncode)
 
@@ -107,7 +122,7 @@ def build_check():
     objs += compile_all([(os.path.join(HERE, "src", f), obj_path(os.path.join(HERE, "src", f), "check"), RULE_FLAGS + ["-fPIC", "-Werror"] + inc)
                          for f in own], "check")
     lib = os.path.join(BUILD, "libdrf_check.dylib")
-    subprocess.run(clang() + ARCH + [MIN_MACOS, "-dynamiclib"] + objs + ["-o", lib], check=True)
+    subprocess.run(clang() + ["-dynamiclib"] + objs + ["-o", lib], check=True)
     print("built " + os.path.relpath(lib, ROOT))
 
 
@@ -132,7 +147,7 @@ def generate_bindings():
     return gen
 
 
-def build_extension():
+def build_extension(lib_name="libdungeonraid.macos.template_debug.arm64.dylib", out_dir=BIN):
     if not os.path.isdir(GODOT_CPP):
         sys.exit("frontend/gdext/godot-cpp is missing (godot-cpp 10.0.0-stable, see frontend/README.md)")
     gen = generate_bindings()
@@ -147,19 +162,39 @@ def build_extension():
     for s in cpp_sources:
         group = "godot-cpp" if s.startswith(GODOT_CPP) else "godot-cpp-gen"
         rel = os.path.relpath(s, GODOT_CPP if group == "godot-cpp" else gen)
-        jobs.append((s, os.path.join(BUILD, group, rel.replace(os.sep, "_") + ".o"), GODOT_FLAGS + inc))
+        jobs.append((s, os.path.join(build_dir(), group, rel.replace(os.sep, "_") + ".o"), godot_flags() + inc))
     objs = compile_all(jobs, "godot-cpp")
     objs += rule_objects("ext-rules", ["-fPIC", "-fvisibility=hidden"])
     own = ["dr_bridge.cpp", "dungeon_raid_session.cpp", "register_types.cpp"] + UI_SOURCES
     # godot-cpp's headers as system headers: their warnings are not ours.
     own_inc = [f.replace("-I", "-isystem", 1) for f in inc] + ["-I" + RECOVERED, "-I" + os.path.join(HERE, "src")]
     objs += compile_all([(os.path.join(HERE, "src", f), obj_path(os.path.join(HERE, "src", f), "ext"),
-                          GODOT_FLAGS + ["-Wall", "-Wextra", "-ffp-contract=off"] + own_inc) for f in own], "extension")
-    os.makedirs(BIN, exist_ok=True)
-    lib = os.path.join(BIN, "libdungeonraid.macos.template_debug.arm64.dylib")
-    subprocess.run(clang() + ARCH + [MIN_MACOS, "-dynamiclib", "-fvisibility=hidden", "-install_name", "@rpath/" + os.path.basename(lib)]
+                          godot_flags() + ["-Wall", "-Wextra", "-ffp-contract=off"] + own_inc) for f in own], "extension")
+    os.makedirs(out_dir, exist_ok=True)
+    lib = os.path.join(out_dir, lib_name)
+    subprocess.run(clang() + ["-dynamiclib", "-fvisibility=hidden", "-install_name", "@rpath/" + os.path.basename(lib)]
                    + objs + ["-o", lib], check=True)
     print("built " + os.path.relpath(lib, ROOT))
+    return lib
+
+
+def build_ios():
+    """The extension for the iPhone and for the simulator (both arm64), joined into one xcframework; Godot's iOS
+    export copies it into the Xcode project and wraps each dylib as a framework."""
+    import shutil
+    global target
+    libs = []
+    for t in ["ios", "ios-simulator"]:
+        target = t
+        libs.append(build_extension("libdungeonraid.ios.template_debug.dylib", os.path.join(BUILD, t, "lib")))
+    target = "macos"
+    xcf = os.path.join(BIN, "libdungeonraid.ios.template_debug.xcframework")
+    shutil.rmtree(xcf, ignore_errors=True)
+    cmd = ["xcodebuild", "-create-xcframework"]
+    for lib in libs:
+        cmd += ["-library", lib]
+    subprocess.run(cmd + ["-output", xcf], check=True, capture_output=True)
+    print("built " + os.path.relpath(xcf, ROOT))
 
 
 GODOT_APP = "/Applications/Godot.app"
@@ -221,5 +256,7 @@ if __name__ == "__main__":
         build_check()
     elif what == "app":
         build_app()
+    elif what == "ios":
+        build_ios()
     else:
         sys.exit(__doc__)

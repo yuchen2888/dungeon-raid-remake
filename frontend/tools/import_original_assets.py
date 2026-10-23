@@ -11,6 +11,7 @@ GetSoundVolume 0x1ba34, read from their jump tables; the game's English texts, s
 WAV with macOS's afconvert.
 
   python3 frontend/tools/import_original_assets.py --texts    # only the texts (texts.txt)
+  python3 frontend/tools/import_original_assets.py --raw      # only the "keep" import settings (see keep_raw()) and the icons
 """
 import json
 import os
@@ -271,7 +272,19 @@ def texts():
     return len(out)
 
 
+def keep_raw():
+    """The pictures and fonts are read as plain files (original.gd, the library's fonts), not as Godot resources:
+    Godot is told to keep them as they are, so an exported game (iOS) carries the files themselves."""
+    for name in TEXTURES + FONTS:
+        with open(os.path.join(OUT, name + ".import"), "w", encoding="utf-8") as f:
+            f.write('[remap]\n\nimporter="keep"\n')
+
+
 def main():
+    if "--raw" in sys.argv:
+        keep_raw()
+        make_icns()
+        return
     if "--texts" in sys.argv:
         print("wrote %d texts into %s" % (texts(), os.path.relpath(os.path.join(OUT, "texts.txt"), ROOT)))
         return
@@ -302,13 +315,14 @@ def main():
     with open(os.path.join(OUT, "sounds.json"), "w", encoding="utf-8") as f:
         json.dump(table, f, indent=1)
     make_icns()
+    keep_raw()
     texts()
     print("imported %d textures, %d fonts, %d sounds into %s" % (len(TEXTURES), len(FONTS),
           sum(s["variations"] for s in table), os.path.relpath(OUT, ROOT)))
 
 
 def make_icns():
-    """The app icon for the Mac app (from the original's 114-pixel icon, scaled; local only)."""
+    """The app icons for the Mac app and the iPhone app (from the original's 114-pixel icon, scaled; local only)."""
     with tempfile.TemporaryDirectory() as tmp:
         iconset = os.path.join(tmp, "icon.iconset")
         os.makedirs(iconset)
@@ -320,6 +334,8 @@ def make_icns():
                 subprocess.run(["sips", "-z", str(size * 2), str(size * 2), src, "--out",
                                 os.path.join(iconset, "icon_%dx%d@2x.png" % (size, size))], check=True, capture_output=True)
         subprocess.run(["iconutil", "-c", "icns", iconset, "-o", os.path.join(OUT, "icon.icns")], check=True)
+    # The iPhone app's icon (export_presets.cfg, icons/icon_1024x1024); Godot makes the other sizes from it.
+    subprocess.run(["sips", "-z", "1024", "1024", src, "--out", os.path.join(OUT, "icon1024.png")], check=True, capture_output=True)
 
 
 if __name__ == "__main__":

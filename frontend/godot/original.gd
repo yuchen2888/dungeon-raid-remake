@@ -21,6 +21,8 @@ extends Node2D
 const SCALE := 640.0   # the original's screen is 1 wide, 1.5 high; the viewport is 640 x 960
 const STORE_KEYS := ["classes", "scores0", "scores1", "scores2", "scores3", "scores4", "scores5", "game", "spawn", "settings"]
 const TEXTURES := {1: "tiles", 2: "font", 3: "icons", 4: "menus", 5: "fontMenu", 6: "fontScore"}   # GetTextureName
+const RAW_FILES := ["tiles.png", "font.png", "icons.png", "menus.png", "fontMenu.png", "fontScore.png", "font.fnt",
+		"fontMenu.fnt", "fontScore.fnt", "texts.txt", "sounds.json"]   # see _asset_folder
 
 var session = null
 var textures := {}
@@ -84,7 +86,7 @@ func _ready() -> void:
 	if not ClassDB.class_exists("DungeonRaidSession"):
 		error_text = "The game library did not load (frontend/godot/bin/).\nRun frontend/gdext/build.py extension."
 		return
-	var assets := ProjectSettings.globalize_path("res://assets/original")
+	var assets := _asset_folder()
 	for id in TEXTURES:
 		var image := Image.load_from_file(assets + "/" + TEXTURES[id] + ".png")
 		if image == null:
@@ -108,6 +110,28 @@ func _ready() -> void:
 		var file: String = store_dir + key + ".bin"
 		if FileAccess.file_exists(file):
 			session.restore(key, FileAccess.get_file_as_bytes(file))
+
+# The original files the game reads as plain files (the pictures, and the fonts and texts the library opens itself):
+# the project's own folder when it is one on disk (the editor, the Mac app); in an exported game (iOS) they sit inside
+# the package, so they are copied out once into user://original/ (they are exported as is, importer "keep").
+func _asset_folder() -> String:
+	var folder := ProjectSettings.globalize_path("res://assets/original")
+	if FileAccess.file_exists(folder + "/texts.txt") and not OS.has_feature("template"):
+		return folder
+	var copy := ProjectSettings.globalize_path("user://original")
+	DirAccess.make_dir_recursive_absolute(copy)
+	for file: String in RAW_FILES:
+		var bytes := FileAccess.get_file_as_bytes("res://assets/original/" + file)
+		if bytes.is_empty():
+			continue
+		var target := copy + "/" + file
+		if FileAccess.file_exists(target) and FileAccess.get_file_as_bytes(target) == bytes:
+			continue
+		var f := FileAccess.open(target, FileAccess.WRITE)
+		if f != null:
+			f.store_buffer(bytes)
+			f.close()
+	return copy
 
 # The bytes the session changed, written whole to a temporary file and renamed; an empty saved game is deleted.
 func _store() -> void:
