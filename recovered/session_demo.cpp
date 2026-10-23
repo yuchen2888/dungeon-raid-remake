@@ -7,13 +7,15 @@ using namespace dungeonraid;
 // Headless source-only example: one native session plays whole games by itself -- no original instruction,
 // no test harness. The embedding does what a renderer would: the board layout, the touch (the
 // longest of a few random paths that follow the game's linking rule, or a ready skill's button), the menu buttons
-// (options, then confirm) and the layout targets of flying tokens (demonstration constants). Each game runs until
+// (options, then confirm), a touch inside an open help popup's box and the layout targets of flying tokens
+// (demonstration constants). Each game runs until
 // the game-over screen or a turn limit; the games start as the main menu's new game, tutorial and challenge in
-// turn (dr_session_start_game, on the session's own class roster), through the setup screen (a random name, Start) and
+// turn (dr_session_start_game, on the session's own class roster), through the setup screen (after its fade, each button
+// a touch it takes: a random name, the difficulty or mode, Start) and
 // the story screen; the first game quits at turn 40 and continues
 // from its save (dr_session_continue_game). DEMO_TRACE=1 prints every turn.
 namespace {
-struct Demo { long events=0; int menus[3]{},skills_used=0,continued=0; };
+struct Demo { long events=0; int menus[3]{},skills_used=0,continued=0,helps=0; };
 void event(void* c,SessionSource source,const void* e) {
     auto& d=*static_cast<Demo*>(c);++d.events;
     if(source==SessionSource::Skill && static_cast<const SkillEvent*>(e)->kind==SkillEventKind::UpdateSkills)++d.skills_used;
@@ -54,9 +56,19 @@ int main() {
         for(int k=0;k<4;++k){sel.character.flaws[k]=255;o.match->perks[k]=255;}
         const std::uint32_t seed=20261020u+static_cast<std::uint32_t>(game);
         dr_session_start_game(s,game,seed);
+        // a press on the setup screen is a touch it takes (T040-M7d): an open help popup closed first (a touch inside its box
+        // after its fade), the screen's fade over, a frame without a touch and one beginning it; then the button's call
+        const auto touch_setup=[&] {
+            for(int frame=0;frame<600 && (o.screens->help_102a4 || o.setup->timer>0.0f);++frame) {
+                const HelpPopup& h=*o.help;const bool tap=o.screens->help_102a4 && h.timer<=0.0f && !h.closing && h.previous_phase==0;
+                *o.menu_button=tap?0:-1;dr_session_frame(s,1.0f/60,tap?1:0,Point{0.5f,0.5f});
+            }
+            *o.menu_button=-1;dr_session_frame(s,1.0f/60,0,Point{0.5f,0.5f});dr_session_frame(s,1.0f/60,1,Point{0.5f,0.5f});
+        };
         // the setup screen: a random name, a difficulty (a challenge: the mode), Start, then the story screen's Continue
-        dr_session_setup_random_name(s);
-        if(game==2)dr_session_setup_mode(s,1);else dr_session_setup_difficulty(s,1);
+        touch_setup();dr_session_setup_random_name(s);
+        touch_setup();if(game==2)dr_session_setup_mode(s,1);else dr_session_setup_difficulty(s,1);
+        touch_setup();
         if(!dr_session_setup_start(s,seed)) {std::printf("game %d: the setup screen did not start\n",game);return 1;}
         dr_session_intro_done(s);
         o=dr_session_objects(s);std::printf("game %d: %s\n",game,reinterpret_cast<const char*>(o.name));
@@ -82,9 +94,14 @@ int main() {
                 script.push_back({2,o.stroke->selection.tiles[path.back()].geometry.center,-1});
             }
             std::vector<std::pair<int,int>> menu_plan;bool menu_seen=false;
-            for(int frame=0;frame<5000;++frame) {
+            for(int frame=0,step=0;frame<5000;++frame) {
                 o=dr_session_objects(s);int phase=0;Point touch{0.5f,0.9f};*o.menu_button=-1;*o.skill_button=-1;
-                if(frame<static_cast<int>(script.size()))phase=script[frame].phase,touch=script[frame].touch,*o.skill_button=script[frame].button;
+                if(o.screens->help_102a4) {   // a help popup (the game waits): after its fade a touch ends, one inside the box closes it
+                    const HelpPopup& h=*o.help;const bool tap=h.timer<=0.0f && !h.closing && h.previous_phase==0;
+                    *o.menu_button=tap?0:-1;dr_session_frame(s,1.0f/60,tap?1:0,Point{0.5f,0.5f});++frames;++demo.helps;continue;
+                }
+                if(step<static_cast<int>(script.size()))phase=script[step].phase,touch=script[step].touch,*o.skill_button=script[step].button;
+                ++step;
                 if(o.screens->menus[0]) {   // the FoldoutMenu: after its animation, choose (two on the level-up menu), confirm
                     const MenuState& m=*o.menu;
                     if(!menu_seen){menu_seen=true;++demo.menus[m.type];}
@@ -98,7 +115,7 @@ int main() {
                 const FrameRoute route=dr_session_frame(s,1.0f/60,phase,touch);++frames;
                 o=dr_session_objects(s);
                 if(route==FrameRoute::Ended || o.end->game_over_screen){over=true;break;}
-                if(frame>=static_cast<int>(script.size()) && o.path->input_ready && o.damage->phase==0 && !o.falling_count &&
+                if(step>=static_cast<int>(script.size()) && o.path->input_ready && o.damage->phase==0 && !o.falling_count &&
                    !dr_token_queue_counters(o.tokens)->pending && !o.screens->menus[0])break;
             }
             if(std::getenv("DEMO_TRACE")) {o=dr_session_objects(s);std::printf("turn %d path %zu type %d: xp %d gold %d up %d health %d level %d pending %u\n",turns,path.size(),
@@ -112,7 +129,7 @@ int main() {
                     o.resources->gold,o.resources->skill_count);
         ended+=over;total_turns+=turns;total_frames+=frames;dr_session_destroy(s);
     }
-    std::printf("%d games, %d ended, %d turns, %ld frames, %ld events; menus opened: level-up %d, shop %d, upgrade %d; skills used %d; continued %d\n",
-                3,ended,total_turns,total_frames,demo.events,demo.menus[0],demo.menus[1],demo.menus[2],demo.skills_used,demo.continued);
+    std::printf("%d games, %d ended, %d turns, %ld frames, %ld events; menus opened: level-up %d, shop %d, upgrade %d; skills used %d; continued %d; help frames %d\n",
+                3,ended,total_turns,total_frames,demo.events,demo.menus[0],demo.menus[1],demo.menus[2],demo.skills_used,demo.continued,demo.helps);
     return ended>0 && demo.menus[0]>0 && demo.menus[1]>0 && demo.skills_used>0 && demo.continued>0 ? 0 : 1;
 }

@@ -37,6 +37,8 @@ struct SaveSettings {
     std::uint8_t clock_13ec9, clock_changed_13ecc;        // Game::SetClockState (Interface's clock)
     std::uint8_t dimming_13eca, dimming_changed_13ecd;    // Game::SetAttackDimmingState (Game::Render dims the board in attacks)
     std::uint8_t framerate_13ecb, framerate_changed_13ece;   // Game::SetHighFramerate (the platform's frame rate)
+    std::int32_t score_page_1660c;                        // Game::SetScorePage (T040-M7): the high-score page 0..5 last
+    std::uint8_t score_page_changed_16610;                // shown (High scores opens it), changed flag as the others
 };
 // Achievement: a = achievement, b = value float bits (Item::Serialise). DeserialiseState's presentation: Freeze (a = tile,
 // Tile::SetFreezeVisibility), Skull / HealthCeiling / Health / ArmourMax / Armour / XP / UP / Gold (the Interface update of

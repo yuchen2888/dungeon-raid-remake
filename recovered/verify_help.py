@@ -6,7 +6,8 @@ Each trial starts from a closed popup, random queued topics (Game+0x102d0, often
 switch, then plays a few hundred steps. A step is one of: a frame of Game::Process's help route while the popup is open
 (the touch's phase 2 / 3 become 0, then HelpMenu::Process(dt); the native dr_session_frame, which routes there), touches
 inside or outside the box (menu_button 0 / -1; the original's box is fixed at (0.1, 0.5, 0.8 x 0.5) when Show returns);
-the setup screen's help button (QueueHelp of its five texts; dr_session_setup_help) or the class screen's for a random tab
+the setup screen's help button while the popup is closed (QueueHelp of its five texts; the native: a frame of the setup
+screen beginning a touch, then dr_session_setup_help, T040-M7d) or the class screen's for a random tab
 (dr_session_class_help, false for tabs other than 0..3); or Interface::ProcessHeartbeat with random shown health and ceiling
 (the native's dr_session_interface_process with input not ready and no menu open; also while the popup is open, as a
 second topic in the frame that showed the first). Compared after every step: the popup
@@ -23,7 +24,7 @@ from verify_skills import Original as SkillsOriginal, case as skills_case
 from verify_stroke import HERE
 from verify_resources import Resource
 from verify_stats import PlayerStats
-from verify_session import Objects, Host, EVENT, HelpPopup, U8, I32, Point, HELP_TEXTS, HELP_TEXT_IDS, CLASS_HELP, HELP_BOX
+from verify_session import Objects, Host, EVENT, HelpPopup, U8, I32, Point, HELP_TEXTS, HELP_TEXT_IDS, CLASS_HELP, HELP_BOX, Setup
 
 TEXT=(HERE.parent/'armv7-disassembly.txt').read_text()
 def addr(symbol):return int(re.search(r'^'+re.escape(symbol)+r':\n\s*([0-9a-f]+):',TEXT,re.M)[1],16)
@@ -106,6 +107,7 @@ def main():
         for step in range(300):
             kind=rng.choices(['frame','heartbeat','setup','class'],[8,2,.3,.3])[0] if not screens[0] else rng.choices(['frame','heartbeat','setup','class'],[20,1,.2,.2])[0]
             if kind in ('setup','class') and h.queued>50:kind='frame'   # (the native queue holds 64)
+            if kind=='setup' and screens[0]:kind='class'   # (the setup screen takes no input while a popup is open)
             if kind=='frame':
                 if not screens[0]:continue
                 phase=rng.choice([0,0,1,1,2,3]) if rng.random()<.5 else phase;inside=rng.random()<.6;dt=rng.choice([1/60,1/30,0.05,rng.uniform(0,0.3)])
@@ -121,7 +123,8 @@ def main():
             elif kind=='setup':
                 old.call(QUEUE,[H,HELP_TEXTS[0],0,0],[0])
                 for a in HELP_TEXTS[1:5]:old.call(QUEUE,[H,a,0,0],[0])
-                lib.dr_session_setup_help(session);counts['setup']+=1
+                screens[4]=1;Setup.from_address(o.setup).previous_phase=0;lib.dr_session_frame(session,1/60,1,Point(0.5,0.5))   # the press's frame
+                lib.dr_session_setup_help(session);screens[4]=0;counts['setup']+=1
             else:
                 tab=rng.choice([0,1,2,3,3,-1,4])
                 for a in (CLASS_HELP[tab] if 0<=tab<4 else []):old.call(QUEUE,[H,a,0,0],[0])

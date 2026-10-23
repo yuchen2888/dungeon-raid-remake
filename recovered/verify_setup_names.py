@@ -3,7 +3,8 @@
 
 The original runs from its entry (0x3882c, R0 = a NameScreen in scratch memory) with RandI as original code on the
 harness's random streams; the sprintf (%s only) and strlen stubs are modelled. The native side is a session whose
-stream 0 gets the same seeds. 4000 draws from random seeds over a name box that holds random bytes beforehand; compared:
+stream 0 gets the same seeds; each draw is a press (T040-M7d: the setup screen open, a frame beginning a touch, then
+dr_session_setup_random_name). 4000 draws from random seeds over a name box that holds random bytes beforehand; compared:
 the box's 19 bytes (NameScreen+0x2935), the length (+0x2948) and the six random streams. Every part of both name tables
 and both formats ("%s%s", "%s%s %s%s") must occur.
 """
@@ -14,7 +15,7 @@ import struct
 from verify_skills import Original as SkillsOriginal, case as skills_case
 from verify_stroke import HERE
 from verify_match import Match
-from verify_session import Objects, Host, Setup, RANDOM_NAME, SPRINTF, STRLEN, NAME_NAME, NAME_LENGTH, SEEDS
+from verify_session import Objects, Host, Setup, U8, I32, Point, RANDOM_NAME, SPRINTF, STRLEN, NAME_NAME, NAME_LENGTH, SEEDS
 
 BOX=0x170c000
 STARTS,ENDS=0x18da29,0x18d934   # the two name tables (five-byte entries)
@@ -41,7 +42,8 @@ def main():
     lib.dr_session_objects.argtypes=[C.c_void_p];lib.dr_session_objects.restype=Objects
     lib.dr_session_setup_random_name.argtypes=[C.c_void_p];lib.dr_session_setup_random_name.restype=None
     host=Host();session=lib.dr_session_create(C.byref(host),1);o=lib.dr_session_objects(session)
-    match=Match.from_address(o.match);box=Setup.from_address(o.setup)
+    match=Match.from_address(o.match);box=Setup.from_address(o.setup);(U8*15).from_address(o.screens)[4]=1   # the setup screen open
+    lib.dr_session_frame.argtypes=[C.c_void_p,C.c_float,I32,Point];lib.dr_session_frame.restype=I32
     rng=random.Random(0x3882c);starts=set();ends=set();longest=0
     for trial in range(4000):
         seeds=[rng.randrange(1,2**31) for _ in range(6)];fill=bytes(rng.randrange(256) for _ in range(19))
@@ -50,6 +52,7 @@ def main():
         u.reg_write(old.regs[0],BOX);u.reg_write(old.SP,0x140fe00);u.reg_write(old.LR,old.STOP|1);old.naming=True
         try:u.emu_start(RANDOM_NAME[0]|1,old.STOP,timeout=0,count=100000);assert u.reg_read(old.PC)==old.STOP,hex(u.reg_read(old.PC))
         finally:old.naming=False
+        box.previous_phase=0;lib.dr_session_frame(session,1/60,1,Point(0.5,0.5))   # the press's frame (T040-M7d)
         lib.dr_session_setup_random_name(session)
         a=[bytes(u.mem_read(BOX+NAME_NAME,19)).hex(),C.c_int32(old.read(BOX+NAME_LENGTH)).value,list(struct.unpack('<6I',u.mem_read(SEEDS,24)))]
         b=[bytes(box.name).hex(),box.length,list(match.random.seeds)]

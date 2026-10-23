@@ -14,13 +14,20 @@ namespace dungeonraid {
 // to each other as Game does it (see docs/T040_SESSION_PLAN.md). No original instruction runs here.
 struct Session;
 // The new-game setup screen (NameScreen, Game+0x102dc; T040-M3): what its rules use. Its on-screen keyboard, layout and
-// fades are the renderer's (the original also shortens a name that is wider than its box, by the font's widths).
+// alpha are the renderer's (the original also shortens a name that is wider than its box, by the font's widths).
 struct SetupScreen {
     std::uint8_t challenge;   // NameScreen+0x3bbc: a challenge game (mode buttons instead of difficulty buttons)
     char name[19];            // +0x2935: the name being entered (a random name can be 17 characters)
     std::int32_t length;      // +0x2948
     std::uint8_t named;       // +0x294c: a name was entered (else the box shows "Enter name" and Start stays hidden)
+    float timer;              // +0x2930 (T040-M7d): NameScreen::Show's 0.3 s fade-in, Back's 0.3 s fade-out
+    std::uint8_t closing;     // +0x2934: fading out after Back (the screen closes when the timer runs out)
+    std::int32_t previous_phase;   // +0x2960: the touch phase of its last input frame (1 after Show and the class screen)
 };
+// The setup calls below stand for a press in the last frame (call them after dr_session_frame): one is taken only when
+// that frame ran the screen's input (the Name route with no fade running) and began a touch there (phase 1 after an input
+// frame with phase 0); else it does nothing / returns false (T040-M7d). One press a frame. The class screen's own fades
+// are the renderer's (T040-M4b): the original keeps the setup screen's previous phase at 1 until it has closed.
 // The in-game menu (GameMenu, Interface+0xe24) and the statistics menu (StatsMenu, Interface+0xeb4) (T040-M5): open while
 // screens->menus[1] / menus[2] (their +0xc). Their quads, labels, texts and fades are the renderer's.
 struct OverlayMenu {
@@ -32,8 +39,57 @@ struct OverlayMenu {
 };
 // Interface's menu and stats buttons (Interface+0xcb4 / +0xcb5): touched; their menu opens when the touch ends.
 struct InterfaceButtons { std::uint8_t menu_pressed, stats_pressed; };
-// The main menu (MainMenu, Game+0xc3fc; open while screens->main_menu_c400): MainMenu::FadeIn's fade (+0x8, +0xc).
-struct MainMenuScreen { float timer; std::uint8_t fading; };
+// The main menu (MainMenu, Game+0xc3fc; open while screens->main_menu_c400; T040-M5, M7). Its quads, button colours and the
+// "more games" colour cycle are the renderer's.
+struct MainMenuScreen {
+    float timer;                  // +0x8: MainMenu::FadeIn's 0.5 s / FadeOut's 0.3 s
+    std::uint8_t fading;          // +0xc: fading in (else out: the menu closes when the fade-out ends)
+    std::uint8_t splash;          // +0x8f: the title's alpha (255 at start-up, 500 less per second; no input until 0)
+    std::uint8_t has_save;        // +0x4e4: a saved game exists (Continue shown, a new game asks first)
+    std::uint8_t has_scores;      // +0x4e5: high scores exist (High scores shown)
+    std::uint8_t bonus;           // +0x4e6: the bonus button is shown (the platform's)
+    std::int32_t pressed;         // +0x4e0: the touched button 0..7 (-1 none)
+    std::uint8_t confirm;         // +0x6a8: "overwrite the saved game?" open
+    std::uint8_t chosen;          // +0x6b0: its answer (yes)
+    std::uint8_t closing;         // +0x6b1: it is fading out
+    std::int32_t confirm_kind;    // +0x6ac: the game a yes starts (0 new game, 1 challenge, 2 tutorial)
+    float confirm_timer;          // +0x6b4: its 0.3 s fades
+    std::int32_t previous_phase;  // +0x6b8
+};
+// The game-over screen (GameOverScreen, Game+0xcac0; open while end->game_over_screen, +0x4; its state is
+// screens->game_over_state_cc1c, +0x15c: 0 fade-in, 1 a pause and the panel, 2 the tally, 3 the last 10 s and the
+// fade-out to the high scores; T040-M7). Its texts, icons, panels and fades are the renderer's.
+struct GameOverTally {
+    std::uint8_t win;             // +0x158: GameOverScreen::Initialise(win)
+    std::int32_t line;            // +0x160: the tally's line: 0..2 headings, 3 turns, 4 level, 5 XP, 6 gold, 7 upgrade points (a
+                                  // challenge game's mode 1: its crossing average / best / samples), 8 the class's 5 icons,
+                                  // 9 skills, 10 perks, 11 flaws, 12 score, 21 the enemies left on the board (-1 before 0)
+    float progress;               // +0x164: the state's fade; in a line: 1 = shown whole (a tap)
+    float wait;                   // +0x168: the pause before the next line (0.5 s; 10 s at the end; a tap ends it)
+    float value;                  // +0x16c: a number line's counting value (times the rate each frame)
+    float rate;                   // +0x170: its growth (+0.1 a second)
+    std::int32_t shown[5];        // +0x174..+0x184: icons shown: the class's (line 8), skills (9), perks (10), flaws (11), enemies (21)
+    float tick;                   // +0x188: 0.2 s between icons
+    std::int32_t perks,flaws,enemies;   // +0x18c / +0x190 / +0x194: their counts (GameOverScreen::InitIcons)
+    std::int32_t previous_phase;  // +0x24a4
+};
+// The high-score screen (ScoreScreen, Game+0xef68; open while screens->score_ef6c, +0x4; T040-M7): six pages (0..3 the
+// difficulties, 4..5 the challenge modes) that a drag or the arrow buttons slide; its panels, texts and fades are the
+// renderer's.
+struct ScorePages {
+    std::uint8_t closing;         // +0x5: fading out (Back): the screen closes when the timer runs out
+    float timer;                  // +0x8: 0.3 s fades
+    std::int32_t previous_phase;  // +0x15c
+    std::uint8_t dragging;        // +0x160: a drag across the pages
+    float last_x,start_x;         // +0x164 / +0x168: the touch's x last frame / where the drag began
+    float velocity;               // +0x16c: the drag's speed (x per second, smoothed: 0.4 new)
+    float drag;                   // +0x170: the pages' shift (the drag's x; while sliding, toward the direction: 0.3 a frame)
+    float unused_174;             // +0x174
+    std::uint8_t sliding;         // +0x178: sliding after a drag or an arrow; when it is in place the page changes
+    std::int32_t direction;       // +0x17c: 1 the page before, -1 the page after, 0 back where it was
+    std::uint8_t back,left,right; // +0x1cc / +0x1cd / +0x1ce: buttons touched
+    std::int32_t page;            // +0x1d0
+};
 // The help popup (HelpMenu, Game+0x10298; T040-M6): open while screens->help_102a4 (+0xc), and then Game::Process runs only
 // HelpMenu::Process (the game pauses). The topics still to come are finish->help_flags_102d0 (+0x38): each shows once. Its
 // texts, box layout and fades are the renderer's.
@@ -96,7 +152,11 @@ struct SessionObjects {
     MenuState* menu;                     // FoldoutMenu (Interface+0xd10): the level-up, shop and upgrade menus
     std::int32_t* menu_button;           // renderer-owned: the menu button under the touch. FoldoutMenu: 14..17 options, 7
                                          // confirm, -1 none; game menu: 9..15, -1 none; stats menu: tabs 10..15, -1 outside
-                                         // the menu, any other value inside it
+                                         // the menu, any other value inside it; help popup: 0 inside the box, -1 outside;
+                                         // main menu (T040-M7): buttons 0..7 (7: the bonus button), 8 more games, 10 yes / 11 no of the
+                                         // confirmation, -1 none (under the last touch also when it has ended); high scores:
+                                         // 1 Back, 2 the left arrow, 3 the right arrow, plus 16 when the touch is on the pages'
+                                         // rows (a drag starts there), -1 none
     std::uint8_t* dimmed;                // 36 tiles: dimmed by Game::UpdateDimming (cannot continue the path)
     std::uint8_t* save;                  // the saved game (save_capacity bytes, Game+0x13ecf): length end->flag_146d0 (0: none),
                                          // end->flag_146d4 set when it changed -- the platform stores it then and clears the flag
@@ -114,6 +174,10 @@ struct SessionObjects {
     InterfaceButtons* interface_buttons;
     MainMenuScreen* main_menu;
     HelpPopup* help;                     // the help popup (open while screens->help_102a4)
+    ScorePages* scores_screen;           // the high-score screen (open while screens->score_ef6c)
+    GameOverTally* game_over;            // the game-over screen (open while end->game_over_screen)
+    std::uint32_t* time;                 // platform-owned (T040-M7): its time() -- the games the main menu starts seed their
+                                         // random streams with it (as dr_session_start_game's time)
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
@@ -130,7 +194,13 @@ struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 // state): GameMenu::Set*State, Interface::SetClockState (12) and MainMenu::SetSoundState (10) are presentation.
 // MainMenu: the game menu's quit button (15) ran MainMenu::FadeIn. Help: the help popup shows a text (HelpMenu::Show,
 // index = SessionObjects.help->text; T040-M6); when the last queued topic shows, the help switch goes off first (Setting 11, 0).
-enum class InterfaceEventKind : std::int32_t { Sound=1, Setting, MainMenu, Help };
+// MoreGames / BonusRequest / Dashboard: the main menu's "more games" and bonus buttons (Game::ShowMoreGames /
+// ShowBonusRequest) and button 6 (Game+0x15545: the original launches OpenFeint's dashboard) -- the platform's.
+// MainMenuButton: a main-menu button 0..6 acted (index; 0 Continue, 1 New game, 2 Challenge, 3 Tutorial, 4 High scores,
+// 5 sound, 6 Dashboard), before its action -- for 1..3 over a saved game when the confirmation's yes starts it.
+// NagScreen: the game-over tally ended (Game::ShowNagScreen: the platform's, the original's promotion).
+enum class InterfaceEventKind : std::int32_t { Sound=1, Setting, MainMenu, Help, MoreGames, BonusRequest, Dashboard, MainMenuButton,
+    NagScreen };
 struct SessionHost {
     void* context;
     void (*event)(void*,SessionSource,const void*);
@@ -176,6 +246,10 @@ bool dr_session_setup_select_class(dungeonraid::Session*,std::int32_t type);
 bool dr_session_setup_mode(dungeonraid::Session*,std::int32_t mode);
 bool dr_session_setup_difficulty(dungeonraid::Session*,std::int32_t difficulty);
 bool dr_session_setup_start(dungeonraid::Session*,std::uint32_t time);
+// Back (T040-M7d; NameScreen::ProcessInput, its button at +0x154, acting only while the renderer's keyboard is hidden):
+// sound 0, the setup screen fades out (0.3 s; the frame's Name route counts it down and then closes the screen), the main
+// menu shows again (MainMenu::Show, MainMenu::SetActive(true) with the pressing touch down). False while a fade runs.
+bool dr_session_setup_back(dungeonraid::Session*);
 // The story screen's end (IntroScreen::Process 0x2dd04: Continue pressed and the fade done): it closes and
 // Game::SerialiseState saves the new game.
 void dr_session_intro_done(dungeonraid::Session*);
@@ -231,7 +305,21 @@ void dr_session_interface_process(dungeonraid::Session*,float dt,bool input_read
 // tab) queue the screen texts; while the popup is open Game::Process runs neither screen.
 void dr_session_setup_help(dungeonraid::Session*);
 bool dr_session_class_help(dungeonraid::Session*,std::int32_t tab);
-// One Game::Process frame (dr_process_frame with every step wired) for the touch (phase, position).
+// One Game::Process frame (dr_process_frame with every step wired) for the touch (phase, position). The screens' routes
+// run natively (T040-M6, M7): Help (HelpMenu::Process), GameOver (GameOverScreen::Process 0x30c28: 2 s fade-in; 1 s pause
+// and 1 s panel; the tally -- a 0.5 s pause before each line (sound 27), numbers counting up (times a rate growing 0.1 a
+// second; sound 2 as the whole part changes, 10 when shown whole), icons one each 0.2 s (sound 2, the enemies 14), a tap
+// showing the line whole and ending a pause; then Game::ShowNagScreen, 10 s (a tap ends them) and a 2 s fade-out; from
+// its state 3 Game::Process shows the high scores: the challenge mode's page, else the difficulty's, without a fade-in),
+// Score (ScoreScreen::Process 0x367f8: 0.3 s fades; a drag on the rows or an arrow slides to the page before / after
+// (0.3 of the way a frame, in place within 0.00625; a drag counts past 0.1 of speed or half a page), the page saved with
+// Game::SetScorePage; Back: the main menu shows (MainMenu::Show, SetActive) as the scores fade out) and MainMenu
+// (MainMenu::Process 0x2e668: the fades, the title, then the buttons acting when the touch ends on them -- Continue
+// (Game::ContinueGame: dr_session_continue_game, the menu fading out), New game / Challenge / Tutorial (dr_session_start_game
+// with SessionObjects.time; over a saved game "overwrite?" asks first, its yes or no answering after its 0.3 s fade-in), High
+// scores (the saved page, a fade-in), the sound switch, Dashboard; "more games" and the bonus button), Name (T040-M7d:
+// the setup screen's 0.3 s fades; its buttons are the dr_session_setup_* calls). The story, class and unlock screens are
+// the API calls above and the renderer's.
 dungeonraid::FrameRoute dr_session_frame(dungeonraid::Session*,float dt,std::int32_t touch_phase,dungeonraid::Point touch);
 // Game::SerialiseState now: the saved game into SessionObjects.save, its length and changed flag into end (the
 // session runs it itself where the original does: the end of a turn, ProcessInput's tail).

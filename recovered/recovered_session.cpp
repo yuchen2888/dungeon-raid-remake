@@ -5,6 +5,7 @@
 #include "recovered_tokens.hpp"
 #include "recovered_path.hpp"
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <utility>
@@ -109,6 +110,10 @@ struct Session {
     InterfaceButtons interface_buttons{}; // Interface+0xcb4 / +0xcb5
     MainMenuScreen main_menu{};           // MainMenu+0x8 / +0xc
     HelpPopup help{0,0.0f,0,-1,{},0.0f,0.0f,-1,0,{}};   // HelpMenu (Game+0x10298)
+    std::uint32_t clock=0;                // the platform's time() (SessionObjects.time)
+    bool setup_press=false;               // the last frame began a touch the setup screen takes (T040-M7d)
+    ScorePages score_pages{};             // ScoreScreen (Game+0xef68)
+    GameOverTally game_over{};            // GameOverScreen (Game+0xcac0)
     StatsTargets stats_targets{};
     StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
@@ -391,6 +396,7 @@ void over_event(void* c,const TurnEvent* e) {
     }
     if(static_cast<std::int32_t>(e->kind)==static_cast<std::int32_t>(EndGameEventKind::GameOverScreen)) {
         s.end.game_over_screen=1;s.screens.game_over_state_cc1c=0;
+        GameOverTally& g=s.game_over;g.win=static_cast<std::uint8_t>(e->a);g.line=0;std::fill(g.shown,g.shown+5,0);g.progress=g.wait=0.0f;   // T040-M7
     }
 }
 void end_of_turn(void* c) {
@@ -514,6 +520,205 @@ void interface_input(Session& s) {
         if(b.stats_pressed) {show_menu(s.stats_menu,s.screens.menus[2]);b.stats_pressed=0;}
     }
 }
+// The main menu (T040-M7)
+std::uint32_t now(Session& s) {return s.clock;}
+// Game::SetScorePage 0x83a4: the page clamped to 0..5, changed flag whether it changed
+void set_score_page(Session& s,std::int32_t page) {
+    const std::int32_t p=std::clamp(page,0,5);
+    s.settings.score_page_changed_16610=s.settings.score_page_1660c!=p;s.settings.score_page_1660c=p;
+}
+// ScoreScreen::Show(bool) 0x36720 (the page given first): the page saved (Game::SetScorePage), the first page shown; a fade-in
+// unless shown from the game-over screen (which fades out over it)
+void score_show(Session& s,std::int32_t page,bool from_game) {
+    ScorePages& p=s.score_pages;p.page=page;set_score_page(s,page);
+    p.closing=0;p.back=0;p.dragging=0;p.sliding=0;s.screens.score_ef6c=1;p.previous_phase=1;p.drag=0.0f;p.unused_174=0.0f;
+    p.timer=from_game?0.0f:0.3f;
+}
+void main_menu_set_active(Session& s,bool active);
+// MainMenu::Show 0x2f60c: Continue and High scores shown or not
+void main_menu_show(Session& s) {
+    s.main_menu.has_save=static_cast<std::int32_t>(s.end.flag_146d0)>0;s.main_menu.has_scores=dr_score_count(&s.scores)>0;
+}
+float interpolate(float a,float b,float t) {return a*t+(1.0f-t)*b;}   // Interpolate 0x1b800
+// ScoreScreen::Process 0x367f8 (route Score)
+void score_process(Session& s) {
+    ScorePages& p=s.score_pages;const float x=s.touch.position.x;
+    if(p.timer>0.0f) {p.timer-=s.dt;if(!(p.timer>0.0f)) {p.timer=0.0f;if(p.closing)s.screens.score_ef6c=0;}return;}
+    if(p.sliding) {
+        const float d=static_cast<float>(p.direction);
+        p.drag=interpolate(d,p.drag,0.3f);
+        if(std::fabs(p.drag-d)<0.00625f) {
+            p.drag=0.0f;p.sliding=0;
+            if(d>0.5f)p.page=std::clamp(p.page-1,0,5);else if(d<-0.5f)p.page=std::clamp(p.page+1,0,5);
+            set_score_page(s,p.page);
+        }
+        return;
+    }
+    const std::int32_t phase=s.touch.phase,b=s.menu_button,button=b<0?0:b&15;
+    if(phase==1 && p.previous_phase==0) {
+        p.previous_phase=1;
+        if(b>=0 && (b&16)) {p.dragging=1;p.velocity=0.0f;p.start_x=x;p.last_x=x;}
+        if(button==1) {p.back=1;menu_sound(s);}
+        else if(p.page>0 && button==2) {p.left=1;menu_sound(s);}
+        else if(p.page<=4 && button==3) {p.right=1;menu_sound(s);}
+        return;
+    }
+    if(p.previous_phase==1 && phase==0) {   // the touch ended
+        p.previous_phase=0;
+        if(p.dragging) {
+            p.dragging=0;p.sliding=1;
+            if(p.page>0 && (p.velocity>0.1f || p.drag>0.5f))p.direction=1;
+            else if(p.page<=4 && (p.velocity<-0.1f || p.drag<-0.5f))p.direction=-1;
+            else p.direction=0;
+        } else if(p.back) {
+            if(button==1) {p.closing=1;p.timer=0.3f;main_menu_show(s);main_menu_set_active(s,true);}
+            p.back=0;
+        } else if(p.left) {if(button==2) {p.sliding=1;p.direction=1;}p.left=0;}
+        else if(p.right) {if(button==3) {p.sliding=1;p.direction=-1;}p.right=0;}
+        return;
+    }
+    if(!p.dragging)return;
+    p.drag=x-p.start_x;
+    if((p.page==0 && p.drag>0.0f) || (p.page==5 && p.drag<0.0f)) {p.start_x=x;p.drag=0.0f;p.last_x=x;}   // no page beyond
+    p.velocity=interpolate((x-p.last_x)/s.dt,p.velocity,0.4f);p.last_x=x;
+}
+// MainMenu::SetActive 0x2e4d4
+void main_menu_set_active(Session& s,bool active) {
+    s.screens.main_menu_c400=active;if(active)s.main_menu.previous_phase=s.touch.phase;
+}
+// The main menu's games: Game::NewGame / StartChallenge / StartTutorial (confirm_kind 0 / 1 / other) -> dr_session_start_game
+void start_menu_game(Session& s,std::int32_t confirm_kind);
+// MainMenu::Process 0x2e668 (route MainMenu)
+void main_menu_process(Session& s) {
+    MainMenuScreen& m=s.main_menu;
+    m.has_save=static_cast<std::int32_t>(s.end.flag_146d0)>0;m.has_scores=dr_score_count(&s.scores)>0;
+    if(m.timer>0.0f) {   // MainMenu::FadeIn / FadeOut: no input
+        m.timer-=s.dt;
+        if(m.timer<0.0f) {m.timer=0.0f;if(!m.fading)s.screens.main_menu_c400=0;}
+        return;
+    }
+    const std::int32_t phase=s.touch.phase,button=s.menu_button;
+    if(m.confirm) {   // "overwrite the saved game?"
+        m.confirm_timer-=s.dt;
+        if(m.confirm_timer<0.0f) {
+            m.confirm_timer=0.0f;
+            if(m.closing) {
+                m.confirm=0;
+                if(m.chosen) {interface_event(s,InterfaceEventKind::MainMenuButton,m.confirm_kind+1,0);start_menu_game(s,m.confirm_kind);}
+                return;
+            }
+        }
+        if(m.confirm_timer!=0.0f)return;
+        if(phase==1 && m.previous_phase==0) {
+            if(button==10 || button==11) {m.chosen=button==10;m.closing=1;m.confirm_timer=0.3f;menu_sound(s);}
+        }
+        m.previous_phase=phase;return;
+    }
+    if(m.splash) {   // the title fades out (500 a second)
+        const std::int32_t a=static_cast<std::int32_t>(static_cast<float>(m.splash)+s.dt*-500.0f);
+        m.splash=static_cast<std::uint8_t>(a>=0?a:0);return;
+    }
+    if(phase==1) {
+        if(m.previous_phase==0) {
+            if(button==8) {interface_event(s,InterfaceEventKind::Sound,-1,10);m.previous_phase=phase;interface_event(s,InterfaceEventKind::MoreGames,-1,0);return;}
+            if(m.bonus && button==7) {interface_event(s,InterfaceEventKind::Sound,-1,10);m.previous_phase=phase;interface_event(s,InterfaceEventKind::BonusRequest,-1,0);return;}
+            if(button>=0 && button<8 && !(button==0 && !m.has_save) && !(button==4 && !m.has_scores)) {menu_sound(s);m.pressed=button;}
+        }
+    } else if(phase==0 && m.pressed>=0) {   // the touch has ended: the button still under it acts
+        const bool asks=m.has_save && m.pressed>=1 && m.pressed<=3;   // a new game over a saved one asks first
+        if(button==m.pressed && m.pressed<=6 && !asks)interface_event(s,InterfaceEventKind::MainMenuButton,m.pressed,0);
+        if(button==m.pressed)switch(m.pressed) {
+        case 0:dr_session_continue_game(&s,now(s));break;   // Game::ContinueGame
+        case 1:case 2:case 3:
+            if(m.has_save) {m.confirm=1;m.closing=0;m.confirm_kind=m.pressed-1;m.confirm_timer=0.3f;}
+            else start_menu_game(s,m.pressed-1);
+            break;
+        case 4:score_show(s,s.settings.score_page_1660c,false);main_menu_set_active(s,false);break;   // Game::ShowScores
+        case 5:flip_switch(s,10,s.settings.sound_13ec6,&s.settings.sound_changed_13ec7);if(s.settings.sound_13ec6)menu_sound(s);break;
+        case 6:interface_event(s,InterfaceEventKind::Dashboard,-1,0);break;
+        default:break;
+        }
+        m.pressed=-1;
+    }
+    m.previous_phase=s.touch.phase;
+}
+// The game-over screen (T040-M7). GameOverScreen::InitIcons 0x3013c: the perks and flaws the class has, the enemies on the board
+void game_over_icons(Session& s) {
+    GameOverTally& g=s.game_over;g.perks=g.flaws=g.enemies=0;
+    for(int i=0;i<4;++i) {g.perks+=s.match.perks[i]!=255;g.flaws+=s.stroke.selection.character.flaws[i]!=255;}
+    for(const auto& tile:s.stroke.selection.tiles)g.enemies+=tile.rule.type==1 && static_cast<std::uint32_t>(tile.rule.enemy_type)<=32u;
+}
+// GameOverScreen::Process 0x30c28 (route GameOver)
+void game_over_process(Session& s) {
+    GameOverTally& g=s.game_over;std::int32_t& state=s.screens.game_over_state_cc1c;
+    const float wait=g.wait;
+    if(state>1 && s.touch.phase==1 && g.previous_phase==0) {g.wait=0.0f;if(state!=3)g.progress=1.0f;}   // a tap
+    g.previous_phase=s.touch.phase;
+    if(wait>0.0f) {
+        g.wait-=s.dt;
+        if(!(g.wait>0.0f) && state==2) {interface_event(s,InterfaceEventKind::Sound,-1,27);g.line=g.line==12?21:g.line+1;}
+        if(g.wait>0.0f)return;
+    }
+    const auto next_line=[&g] {g.progress=0.0f;g.value=1.0f;g.rate=1.0f;g.wait=0.5f;};
+    switch(state) {
+    case 0:
+        g.progress+=s.dt*0.5f;
+        if(g.progress>=1.0f) {state=1;g.wait=1.0f;g.progress=0.0f;}
+        return;
+    case 1:
+        g.progress+=s.dt;
+        if(g.progress>=1.0f) {g.progress=0.0f;state=2;g.tick=0.2f;g.line=-1;g.wait=0.5f;g.value=g.rate=1.0f;game_over_icons(s);}
+        return;
+    case 3:
+        g.progress+=s.dt*0.5f;
+        if(g.progress>=1.0f)s.end.game_over_screen=0;
+        return;
+    case 2:break;
+    default:return;
+    }
+    const std::int32_t line=g.line;
+    if((line>=8 && line<=11) || line==21) {   // icons, one each 0.2 s
+        std::int32_t& shown=g.shown[line==21?4:line-8];
+        const std::int32_t target=line==8?5:line==9?s.resources.skill_count:line==10?g.perks:line==11?g.flaws:g.enemies;
+        if(g.progress==1.0f)shown=target;
+        else if(shown<target) {
+            g.tick-=s.dt;
+            if(!(g.tick>0.0f)) {++shown;g.tick=0.2f;interface_event(s,InterfaceEventKind::Sound,-1,line==21?14:2);}
+            if(shown<target)return;
+        }
+        if(line==21) {interface_event(s,InterfaceEventKind::NagScreen,-1,0);state=3;g.progress=0.0f;g.wait=10.0f;}   // Game::ShowNagScreen
+        else next_line();
+        return;
+    }
+    if(line<3 || line>12) {next_line();return;}   // the headings
+    const bool challenge=s.stroke.record_14aed && s.stroke.mode_14ae8==1;   // record mode, mode 1
+    const PathState& p=s.path;
+    const std::int32_t target=line==3?p.turn:line==4?s.resources.level:line==5?(challenge?p.crossing_average:dr_total_xp(&s.resources)):
+        line==6?(challenge?p.crossing_best:dr_total_gold(&s.resources)):line==7?(challenge?p.crossing_samples:dr_total_up(&s.resources)):
+        dr_get_score(&s.resources,&s.path,&s.skills,s.end.victory!=0);
+    g.rate+=s.dt*0.1f;
+    const float old=g.value;g.value=g.rate*old;
+    const float goal=static_cast<float>(target);
+    if(g.value>=goal || g.progress==1.0f) {g.value=goal;interface_event(s,InterfaceEventKind::Sound,-1,10);}
+    else if(static_cast<std::int32_t>(g.value)!=static_cast<std::int32_t>(old))interface_event(s,InterfaceEventKind::Sound,-1,2);
+    if(goal>g.value)return;
+    next_line();
+}
+// NameScreen::Process 0x3cac0 (route Name, T040-M7d; the class and mode screens inside it are the dr_session_class_* /
+// setup calls): the fade counts down and, closing, the screen closes when it has run out; its alpha, the keyboard's
+// slide, the cursor and Start's alpha are the renderer's, its buttons the dr_session_setup_* calls
+void setup_process(Session& s) {
+    SetupScreen& n=s.setup;
+    if(n.timer>0.0f) {   // no input in the frame
+        n.timer-=s.dt;
+        if(n.timer<0.0f) {n.timer=0.0f;if(n.closing)s.screens.name_12c09=0;}
+        return;
+    }
+    s.setup_press=s.touch.phase==1 && n.previous_phase==0;   // NameScreen::ProcessInput: a touch begun since the last input frame
+    n.previous_phase=s.touch.phase;
+}
+// A setup call stands for a press in the last frame: taken when that frame began a touch the screen takes (one a frame)
+bool setup_ready(Session& s) {const bool ready=s.setup_press;s.setup_press=false;return ready;}
 // The help popup (T040-M6). HelpMenu::Show 0x37f04
 void help_show(Session& s,std::int32_t text,Point at,float width,float height,std::int32_t slot) {
     HelpPopup& p=s.help;p.timer=0.2f;p.closing=0;s.screens.help_102a4=1;p.previous_phase=1;
@@ -582,6 +787,15 @@ void frame_event(void* c,const GameFrameEvent* e) {
     Session& s=self(c);forward(s,SessionSource::GameFrame,e);
     if(e->kind==GameFrameEventKind::InterfaceProcess)interface_process(s,e->a!=0);
     else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Help))help_process(s);
+    else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::MainMenu))main_menu_process(s);
+    else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::GameOver))game_over_process(s);
+    else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Score))score_process(s);
+    else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Name))setup_process(s);
+    else if(e->kind==GameFrameEventKind::ScoreShow) {   // ScoreScreen::Show(GameMode / Difficulty, true) from the game-over screen
+        std::int32_t page=s.score_pages.page;
+        if(e->b) {if(e->a==0 || e->a==1)page=4+e->a;} else if(e->a>=0 && e->a<=3)page=e->a;
+        score_show(s,page,true);
+    }
 }
 // Frame steps
 void step_input(Session& s) {
@@ -657,7 +871,7 @@ void set_name(Session& s,const char* name) {   // Game::SetName
     s.settings.name_changed_be49=std::strcmp(own,name)!=0;std::strncpy(own,name,16);own[16]=0;
 }
 void show_setup(Session& s,bool challenge) {   // NameScreen::Show(Game's name, challenge)
-    SetupScreen& n=s.setup;n.challenge=challenge;s.screens.name_12c09=1;
+    SetupScreen& n=s.setup;n.challenge=challenge;s.screens.name_12c09=1;n.timer=0.3f;n.closing=0;n.previous_phase=1;   // its fade-in (T040-M7d)
     const char* name=reinterpret_cast<const char*>(s.name);n.length=static_cast<std::int32_t>(std::strlen(name));
     if(!n.length){std::memcpy(n.name,"Enter name",11);n.named=0;}
     else {std::strncpy(n.name,name,16);n.name[16]=0;n.named=1;}
@@ -737,6 +951,7 @@ extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t diffi
     }
     for(int i=0;i<10;++i)dr_class_initialise(&s->classes[i],i,s->class_replacements[i]);   // Game::Start: the class roster
     s->tokens=dr_token_queue_create(&s->match);
+    s->screens.main_menu_c400=1;s->main_menu.splash=255;s->main_menu.pressed=-1;   // MainMenu::MainMenu (T040-M7)
     link(*s);return s;
 }
 extern "C" void dr_session_destroy(Session* s) {dr_token_queue_destroy(s->tokens);delete s;}
@@ -747,7 +962,7 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
         s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
         s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels,&s->setup,&s->game_menu,&s->stats_menu,
-        &s->interface_buttons,&s->main_menu,&s->help};
+        &s->interface_buttons,&s->main_menu,&s->help,&s->score_pages,&s->game_over,&s->clock};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 // Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
@@ -788,6 +1003,7 @@ extern "C" void dr_session_set_difficulty(Session* s,std::int32_t difficulty) {
 }
 extern "C" void dr_session_set_name(Session* s,const char* name) {set_name(*s,name);}
 extern "C" void dr_session_setup_random_name(Session* s) {
+    if(!setup_ready(*s))return;
     SetupScreen& n=s->setup;RandomState* r=&s->match.random;
     if(dr_random_int(r,0,1,0)==0) {
         const std::int32_t a=dr_random_int(r,0,49,0),b=dr_random_int(r,0,48,0);
@@ -798,24 +1014,33 @@ extern "C" void dr_session_setup_random_name(Session* s) {
     }
     n.length=static_cast<std::int32_t>(std::strlen(n.name));n.named=1;
 }
-extern "C" bool dr_session_setup_select_class(Session* s,std::int32_t type) {
+namespace {
+bool select_class(Session* s,std::int32_t type) {
     if(type<0 || type>9 || !s->classes[type].level)return false;
     dr_session_set_current_class(s,type);return true;
 }
+}
+extern "C" bool dr_session_setup_select_class(Session* s,std::int32_t type) {return setup_ready(*s) && select_class(s,type);}
 extern "C" bool dr_session_setup_mode(Session* s,std::int32_t mode) {
-    if(!s->setup.challenge || mode<0 || mode>1)return false;
+    if(!setup_ready(*s) || !s->setup.challenge || mode<0 || mode>1)return false;
     dr_session_set_mode(s,mode);return true;
 }
 extern "C" bool dr_session_setup_difficulty(Session* s,std::int32_t difficulty) {
-    if(s->setup.challenge || difficulty<0 || difficulty>3)return false;
+    if(!setup_ready(*s) || s->setup.challenge || difficulty<0 || difficulty>3)return false;
     dr_session_set_difficulty(s,difficulty);return true;
 }
 extern "C" bool dr_session_setup_start(Session* s,std::uint32_t time) {
-    if(!s->setup.named || s->setup.length<=0)return false;
+    if(!setup_ready(*s) || !s->setup.named || s->setup.length<=0)return false;
     set_name(*s,s->setup.name);
     s->screens.intro_c3f0=1;          // IntroScreen::Initialise
     dr_session_new_game(s,time);
     s->screens.name_12c09=0;
+    return true;
+}
+extern "C" bool dr_session_setup_back(Session* s) {
+    if(!setup_ready(*s))return false;
+    menu_sound(*s);s->setup.closing=1;s->setup.timer=0.3f;
+    main_menu_show(*s);s->screens.main_menu_c400=1;s->main_menu.previous_phase=1;   // MainMenu::SetActive(true): the touch is down
     return true;
 }
 extern "C" void dr_session_intro_done(Session* s) {s->screens.intro_c3f0=0;save_state(*s);}
@@ -838,10 +1063,11 @@ template<class Edit> void edit_current(Session& s,Edit edit) {record_from_views(
 extern "C" void dr_session_class_choices(Session* s,std::uint8_t perks[10],std::uint8_t flaws[10],std::uint8_t skills[20]) {
     record_from_views(*s);dr_class_choices(s->classes,s->scroll.current,perks,flaws,skills);
 }
-extern "C" bool dr_session_class_select(Session* s,std::int32_t type) {return dr_session_setup_select_class(s,type);}
+extern "C" bool dr_session_class_select(Session* s,std::int32_t type) {return select_class(s,type);}
 // The setup screen's help button (NameScreen::ProcessInput: sound 0, then HelpMenu::QueueHelp of its five texts) and the
 // class screen's (ClassScreen::Process, released on it: the shown tab's texts)
 extern "C" void dr_session_setup_help(Session* s) {
+    if(!setup_ready(*s))return;
     menu_sound(*s);
     for(std::int32_t t=100;t<105;++t)help_queue(*s,t);
 }
@@ -870,6 +1096,7 @@ extern "C" void dr_session_class_done(Session* s) {
     edit_current(*s,[](ClassProfile& c){dr_class_validate(&c);});
     dr_session_set_current_class(s,s->classes[s->scroll.current].class_type);
     dr_session_save_classes(s);
+    s->setup.previous_phase=1;   // as the press that opened the class screen left it (T040-M7d)
 }
 extern "C" void dr_session_set_current_class(Session* s,std::int32_t type) {
     auto& sel=s->stroke.selection;MatchState& m=s->match;
@@ -899,12 +1126,16 @@ extern "C" bool dr_session_continue_game(Session* s,std::uint32_t time) {
     dr_session_new_game(s,time);
     const SaveSources src=save_sources(*s);dr_deserialise_state(&src,s->save,&s->save_hooks);
     dr_calculate_tile_positions(&s->stroke,&s->new_game_hooks);
+    s->main_menu.timer=0.3f;s->main_menu.fading=0;   // MainMenu::FadeOut 0x2e204 (T040-M7): the menu closes in 0.3 s
     s->dt=0.0f;interface_process(*s,false);   // Interface::Process(0, false) (T040-M6: the heartbeat's help)
     return true;
 }
+namespace {
+void start_menu_game(Session& s,std::int32_t confirm_kind) {dr_session_start_game(&s,confirm_kind==0?0:confirm_kind==1?2:1,now(s));}
+}
 extern "C" void dr_session_interface_process(Session* s,float dt,bool input_ready) {s->dt=dt;interface_process(*s,input_ready);}
 extern "C" FrameRoute dr_session_frame(Session* s,float dt,std::int32_t touch_phase,Point touch) {
-    s->touch.phase=touch_phase;s->touch.position=touch;s->dt=dt;s->input_route=-1;
+    s->touch.phase=touch_phase;s->touch.position=touch;s->dt=dt;s->input_route=-1;s->setup_press=false;
     return dr_process_frame(&s->frame,dt,&s->frame_hooks);
 }
 extern "C" std::int32_t dr_session_input_route(const Session* s) {return s->input_route;}
