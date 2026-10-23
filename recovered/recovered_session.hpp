@@ -258,6 +258,8 @@ bool dr_session_next_sound(dungeonraid::Session*,std::int32_t* sound,std::int32_
 // Tile::UpdateEnemyUV's rules on a tile (T040-N3): the session runs it itself on the units' EnemyUV events (a spinning
 // mortal enemy: GeneratedTile.flag_224 and Rand(30, 45, stream 0) drawn after the event, its speed the renderer's).
 void dr_session_update_enemy_uv(dungeonraid::Session*,std::int32_t tile);
+// Game::QueueTileSound on a tile (T040-P, for tests: the session runs it on the selection's TileSound events).
+void dr_session_queue_tile_sound(dungeonraid::Session*,std::int32_t tile);
 void dr_session_destroy(dungeonraid::Session*);
 // Pointers to every object (the token queue's request storage is reached through recovered_tokens).
 dungeonraid::SessionObjects dr_session_objects(dungeonraid::Session*);

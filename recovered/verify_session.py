@@ -39,7 +39,9 @@ Saves (T030-N5): Game::SerialiseState (the turns' ends, ProcessInput's tail) and
 a class scroll's level-up) run as original code instead of the units' boundaries; the save buffer (length, changed flag,
 bytes) and the class records' save are compared every frame. Every case has a player name (saved). In the new-game
 phase some games quit midway and continue from their save (the original's InitNewGame, DeserialiseState and
-CalculateTilePositions; the native dr_session_continue_game), then play on.
+CalculateTilePositions; the native dr_session_continue_game), then play on. T040-P: every third of them first saves a
+primed state (help on with topics 14, 19 and 20 to come, low health, full cooldowns) on both sides, so the continue's
+Interface::Process shows the heartbeat's help 14 (19 / 20 at a load: verify_load.py); a help popup over the main menu afterwards is closed with a tap inside.
 Damage labels (T040-K6): the leech, flame and spike SimpleLabels (Game+0xbfc0 / 0x14afc / 0x14e70) are set up by the
 constructor and Game::Start's SetColour (17, 18, 19) and duration 0.2 as original code; Game::Process's SimpleLabel calls on
 them (Initialise, SetPosition, SetNumber, SetAlpha, Process) run as original code (the digit tables filled by their static
@@ -283,12 +285,12 @@ SCORE_FUNCTIONS=('__ZN11ScoreScreen8AddScoreEPKciiiii9ScoreType','__ZN11ScoreScr
 SCORE_CALLS={}         # by function: the GameMode / Difficulty overloads and SetSkills
 NAME_RNG=random.Random(0xbe38)
 # Game::DeserialiseState / ContinueGame / CalculateTilePositions (T030-N5): original code; the interface updates, icons
-# and texts are skipped (sprintf, strcpy stubs too)
+# and texts are skipped (sprintf, strcpy stubs too), except Interface::UpdateSkills (T040-P: its help 19 / 20)
 DESERIALISE,CONTINUE_GAME,TILE_POSITIONS=0x15c18,0x165f4,0xb264
 LOAD_SKIP=['__ZN7Upgrade7SetIconEiiii','__ZN5Label7SetTextEPKci','__ZN4Item9MakeStatsEv','__ZN9Interface16UpdateSkullValueEv',
            '__ZN9Interface15UpdateHealthBarER4Quadi','__ZN9Interface17UpdateShieldValueEv','__ZN9Interface11UpdateXPBarER4Quadi',
            '__ZN9Interface11UpdateUPBarER4Quadi','__ZN9Interface13UpdateGoldBarERA2_4Quadi','__ZN9Interface9SetPoisonEi',
-           '__ZN9Interface13PositionSkillEi','__ZN9Interface12UpdateSkillsEv','__ZN8GameMenu12SetHelpStateEb']
+           '__ZN9Interface13PositionSkillEi','__ZN8GameMenu12SetHelpStateEb']   # (T040-P: Interface::UpdateSkills runs: its help 19 / 20)
 LOAD_STUBS=(0x194f60,0x194fb0)
 HELP_SWITCH,DIFFICULTY_CHANGED=0x13ec8,0x14ae4
 # The damage labels (T040-K6): leech, flame, spike SimpleLabel; their calls from Game::Process run as original code
@@ -313,7 +315,8 @@ MODE,MODE_CHANGED,NAME_CHANGED,CURRENT_CLASS,NAME_OPEN,INTRO_OPEN=0x14ae8,0x14ae
 SETUPS={}             # setup presses by kind and result
 VALIDATE,RACE_UNLOCKED,CAN_CHOOSE,SET_PERK,SET_FLAW,SET_SKILL=0x111870,0x8d88,0x110a54,0x1115e0,0x111628,0x111b80   # T040-M4b
 CLASS_OPS={}          # class-screen edits by kind
-CONTINUES=[0]         # games continued from their save (new-game phase)
+CONTINUES=[0,0]       # games continued from their save (new-game phase); of them, from a primed save (T040-P)
+PRIMED=[0]            # T040-P: primed continues whose Interface::Process showed help 14
 # T040-M5: GameMenu (Game+0x5b00) and StatsMenu (Game+0x5b90) from Interface::Process, their Show from Interface::ProcessInput, and
 # InitNewGame's Interface::Reset as original code (display skipped); MainMenu (Game+0xc3fc)
 GM,SM,GM_PROCESS,SM_PROCESS,GM_SHOW,SM_SHOW,IFACE_RESET,MAIN_MENU_OBJ=0x5b00,0x5b90,0x32580,0x33c0c,0x31b88,0x3381c,0x204a4,0xc3fc
@@ -747,6 +750,7 @@ class OriginalMixin:
         self.sound_queue=[]   # T040-N4
         super().load(c);G=self.GAME;I=G+INTERFACE
         for o,v in ((0x109c,0.0),(0x10a0,1.0),(0x10a4,0.0)):self.u.mem_write(I+o,struct.pack('<f',v))   # the heartbeat as Interface::Interface leaves it (T040-N4)
+        self.write(I+0x1030,G)   # its Game* (Interface::Interface; T040-P: UpdateSkills reads the skill count through it)
         self.u.mem_write(G+SAVE_BUFFER,bytes(0x800));self.u.mem_write(G+NAME,bytes(c['name'])+bytes(17-len(c['name'])))   # no save yet; the name
         self.u.mem_write(G+HELP_SWITCH,b'\0')   # help off (a new session's setting)
         N=G+NAME_SCREEN;self.write(N,G);self.write(G+INTRO,G)   # NameScreen / IntroScreen -> Game; their fields as a new session's
@@ -1201,6 +1205,18 @@ def set_health(old,new,health,maximum=None):
     old.write(old.GAME+RESOURCE_INTS['health'],health);new.r.health=health
     if maximum is not None:old.write(old.GAME+RESOURCE_INTS['health_max'],maximum);new.r.health_max=maximum
 
+def prime_continue(old,new):   # T040-P: the save Continue reads has help on with topics 14, 19 and 20 still to come, low
+    # health and every skill's cooldown full, so ContinueGame's load (Interface::UpdateSkills: help 19 / 20) and its
+    # Interface::Process(0, false) (ProcessHeartbeat: help 14) act; both sides save it again with their SerialiseState.
+    G=old.GAME;bits=(1<<14)|(1<<19)|(1<<20);lib=new.session_lib
+    old.write(G+HELP_QUEUE,old.read(G+HELP_QUEUE)|bits);old.u.mem_write(G+HELP_SWITCH,b'\1')
+    new.fin_flags.help_flags_102d0|=bits;(U8*12).from_address(lib.dr_session_objects(new.session).settings)[0]=1
+    set_health(old,new,max(1,C.c_int32(old.read(G+RESOURCE_INTS['health_max'])).value*3//10))
+    for i in range(C.c_int32(old.read(G+0xbfa0)).value):
+        p=old.read(G+0xbf90+4*i);old.write(p+0x90,old.read(p+0x8c));new.r.skill_current[i]=new.r.skill_max[i]
+    old.run_entry(SERIALISE,['saving']);old.returns.pop(old.STOP&~1,None)
+    lib.dr_session_save.argtypes=[C.c_void_p];lib.dr_session_save.restype=None;lib.dr_session_save(new.session)
+
 def main():
     menus_seen={};items_rng=random.Random(0x14c04);rng=random.Random(0x5e55);overlay_rng=random.Random(0x32580);frames=turns=moves=ended=presses=busy_presses=busy_blocked=0;routes={};sources={};phases={};used={}
     help_rng=random.Random(0x38128);post_rng=random.Random(0x30c28);setup_rng=random.Random(0x3cac0);unlock_rng=random.Random(0x1090e8);case_time=None
@@ -1223,7 +1239,10 @@ def main():
         if case_time is not None:new.set_time(case_time)
         for frame in range(8000):
             dt=f32(o.choice([1/60,1/30]));screen=None
-            if new.flags.game_over_screen:
+            if new.screens.help_102a4:   # T040-P: a help popup over the menu (Continue's load showed it; the menu waits): after
+                screen='help';h=new.help_popup()   # its fade the touch ends, then a tap inside closes it
+                plan=[(1,0,.5)] if h.timer<=0 and not h.closing and h.previous_phase==0 else [(0,-1,.5)]
+            elif new.flags.game_over_screen:
                 screen='over'
                 if not plan and o.random()<.04:plan=[(1,-1,.5),(0,-1,.5)]
             elif new.screens.score_ef6c:
@@ -1264,7 +1283,7 @@ def main():
                     else:break
             else:break
             phase,button,x=plan.pop(0) if plan else (0,-1,.5)
-            touch=[x,ROWS_TOP+ROWS_HEIGHT/2 if button>=0 and button&16 else .2]
+            touch=[x,ROWS_TOP+ROWS_HEIGHT/2 if button>=0 and button&16 else .2] if screen!='help' else HELP_IN if button==0 else HELP_OUT
             old.set_menu_button(button);new.set_menu_button(button);old.set_button(-1);new.set_button(-1);old.post_calls=[]
             a,b=old.play_frame(phase,touch,dt),new.play_frame(phase,touch,dt)
             for call in old.post_calls:   # the original's MainMenu::Process called these (skipped there): performed now, as in its frame
@@ -1442,8 +1461,11 @@ def main():
         play(old,new,game,LONG_TURNS if game%3==2 else TURNS)
         if game%3!=1 and not old.read(old.GAME+0xcac4)&0xff:   # T030-N5: quit, then Continue from the saved game and play on
             assert old.read(old.GAME+SAVE_LENGTH),'no save'
+            if game%3==0:prime_continue(old,new);compare('primed save',old.save_state(),new.save_state(),game=game);CONTINUES[1]+=1
             old.continue_game();new.continue_game(c['new_game']['time'])
             compare('continue',old.game_state(),new.game_state(),game=game);CONTINUES[0]+=1
+            if game%3==0:PRIMED[0]+=not new.fin_flags.help_flags_102d0>>14&1   # (the heartbeat took topic 14; 19 / 20: verify_load.py,
+                # since ContinueGame's InitNewGame clears the topics before DeserialiseState's UpdateSkills)
             play(old,new,game,TURNS,quit=game%3==0)   # T040-M5: some quit to the main menu from the game menu at once
             if new.screens.main_menu_c400:   # then the main menu (T040-M7): over the saved game a new game asks first, or Continue;
                 assert new.screens.menus[1];after_game(old,new,game)   # InitNewGame's Interface::Reset closes the game menu
@@ -1520,8 +1542,9 @@ def main():
     assert set(range(23))|set(range(100,105))|{'tap_in','tap_out'}<=set(HELP) and len([k for k in HELP if isinstance(k,int) and k>=105])>=8,HELP
     assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
     assert all(LABEL_CALLS.get(n,0)>0 for n in LABEL_FUNCTIONS),LABEL_CALLS   # the damage labels shown, moved, renumbered, dimmed, faded
+    assert CONTINUES[1]>0 and PRIMED[0]>0,(CONTINUES,PRIMED)   # T040-P: a primed continue showed help 14
     assert SAVE_CALLS[0]>100 and CONTINUES[0]>0 and CLASS_SAVES[0]>0 and len(SCORE_CALLS)==3,(SAVE_CALLS,CONTINUES,CLASS_SAVES,SCORE_CALLS)   # saves; continued games; class saves; scores
-    report=dict(status='passed',phases=phases,skill_topups={str(k):v for k,v in SKILL_TOPUPS.items()},menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],starts=STARTS,class_ops=dict(sorted(CLASS_OPS.items())),after_games=dict(sorted(POST.items())),help={str(k):v for k,v in sorted(HELP.items(),key=lambda kv:str(kv[0]))},overlay=dict(sorted(OVERLAY.items())),setup_presses=dict(sorted(SETUPS.items())),label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
+    report=dict(status='passed',phases=phases,skill_topups={str(k):v for k,v in SKILL_TOPUPS.items()},menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],primed_continues=dict(count=CONTINUES[1],help14=PRIMED[0]),class_saves=CLASS_SAVES[0],starts=STARTS,class_ops=dict(sorted(CLASS_OPS.items())),after_games=dict(sorted(POST.items())),help={str(k):v for k,v in sorted(HELP.items(),key=lambda kv:str(kv[0]))},overlay=dict(sorted(OVERLAY.items())),setup_presses=dict(sorted(SETUPS.items())),label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',

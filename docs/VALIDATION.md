@@ -587,3 +587,11 @@
 
 - verify_score_screen：原版每次 Game::SetScorePage 调用与会话的 ScorePageTurn 事件逐帧对照。GameOverLine 只是在已逐帧对照的计分状态变化处发通知（不另对照）。
 - `./scripts/relay.sh verify --full` → exit 0：97 步全部通过。运行目录 `.relay/runs/20261023T122501.899959Z`，输入指纹 `2ddb5826…6a266c`，inputs_unchanged true。
+
+## 2026-10-23 T040-P：补三处测试覆盖缺口（Claude）
+
+- 新 verify_tile_sound：原版 Game::QueueTileSound 0x9094 从入口执行（QueueSound 照 verify_session 记录、受声音开关控制）对新增的 dr_session_queue_tile_sound，3000 次随机格子类型（−1..8）、药水标志 +0x232/+0x233/+0x234 与声音开关；八种药水标志组合都出现。错误副本“只认 +0x234”（T040-N 存活的那个）exit 1。
+- verify_load：读档时原版 Interface::UpdateSkills 不再跳过（作为原版代码执行）；40% 的情形在被覆盖的状态里留着帮助 19 / 20（原版在 HelpMenu::Deserialise 读回存档的帮助位之前就调用 UpdateSkills，所以看的是读档前的状态）；300 例中 126 例设好，86 例读档时弹出 19 / 20，两边一致。错误副本“读档不刷新技能按钮”（M6 存活）exit 1。
+- 查出测试框架的缺口：原版界面对象指回 Game 的指针 Interface+0x1030 只在技能输入、特殊目标两条流程里才填；读档时 UpdateSkills 经它读技能数，读到 0，所以从未弹出。现在 OriginalMixin.load 按 Interface::Interface 设好。
+- verify_session：继续游戏的局里每三局一局先在两边存一个“帮助开、主题 14/19/20 待显示、低血、技能冷却满”的存档再继续（各用自己的 SerialiseState，存档逐字节一致）；继续时 Interface::Process 弹出心跳帮助 14（整轮 3 局、3 次）。局后画面里帮助框盖在主菜单上时，照原版点框内关闭（主菜单在帮助框打开时暂停，两边一致）。错误副本“继续游戏末尾不跑 Interface::Process”（M6 存活）在缩短版整局测试中 exit 1（continue 阶段）。19 / 20 在继续游戏时出不来（ContinueGame 的 InitNewGame 先清空帮助位），由 verify_load 覆盖。
+- `./scripts/relay.sh verify --full` → exit 0：98 步全部通过（verify_session 1056 秒、verify_load 87 秒）。运行目录 `.relay/runs/20261023T184914.761441Z`，输入指纹 `299ef5a9…afd4ad`，inputs_unchanged true。

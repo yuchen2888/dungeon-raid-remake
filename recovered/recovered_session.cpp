@@ -1098,6 +1098,7 @@ extern "C" void dr_session_seed(Session* s,std::uint32_t time) {
     }
 }
 extern "C" void dr_session_update_enemy_uv(Session* s,std::int32_t tile) {update_enemy_uv(*s,tile);}
+extern "C" void dr_session_queue_tile_sound(Session* s,std::int32_t tile) {queue_tile_sound(*s,tile);}
 extern "C" void dr_session_queue_sound(Session* s,std::int32_t sound) {queue_sound(*s,sound);}
 // Game::GetNextSound 0x9f18, then GetSoundMapping 0x1bdf8's RandI(0, variants - 1, stream 0) (GetSoundVariations 0x1b9f0:
 // the files the platform loads for each sound)

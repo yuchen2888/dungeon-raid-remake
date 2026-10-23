@@ -9,7 +9,8 @@ UVs, texts, countdowns and enemy UVs recorded), Tile::Deserialise2 and the Make*
 UpdateValues functions, Item::Deserialise2 and ClearStats, Game::UpdateStats (as verify_session.py), Skill::Deserialise,
 CharacterClass::DeserialiseGameState, SetRandSeed, HelpMenu::Deserialise, Game::SetHelpState and SetDifficulty are
 original code; the interface updates, Upgrade::SetIcon, texts (Label::SetText, sprintf, strcpy, Item::MakeStats),
-PositionSkill, UpdateSkills and GameMenu::SetHelpState are skipped. Some cases take older format versions (0..2: no
+PositionSkill and GameMenu::SetHelpState are skipped; Interface::UpdateSkills runs (T040-P: in 40% of the cases the state loaded
+over has topics 19 / 20 to come, so the load points them at skills; the help popup state is compared). Some cases take older format versions (0..2: no
 record mode / class / kill count, no broken-shield byte without a header) by rewriting the version byte. Compared:
 the game state of verify_session.py (board, combat, resources, items, skills, stats, seeds ...) plus the resource values,
 chances and stat counts, the current class record (race, perks, flaws, class type and level views), the name, the help
@@ -22,7 +23,7 @@ the ten records and the current class's views.
 import ctypes as C
 import json
 import random
-from verify_session import SET_CURRENT, CarriedSessionOriginal, CarriedSession, SERIALISE, SAVE_BUFFER, NAME, I32, U8, DESERIALISE, HELP_SWITCH as HELP, DIFFICULTY_CHANGED, SERIALISE_CLASSES, CLASS_SAVE
+from verify_session import SET_CURRENT, CarriedSessionOriginal, CarriedSession, SERIALISE, SAVE_BUFFER, NAME, I32, U8, DESERIALISE, HELP_SWITCH as HELP, DIFFICULTY_CHANGED, SERIALISE_CLASSES, CLASS_SAVE, HELP_QUEUE
 from verify_release import CLASSES, CLASS_STRIDE, CLASS_INDEX_ADDR
 from verify_save import case as save_case
 from verify_stroke import HERE
@@ -126,14 +127,20 @@ def main():
     lib=new.session_lib;lib.dr_session_deserialise.argtypes=[C.c_void_p];lib.dr_session_deserialise.restype=C.c_bool
     lib.dr_session_restore_classes.argtypes=[C.c_void_p,C.c_char_p,C.c_uint32];lib.dr_session_restore_classes.restype=C.c_bool
     lib.dr_session_save_classes.argtypes=[C.c_void_p];lib.dr_session_save_classes.restype=None
+    SKILL_HELP=(1<<19)|(1<<20);helped=dict(primed=0,shown=0)
     for n in range(300):
         a=case(rng);old.load(a);old.u.mem_write(old.GAME+SAVE_BUFFER,bytes(0x800))
         old.run_entry(SERIALISE,['saving']);saved=bytearray(old.u.mem_read(old.GAME+SAVE_BUFFER,0x800))
         version=rng.choice([3,3,3,3,2,1,0]);saved=bytearray(older(saved,version)) if version<3 else saved;versions[version]=versions.get(version,0)+1
         b=case(rng);old.load(b);new.load(b)
+        # T040-P: topics 19 / 20 still to come in the state loaded over: DeserialiseState's Interface::UpdateSkills (before
+        # HelpMenu::Deserialise reads the saved topics) points them at the loaded skills whose cooldowns are full or empty
+        primed=rng.random()<.4
+        if primed:old.write(old.GAME+HELP_QUEUE,old.read(old.GAME+HELP_QUEUE)|SKILL_HELP);new.fin_flags.help_flags_102d0|=SKILL_HELP;helped['primed']+=1
         old.u.mem_write(old.GAME+SAVE_BUFFER,bytes(saved));C.memmove(C.addressof(new.save),bytes(saved),0x800)
         old.gen_events=[];new.gen_events=[]
         old.run_entry(DESERIALISE,['loading','gen_active']);ok=lib.dr_session_deserialise(new.session);new.sync()
+        helped['shown']+=primed and bool(new.screens.help_102a4)   # (the popup open after the load)
         old.class_current=True   # the loaded class (Game+0x1648c) is the current one: read its record (verify_session's match_status)
         x=[old.game_state(),old.extra_state(),old.gen_events];y=[new.game_state(),new.extra_state(),new.gen_events]   # with the draws and tile events
         if not ok or x!=y:
@@ -169,7 +176,8 @@ def main():
         if ok!=(classes[1]==10) or x!=y:
             (HERE/'load_failure.json').write_text(json.dumps(dict(stage='classes',original=x,native=y,ok=ok),indent=2,default=str))
             raise AssertionError('load_failure.json (classes)')
-    report=dict(status='passed',cases=300,versions={str(k):v for k,v in sorted(versions.items())},
+    assert helped['shown']>20,helped   # (loads that showed help 19 / 20)
+    report=dict(status='passed',cases=300,skill_help=helped,versions={str(k):v for k,v in sorted(versions.items())},
                 function=dict(symbol='__ZN4Game16DeserialiseStateEv',address=hex(DESERIALISE),native='dr_deserialise_state (dr_session_deserialise)'),
                 original='Actual Game::DeserialiseState from its entry over a different loaded state, with the saved bytes of Game::SerialiseState',
                 classes='Actual Game::DeserialiseClasses with the bytes of Game::SerialiseClasses, every case',
