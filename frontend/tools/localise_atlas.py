@@ -120,9 +120,9 @@ ZH = [
     # menus.png: the confirmation box (main menu), its yes / no, the high scores' Return, Help, the modes' names
     ("menus", (1, 313, 50, 335), "free", 0, "Heavy", ["是"]),
     ("menus", (1, 336, 41, 354), "free", 0, "Heavy", ["否"]),
-    ("menus", (18, 362, 232, 460), (10, 362, 18, 500), 0, "Heavy", ["开始新游戏会删除", "你当前的游戏。", "确定吗？"]),
-    ("menus", (18, 462, 70, 494), (10, 362, 18, 500), 0, "Heavy", ["否"]),
-    ("menus", (168, 462, 232, 494), (10, 362, 18, 500), 0, "Heavy", ["是"]),
+    ("menus", (18, 362, 232, 460), (80, 470, 160, 500), 0, "Heavy", ["开始新游戏会删除", "你当前的游戏。", "确定吗？"]),
+    ("menus", (18, 462, 70, 494), (80, 470, 160, 500), 0, "Heavy", ["否"]),
+    ("menus", (168, 462, 232, 494), (80, 470, 160, 500), 0, "Heavy", ["是"]),
     ("menus", (104, 1, 193, 27), "button", 0, "Heavy", ["返回"]),
     ("menus", (423, 286, 511, 310), "button", 0, "Heavy", ["帮助"]),
     ("menus", (408, 326, 511, 380), "free", 0, "Heavy", ["麻花", "英雄"]),
@@ -305,9 +305,11 @@ def localise(atlas, base, regions):
             px0, py0, px1, py1 = (v * k for v in kind)
             patch = original.crop((px0, py0, px1, py1))
             out = region.copy()
-            for x in range(0, w, patch.width):
-                out.paste(patch.crop((0, 0, min(patch.width, w - x), min(patch.height, h))), (x, 0))
-            out.alpha_composite(text_image(lines, weight, w, h, fill, outline), (0, 0))
+            for y in range(0, h, patch.height):   # (the empty part of the panel, repeated both ways)
+                for x in range(0, w, patch.width):
+                    out.paste(patch.crop((0, 0, min(patch.width, w - x), min(patch.height, h - y))), (x, y))
+            mx, my = round(w * 0.08), round(h * 0.12)   # (a margin: the panel's words smaller than the place)
+            out.alpha_composite(text_image(lines, weight, w - 2 * mx, h - 2 * my, fill, outline), (mx, my))
         if rotation:
             out = out.rotate(-90, expand=True)
         drawn.append((kind in ("free", "bitmap"), out, (x0, y0)))

@@ -75,7 +75,9 @@ const FontCharacter& Font::glyph(std::uint32_t code,std::int32_t& texture_out) c
     if(it==wide.end()){texture_out=texture;return chars['?'];}
     texture_out=wide_texture;return it->second;
 }
-float Font::wide_advance(std::uint32_t code) const {std::int32_t t;return glyph(code,t).advance+spacing;}
+// (the font's spacing is for its own letters: fontMenu's -0.225 pulls Latin capitals together but would run Chinese
+// characters into each other; the wide glyphs' advance already holds their spacing)
+float Font::wide_advance(std::uint32_t code) const {std::int32_t t;return glyph(code,t).advance;}
 std::uint32_t next_code(const char* s,std::size_t& i) {
     const auto b=[&](std::size_t k){return static_cast<std::uint8_t>(s[k]);};
     const std::uint8_t c=b(i);
@@ -111,7 +113,7 @@ std::vector<TextLine> wrap_wide(const Font& font,const char* s,float limit) {
         else if(pos>start && (breaks_around(c) || (breaks_around(previous) && !no_line_start(c)))){cut=pos;next=pos;at=w;can_cut=true;}
         float add;
         if(c<0x80){const char a=static_cast<char>(c);add=font.size(a).x*0.5f+font.advance(a,2.0f);}
-        else {std::int32_t t;const FontCharacter& g=font.glyph(c,t);add=g.w*0.5f+g.advance+font.spacing;}
+        else {std::int32_t t;const FontCharacter& g=font.glyph(c,t);add=g.w*0.5f+g.advance;}
         w+=add;previous=c;
         if(w>limit && pos>start) {
             if(!can_cut){cut=pos;next=pos;at=w-add;}   // (no place to cut: before this character)
@@ -203,7 +205,7 @@ void Label::set_wide_text(const char* s,int n) {
         } else {
             std::int32_t tex=0;const FontCharacter& g=font->glyph(c,tex);
             q.set_uv(Point2{g.u0,g.v0},Point2{g.u1,g.v1});q.set_size(Point2{g.w,g.h});q.set_offset(Point2{g.ox,g.oy});
-            textures[static_cast<std::size_t>(i)]=tex;w=g.w;adv=g.advance+font->spacing;
+            textures[static_cast<std::size_t>(i)]=tex;w=g.w;adv=g.advance;   // (see wide_advance)
         }
         const float centre=w*0.5f+pen;
         q.position=Point2{centre,0.0f};

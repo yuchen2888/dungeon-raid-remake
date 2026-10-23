@@ -212,9 +212,11 @@ void SetupView::initialise(const Texts& t) {
 void SetupView::update_name(const SessionObjects& o) {
     SetupScreen& n=*o.setup;
     Label& l=label(0x2a8);
-    l.set_text(n.name);
     const QuadStrip& box=strip(0x25c);
-    for(;;) {
+    // (the placeholder the session writes, "Enter name", is shown in the game's language: the text setup.enter_name)
+    const std::string* placeholder=!n.named && texts_?&texts_->get("setup.enter_name"):nullptr;
+    l.set_text(placeholder && !placeholder->empty()?placeholder->c_str():n.name);
+    for(;placeholder==nullptr || placeholder->empty();) {
         const float w=l.width*l.scale.x;
         const float room=box.size().x-0.015625f;
         if(!(w>room))break;
