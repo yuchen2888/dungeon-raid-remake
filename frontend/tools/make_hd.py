@@ -3,6 +3,7 @@
 original.gd loads in place of the originals (_texture_path). Local only, like assets/original/ (never in Git).
 
   python3 frontend/tools/make_hd.py <realesrgan-ncnn-vulkan folder> [names...]
+  python3 frontend/tools/make_hd.py --lang     the languages' own pictures in HD, from the HD tiles / menus (below)
 
 The upscaler is Real-ESRGAN's macOS build (github.com/xinntao/Real-ESRGAN, release v0.2.5.0,
 realesrgan-ncnn-vulkan-20220424-macos.zip, downloaded with the owner's consent on 2026-10-23; kept outside the
@@ -23,6 +24,11 @@ to the original's size is compared with the original and the difference, enlarge
 sharper edges and the original's grain; in "other model" areas the pieces come from OTHER_MODEL, which keeps
 a soft pattern the main model turns into dark lines (the coins' rims); "plain" areas (small repeating patterns the model garbles) are simply
 enlarged (Lanczos) instead. Needs Pillow and numpy.
+
+--lang: the languages' pictures (T050-D's localise_atlas.py: tiles / menus with the English words redrawn, and the
+settings page's language names) made again on the HD tiles and menus, into assets/hd/lang/<code>/ and
+assets/hd/lang/names.png, where original.gd's _texture_path looks for them. localise_atlas.py is run as it is, but
+writing into a temporary folder, so the normal-size pictures in assets/lang/ stay untouched.
 """
 import collections
 import os
@@ -174,12 +180,44 @@ def upscale(upscaler, name):
             fix(image, out, mode, box)
     os.makedirs(HD, exist_ok=True)
     Image.fromarray(out).save(os.path.join(HD, name + ".png"), optimize=True)
-    with open(os.path.join(HD, name + ".png.import"), "w", encoding="utf-8") as f:   # exported as is (iOS)
-        f.write('[remap]\n\nimporter="keep"\n')
+    keep(os.path.join(HD, name + ".png"))
     print("%s: %d pieces, %dx%d -> %dx%d" % (name, n, w, h, w * SCALE, h * SCALE), flush=True)
 
 
+def languages():
+    sys.path.insert(0, HERE)
+    import localise_atlas
+    work = tempfile.mkdtemp(prefix="make_hd_lang_")
+    localise_atlas.FRONTEND = work   # (its output folder: <FRONTEND>/godot/assets/lang/<code>)
+    out = os.path.join(work, "godot", "assets", "lang")
+    for code in localise_atlas.REGIONS:
+        sys.argv = ["localise_atlas.py", code, "--base", HD]
+        localise_atlas.main()
+        os.makedirs(os.path.join(HD, "lang", code), exist_ok=True)
+        for name in os.listdir(os.path.join(out, code)):
+            if name.endswith(".png"):
+                shutil.copy(os.path.join(out, code, name), os.path.join(HD, "lang", code, name))
+                keep(os.path.join(HD, "lang", code, name))
+    # the language names (make_names) at SCALE x their size
+    names = Image.new("RGBA", (256 * SCALE, 256 * SCALE), (0, 0, 0, 0))
+    for i, n in enumerate(["English", "中文"]):
+        names.alpha_composite(localise_atlas.text_image([n], "Heavy", 128 * SCALE, 32 * SCALE, localise_atlas.BUTTON_TEXT,
+                                                        localise_atlas.BUTTON_OUTLINE), (0, 32 * SCALE * i))
+    names.save(os.path.join(HD, "lang", "names.png"))
+    keep(os.path.join(HD, "lang", "names.png"))
+    shutil.rmtree(work)
+    print("wrote the languages' HD pictures into %s" % os.path.join(HD, "lang"))
+
+
+def keep(png):
+    with open(png + ".import", "w", encoding="utf-8") as f:   # exported as is (iOS)
+        f.write('[remap]\n\nimporter="keep"\n')
+
+
 def main():
+    if sys.argv[1:] == ["--lang"]:
+        languages()
+        return
     if len(sys.argv) < 2 or not os.path.exists(os.path.join(sys.argv[1], "realesrgan-ncnn-vulkan")):
         sys.exit(__doc__)
     for name in sys.argv[2:] or NAMES:
