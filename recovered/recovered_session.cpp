@@ -623,6 +623,7 @@ void score_process(Session& s) {
             p.drag=0.0f;p.sliding=0;
             if(d>0.5f)p.page=std::clamp(p.page-1,0,5);else if(d<-0.5f)p.page=std::clamp(p.page+1,0,5);
             set_score_page(s,p.page);
+            interface_event(s,InterfaceEventKind::ScorePageTurn,p.page,p.direction);   // (T040-N6)
         }
         return;
     }
@@ -758,6 +759,7 @@ void game_over_process(Session& s) {
             if(!(g.tick>0.0f)) {++shown;g.tick=0.2f;interface_event(s,InterfaceEventKind::Sound,-1,line==21?14:2);}
             if(shown<target)return;
         }
+        interface_event(s,InterfaceEventKind::GameOverLine,line,target);   // (T040-N6)
         if(line==21) {interface_event(s,InterfaceEventKind::NagScreen,-1,0);state=3;g.progress=0.0f;g.wait=10.0f;}   // Game::ShowNagScreen
         else next_line();
         return;
@@ -774,6 +776,7 @@ void game_over_process(Session& s) {
     if(g.value>=goal || g.progress==1.0f) {g.value=goal;interface_event(s,InterfaceEventKind::Sound,-1,10);}
     else if(static_cast<std::int32_t>(g.value)!=static_cast<std::int32_t>(old))interface_event(s,InterfaceEventKind::Sound,-1,2);
     if(goal>g.value)return;
+    interface_event(s,InterfaceEventKind::GameOverLine,line,target);   // (T040-N6)
     next_line();
 }
 // NameScreen::Process 0x3cac0 (route Name, T040-M7d; the class and mode screens inside it are the dr_session_class_* /

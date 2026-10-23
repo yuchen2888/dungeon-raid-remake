@@ -223,7 +223,10 @@ struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 // MainMenuShow: MainMenu::Show 0x2f60c ran (Continue / High scores shown or not: SessionObjects.main_menu) -- the high
 // scores' and the setup screen's Back bring the menu back without a fade (T040-N2).
 enum class InterfaceEventKind : std::int32_t { Sound=1, Setting, MainMenu, Help, MoreGames, BonusRequest, Dashboard, MainMenuButton,
-    NagScreen, MainMenuShow };
+    NagScreen, MainMenuShow, GameOverLine, ScorePageTurn };
+// GameOverLine: a counted or icon line of the game-over tally has ended (index = its line 3..11 or 21, a = its final value
+// or icon count), just before the next line's pause. ScorePageTurn: the high-score pages finished sliding (index = the
+// page now shown, a = the slide's direction: 1 to the page before, -1 to the one after, 0 back in place). (T040-N6)
 struct SessionHost {
     void* context;
     void (*event)(void*,SessionSource,const void*);

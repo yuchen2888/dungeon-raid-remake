@@ -10,7 +10,8 @@ Interpolate and fabsf-free code as original code; QuadStrip::ContainsPoint answe
 QuadStrip::GetSize gives the rows' height (the rows: above panel+0x340, below panel+0x5ec plus the height, fixed in the page panel, the touch's y put inside
 or outside them), Game::QueueSound is recorded, display calls are skipped. Compared every frame: the screen (open,
 closing, timer, previous phase, dragging, last / start x, velocity, shift, sliding, direction, the three buttons, page),
-the saved page and its changed flag, the main menu's open flag and Continue / High scores, and the frame's sounds.
+the saved page and its changed flag, the main menu's open flag and Continue / High scores, and the frame's sounds and
+page turns (the original's Game::SetScorePage calls; the native's ScorePageTurn events, T040-N6).
 """
 import ctypes as C
 import json
@@ -28,6 +29,7 @@ SCREEN,MENU,PAGE,SAVE_LENGTH=0xef68,0xc3fc,0x1660c,0x146d0
 PROCESS=addr('__ZN11ScoreScreen7ProcessEf')
 RUN={PROCESS}|{addr(n) for n in ('__ZN4Game12SetScorePageEi','__ZN8MainMenu4ShowEv','__ZN8MainMenu9SetActiveEb','__ZN11ScoreScreen13GetScoreCountEv',
                                    '__Z6ClampIiii','__Z11Interpolatefff')}
+SET_PAGE=addr('__ZN4Game12SetScorePageEi')
 SOUND,CONTAINS,GET_SIZE=addr('__ZN4Game10QueueSoundE5Sound'),addr('__ZN9QuadStrip13ContainsPointERK8GLfloat2'),addr('__ZN9QuadStrip7GetSizeEv')
 STARTS={int(a,16) for a in re.findall(r'^[^\s][^\n]*:\n\s+([0-9a-f]+):',TEXT,re.M)}
 PANELS=0x3600000   # three page panels (+0x1d4 / +0x1d8 / +0x1dc), 0x3000 bytes each
@@ -42,6 +44,7 @@ def f32(x):return struct.unpack('<I',struct.pack('<f',x))[0]
 class Original(SkillsOriginal):
     def __init__(self):super().__init__();self.screening=False;self.events=[]
     def hook(self,u,address,size,context):
+        if self.screening and address==SET_PAGE:self.events.append(['turn',C.c_int32(u.reg_read(self.regs[1])).value])   # (T040-N6)
         if self.screening and (address in STARTS or 0x194000<=address<0x196000) and address not in RUN:
             r=[u.reg_read(x) for x in self.regs];lr=u.reg_read(self.LR);res=None;S=self.GAME+SCREEN
             if address==SOUND:self.events.append(['sound',C.c_int32(r[1]).value])
@@ -75,6 +78,7 @@ def main():
         if source==SOURCE_INTERFACE:
             k,index,a,_b=struct.unpack('<4i',C.string_at(e,16))
             if k==1:native.append(['sound',a])
+            if k==12:native.append(['turn',index])   # ScorePageTurn (T040-N6)
     callback=EVENT(on_event);host=Host();host.event=callback;session=None
     rng=random.Random(0x367f8);counts=dict(trials=0,frames=0,pages={},closed=0,slides=0,drags=0,sounds=0)
     def fail(**k):

@@ -582,3 +582,8 @@
 - `./scripts/relay.sh verify --full` → exit 0：97 步全部通过（新增 verify_startup、verify_enemy_uv）。运行目录 `.relay/runs/20261023T105108.504251Z`，输入指纹 `90c8263c…685ea9`，inputs_unchanged true。这次技能局补局：4 种技能各补 1 局，敌人跳下补 7 局。
 - 错误副本（T040-N1..N5，25 个）：23 个被拒（开机值、种子与攻击数字抽签、当前职业副本、恢复职业存档后的 SetCurrentClass、心跳各常数与开新局复位、音效开关闸门、格子音效、变体表、宿敌判断与抽签、Promote 的 EnemyUV、护盾碎裂、故事抽签、职业编辑打开时的 Validate、伤害数字位置、设置画面按钮音效）。存活 2 个：每帧开始清空音效队列（平台每帧都取空队列时与不清空等价）；QueueTileSound 里“只有 +0x233 标志的药水格”的音效（现有测试没有先点到这种格子）——记为覆盖缺口，依据为反汇编 0x9094。
 - 复查 T040-M6 的 3 个存活错误副本（整局测试加入心跳计时与音效对照之后）：“FoldoutMenu 打开时不跑心跳”现在被拒；“读档时技能按钮刷新弹出 19 / 20”“继续游戏末尾的心跳弹出 14”仍存活，原因不变（测试流程里没有“读档时帮助位在且技能已就绪”或“继续游戏时血量已低且帮助位在”的局面），仍记为覆盖缺口。
+
+## 2026-10-23 T040-N6：结束画面与最高分页的通知事件（Claude）
+
+- verify_score_screen：原版每次 Game::SetScorePage 调用与会话的 ScorePageTurn 事件逐帧对照。GameOverLine 只是在已逐帧对照的计分状态变化处发通知（不另对照）。
+- `./scripts/relay.sh verify --full` → exit 0：97 步全部通过。运行目录 `.relay/runs/20261023T122501.899959Z`，输入指纹 `2ddb5826…6a266c`，inputs_unchanged true。
