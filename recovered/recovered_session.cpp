@@ -108,6 +108,7 @@ struct Session {
     OverlayMenu stats_menu{0,-1,0,0.0f};  // StatsMenu (Interface+0xeb4)
     InterfaceButtons interface_buttons{}; // Interface+0xcb4 / +0xcb5
     MainMenuScreen main_menu{};           // MainMenu+0x8 / +0xc
+    HelpPopup help{0,0.0f,0,-1,{},0.0f,0.0f,-1,0,{}};   // HelpMenu (Game+0x10298)
     StatsTargets stats_targets{};
     StatsHooks stats_hooks{};
     CrossHooks cross_hooks{};
@@ -119,6 +120,23 @@ Session& self(void* c) {return *static_cast<Session*>(c);}
 void forward(Session& s,SessionSource source,const void* e) {if(s.host.event)s.host.event(s.host.context,source,e);}
 void open_menu(Session& s,std::int32_t type);
 void save_state(Session& s);
+void help_topic(Session& s,std::int32_t type,Point at,float width,float height,std::int32_t slot=-1);
+void update_skills(Session& s);
+float as_float(std::int32_t bits) {float f;std::memcpy(&f,&bits,4);return f;}
+Point tile_center(const Session& s,std::int32_t tile) {return s.stroke.selection.tiles[tile].geometry.center;}
+// Interface::ShowHelp* (fixed places): Gold 7, BaseDmg 9, WeaponDmg 10, Armour 11, UP 12, XP 13, Health 18
+void show_help(Session& s,std::int32_t type) {
+    switch(type) {
+    case 7:help_topic(s,7,Point{as_float(0x3e100000),as_float(0x3fa60000)},0.0f,0.0f);break;
+    case 9:help_topic(s,9,Point{as_float(0x3ea9999a),as_float(0x3fa20000)},0.0f,0.0f);break;
+    case 10:help_topic(s,10,Point{as_float(0x3f240000),as_float(0x3fa20000)},0.0f,0.0f);break;
+    case 11:help_topic(s,11,Point{as_float(0x3efe6666),as_float(0x3fa20000)},0.0f,0.0f);break;
+    case 12:help_topic(s,12,Point{as_float(0x3f000000),as_float(0x3fb20000)},0.0f,0.0f);break;
+    case 13:help_topic(s,13,Point{as_float(0x3f000000),as_float(0x3fb93333)},0.0f,0.0f);break;
+    case 18:help_topic(s,18,Point{as_float(0x3f5b9999),as_float(0x3fa26666)},0.0f,0.0f);break;
+    default:break;
+    }
+}
 template<SessionSource source,class Event> void forward_event(void* c,const Event* e) {forward(self(c),source,e);}
 
 // Game::AddFlare: every unit's Flare event is one call (dr_add_flare: rotation from stream 0, count + 1).
@@ -170,12 +188,14 @@ void match_event(void* c,const MatchEvent* e) {
     case MatchEventKind::Token:dr_enqueue_token(s.tokens,static_cast<std::uint32_t>(e->tile),e->a,e->b!=0,e->c,&s.token_hooks);break;
     case MatchEventKind::SetSpecialType:dr_set_special_type(&s.generation,static_cast<std::uint32_t>(e->tile),e->a,&s.generation_hooks);break;
     case MatchEventKind::Shapeshift:dr_shapeshift(&s.resources,&s.resource_hooks);break;
+    case MatchEventKind::Help:help_topic(s,e->a,tile_center(s,e->tile),as_float(e->b),as_float(e->c));break;
     default:break;
     }
 }
 // A token request becomes a flying token in its slot (Token::InitialiseFromTile).
 void token_event(void* c,const TokenEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Token,e);
+    if(e->kind==TokenEventKind::Help)help_topic(s,e->a,tile_center(s,e->index),as_float(e->b),as_float(e->c));
     if(e->kind!=TokenEventKind::Initialise)return;
     TokenMotion& t=motion(s,static_cast<std::uint32_t>(e->index));t.scale=Point{1.0f,1.0f};
     const std::int32_t position=e->c;
@@ -195,6 +215,8 @@ void resource_event(void* c,const ResourceEvent* e) {
     else if(e->kind==ResourceEventKind::CheckEndGame)check_end_game(s);
     else if(e->kind==ResourceEventKind::Label)label(s,e->a);
     else if(e->kind==ResourceEventKind::Menu)open_menu(s,e->a);
+    else if(e->kind==ResourceEventKind::Help) {static const std::int32_t types[]={7,13,12,11};show_help(s,types[e->a&3]);}   // gold, XP, UP, armour
+    else if(e->kind==ResourceEventKind::Skills)update_skills(s);
 }
 void encounter_event(void* c,const EncounterEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Encounter,e);
@@ -231,6 +253,7 @@ void flare_event(void* c,const AttackFlareEvent* e) {
 }
 void anim_event(void* c,const AttackAnimEvent* e) {
     Session& s=self(c);forward(s,SessionSource::AttackAnim,e);if(e->kind==AttackAnimEventKind::AddLabel)label(s,e->a);
+    if(e->kind==AttackAnimEventKind::HelpMenu)help_topic(s,e->c,Point{as_float(e->a),as_float(e->b)},0.0f,e->c==17?as_float(0x3dcccccd):0.0f);
 }
 void absorb_event(void* c,const AttackAbsorbEvent* e) {
     Session& s=self(c);forward(s,SessionSource::AttackAbsorb,e);if(e->kind==AttackAbsorbEventKind::Label)label(s,e->a);
@@ -253,6 +276,7 @@ void health_event(void* c,const AttackHealthEvent* e) {
     Session& s=self(c);forward(s,SessionSource::AttackHealth,e);
     if(e->kind==AttackHealthEventKind::Vampires)dr_process_vampires(&s.generation,&s.vampire_hooks);
     else if(e->kind==AttackHealthEventKind::Label)label(s,e->a);
+    else if(e->kind==AttackHealthEventKind::HelpHealth)show_help(s,18);
 }
 bool all_attack_skull(void* c,std::int32_t tile,std::int32_t amount,bool effects) {return attack_skull(self(c),tile,amount,effects);}
 void all_move(void* c) {move_matched_tiles(self(c));}
@@ -264,6 +288,8 @@ void turn_event(void* c,const TurnEvent* e) {
     case TurnEventKind::Label:case TurnEventKind::LabelRest:case TurnEventKind::LabelTarget:case TurnEventKind::LabelPoison:label(s,e->a);break;
     case TurnEventKind::Particles:particles(s,e->a);break;
     case TurnEventKind::SerialiseState:save_state(s);break;
+    case TurnEventKind::Help:help_topic(s,e->a,tile_center(s,e->tile),as_float(e->b),as_float(e->c));break;
+    case TurnEventKind::UpdateSkills:update_skills(s);break;
     default:break;
     }
 }
@@ -280,6 +306,7 @@ void turn_ability(void* c,std::int32_t kind,std::int32_t tile) {   // enemy 28: 
 // Game::UpdateStats / DestroyUpgrade / IncreaseStat presentation; DestroyUpgrade's label draws on stream 0.
 void stats_event(void* c,const StatsEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Stats,e);if(e->kind==StatsEventKind::Label)label(s,e->a);
+    if(e->kind==StatsEventKind::UpdateSkills)update_skills(s);
 }
 // FoldoutMenu: what it reads and writes. The scroll draw of the shop reads the 40 words at Game+0xbf90 (the
 // original reads past the four Skill pointers, docs/T040_MENU.md): pointers (non-zero), skill_count, matched_counts
@@ -315,9 +342,11 @@ void save_state(Session& s) {
 }
 void save_event(void* c,SaveEventKind kind,std::int32_t a,std::int32_t b) {
     const SessionSmallEvent e{static_cast<std::int32_t>(kind),-1,a,b};forward(self(c),SessionSource::Save,&e);
+    if(kind==SaveEventKind::UpdateSkills)update_skills(self(c));
 }
 void menu_event(void* c,const MenuEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Menu,e);
+    if(e->kind==MenuEventKind::UpdateSkills)update_skills(s);
     if(e->kind==MenuEventKind::ActivateScroll) {   // the bought scroll: Skill::Activate on the unequipped object
         sync_chances(s);   // after the shop's Game::UpdateStats
         dr_skill_activate(&s.skill_state,e->a,-1,&s.menu.scroll.active,&s.skill_hooks);
@@ -385,6 +414,7 @@ void release_event(void* c,const ReleaseEvent* e) {
     case ReleaseEventKind::MoveMatchedTiles:move_matched_tiles(s);break;
     case ReleaseEventKind::SerialiseState:save_state(s);break;
     case ReleaseEventKind::SerialiseClasses: {const SaveSources src=save_sources(s);dr_serialise_classes(&src,&s.class_save);break;}
+    case ReleaseEventKind::Help:help_topic(s,e->a,Point{e->x,e->y},as_float(e->d),as_float(e->d));break;
     default:break;
     }
 }
@@ -403,6 +433,7 @@ void skill_event(void* c,const SkillEvent* e) {
     case SkillEventKind::SetSpecialType:dr_set_special_type(&s.generation,tile,e->a,&s.generation_hooks);break;
     case SkillEventKind::FlameVisibility:dr_set_flame_visibility(&s.path,tile,true,e->a,true,&s.turn_hooks);break;
     case SkillEventKind::Menu:open_menu(s,e->a);break;   // Game::Upgrade (skill 10): the upgrade menu
+    case SkillEventKind::UpdateSkills:update_skills(s);break;
     default:break;
     }
 }
@@ -483,7 +514,61 @@ void interface_input(Session& s) {
         if(b.stats_pressed) {show_menu(s.stats_menu,s.screens.menus[2]);b.stats_pressed=0;}
     }
 }
-// Interface::Process 0x20c64: an open menu runs, else (with input ready) Interface::ProcessInput.
+// The help popup (T040-M6). HelpMenu::Show 0x37f04
+void help_show(Session& s,std::int32_t text,Point at,float width,float height,std::int32_t slot) {
+    HelpPopup& p=s.help;p.timer=0.2f;p.closing=0;s.screens.help_102a4=1;p.previous_phase=1;
+    p.text=text;p.at=at;p.width=width;p.height=height;p.skill_slot=slot;
+    interface_event(s,InterfaceEventKind::Help,text,0);
+}
+// HelpMenu::Initialise 0x380b8: a queued topic shows once (the last one turns the help switch off: Game::SetHelpState(false))
+void help_topic(Session& s,std::int32_t type,Point at,float width,float height,std::int32_t slot) {
+    std::uint32_t& queued=s.finish.help_flags_102d0;
+    if(s.screens.help_102a4 || !((static_cast<std::int32_t>(queued)>>type)&1))return;
+    queued^=1u<<type;
+    if(!queued) {s.settings.help_13ec8=0;interface_event(s,InterfaceEventKind::Setting,11,0);}
+    help_show(s,type,at,width,height,slot);
+}
+// HelpMenu::QueueHelp 0x38268 (a screen text; its place is the renderer's)
+void help_queue(Session& s,std::int32_t text) {
+    if(!s.screens.help_102a4) {help_show(s,text,Point{},0.0f,0.0f,-1);return;}
+    HelpPopup& p=s.help;if(p.queued<64)p.queue[p.queued++]=text;
+}
+// HelpMenu::Process 0x38128
+void help_process(Session& s) {
+    HelpPopup& p=s.help;
+    if(p.timer>0.0f) {
+        p.timer-=s.dt;
+        if(p.timer>0.0f)return;
+        p.timer=0.0f;
+        if(!p.closing)return;
+        s.screens.help_102a4=0;
+        if(p.queued) {const std::int32_t next=p.queue[0];std::copy(p.queue+1,p.queue+p.queued,p.queue);--p.queued;help_queue(s,next);}
+        return;
+    }
+    const std::int32_t phase=s.touch.phase;
+    if(phase==1 && p.previous_phase==0 && s.menu_button>=0) {p.closing=1;p.timer=0.2f;}
+    p.previous_phase=phase;
+}
+// Interface::UpdateSkills 0x20820: a skill whose cooldown is full or empty points help 19 (inactive) / 20 (active) at its
+// button (the buttons' sizes, pictures and colours are presentation)
+void update_skills(Session& s) {
+    for(std::int32_t i=0;i<s.resources.skill_count;++i) {
+        const std::int32_t current=s.resources.skill_current[i];
+        if(current!=s.resources.skill_max[i] && current!=0)continue;
+        help_topic(s,s.skills.active[i]?20:19,Point{},as_float(0x3dc33333),as_float(0x3dc33333),i);
+    }
+}
+// Interface::ProcessHeartbeat 0x1e8e8: help 14 at low health (the beat is presentation)
+void heartbeat(Session& s) {
+    const float ratio=static_cast<float>(s.resources.ui_health)/static_cast<float>(s.player.ui_health_ceiling_5998);
+    if(ratio<=0.35f)help_topic(s,14,Point{as_float(0x3f5b9999),as_float(0x3fa26666)},0.0f,0.0f);
+}
+void effect_event(void* c,const BoardEffectEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::BoardEffect,e);
+    if(e->kind==BoardEffectEventKind::Help)help_topic(s,0,Point{e->x,e->y},0.0f,0.0f);   // Game::Process: a random tile
+}
+// Interface::Process 0x20c64: an open menu runs, else (with input ready) Interface::ProcessInput; then, with no FoldoutMenu
+// open, ProcessHeartbeat.
 void interface_process(Session& s,bool input_ready) {
     const auto& m=s.screens.menus;
     if(m[0]) {   // the shop and upgrade menus end in Game::UpdateStats
@@ -491,10 +576,12 @@ void interface_process(Session& s,bool input_ready) {
     } else if(m[1])game_menu_process(s);
     else if(m[2])stats_menu_process(s);
     else if(input_ready)interface_input(s);
+    if(!m[0])heartbeat(s);
 }
 void frame_event(void* c,const GameFrameEvent* e) {
     Session& s=self(c);forward(s,SessionSource::GameFrame,e);
     if(e->kind==GameFrameEventKind::InterfaceProcess)interface_process(s,e->a!=0);
+    else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Help))help_process(s);
 }
 // Frame steps
 void step_input(Session& s) {
@@ -510,7 +597,10 @@ void step_input(Session& s) {
 void frame_input(void* c) {step_input(self(c));}
 void part_event(void* c,const FrameEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Frame,e);
-    if(e->kind==FrameEventKind::ProcessInput)step_input(s);   // the stroke cancelled by help 8 (touch phase 3)
+    if(e->kind==FrameEventKind::ProcessInput)step_input(s);   // the stroke cancelled by help 10 (touch phase 3)
+    else if(e->kind==FrameEventKind::Help)help_topic(s,e->a,Point{e->x,e->y},as_float(0x3d4ccccd),0.0f);
+    else if(e->kind==FrameEventKind::BaseDamageHelp)show_help(s,9);
+    else if(e->kind==FrameEventKind::WeaponDamageHelp)show_help(s,10);
 }
 void frame_effects(void* c) {Session& s=self(c);dr_process_board_effects(&s.effects,s.dt,&s.effect_hooks);}
 void frame_falling(void* c) {
@@ -627,7 +717,7 @@ void link(Session& s) {
     s.schedule_hooks={c,end_of_turn};
     s.release_hooks={c,release_event,release_check_end_game};
     s.input_hooks={&s.schedule_hooks,&s.selection_hooks,&s.release_hooks};
-    s.effect_hooks={c,forward_event<SessionSource::BoardEffect,BoardEffectEvent>};
+    s.effect_hooks={c,effect_event};
     s.part_hooks={c,part_event};
     s.label_hooks={c,label_event,label_check_end_game};
     s.frame_hooks={c,frame_event,frame_input,frame_effects,frame_falling,frame_tokens,frame_pools,
@@ -657,7 +747,7 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
         s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
         s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels,&s->setup,&s->game_menu,&s->stats_menu,
-        &s->interface_buttons,&s->main_menu};
+        &s->interface_buttons,&s->main_menu,&s->help};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 // Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
@@ -749,6 +839,18 @@ extern "C" void dr_session_class_choices(Session* s,std::uint8_t perks[10],std::
     record_from_views(*s);dr_class_choices(s->classes,s->scroll.current,perks,flaws,skills);
 }
 extern "C" bool dr_session_class_select(Session* s,std::int32_t type) {return dr_session_setup_select_class(s,type);}
+// The setup screen's help button (NameScreen::ProcessInput: sound 0, then HelpMenu::QueueHelp of its five texts) and the
+// class screen's (ClassScreen::Process, released on it: the shown tab's texts)
+extern "C" void dr_session_setup_help(Session* s) {
+    menu_sound(*s);
+    for(std::int32_t t=100;t<105;++t)help_queue(*s,t);
+}
+extern "C" bool dr_session_class_help(Session* s,std::int32_t tab) {
+    static const std::int32_t first[]={105,110,114,118,123};
+    if(tab<0 || tab>3)return false;
+    for(std::int32_t t=first[tab];t<first[tab+1];++t)help_queue(*s,t);
+    return true;
+}
 extern "C" bool dr_session_class_set_race(Session* s,std::int32_t race) {
     record_from_views(*s);
     if(!dr_race_unlocked(s->classes,race) || !dr_class_can_choose_race(&s->classes[s->scroll.current]))return false;
@@ -786,6 +888,7 @@ extern "C" void dr_session_start_game(Session* s,std::int32_t kind,std::uint32_t
     s->settings.help_13ec8=kind==1;                  // Game::SetHelpState
     s->finish.help_flags_102d0=kind==1?s->finish.help_flags_102d0|0x7fffffu:0u;   // HelpMenu::ResetHelp / ClearHelp
     show_setup(*s,kind==2);
+    s->dt=0.0f;interface_process(*s,false);   // Interface::Process(0, false): with nothing open, ProcessHeartbeat (T040-M6)
 }
 // Game::DeserialiseState now: the saved game in SessionObjects.save over the current state (false: no 0xff header).
 extern "C" bool dr_session_deserialise(Session* s) {const SaveSources src=save_sources(*s);return dr_deserialise_state(&src,s->save,&s->save_hooks);}
@@ -796,6 +899,7 @@ extern "C" bool dr_session_continue_game(Session* s,std::uint32_t time) {
     dr_session_new_game(s,time);
     const SaveSources src=save_sources(*s);dr_deserialise_state(&src,s->save,&s->save_hooks);
     dr_calculate_tile_positions(&s->stroke,&s->new_game_hooks);
+    s->dt=0.0f;interface_process(*s,false);   // Interface::Process(0, false) (T040-M6: the heartbeat's help)
     return true;
 }
 extern "C" void dr_session_interface_process(Session* s,float dt,bool input_ready) {s->dt=dt;interface_process(*s,input_ready);}

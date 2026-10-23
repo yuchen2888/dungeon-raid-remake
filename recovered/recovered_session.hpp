@@ -34,6 +34,23 @@ struct OverlayMenu {
 struct InterfaceButtons { std::uint8_t menu_pressed, stats_pressed; };
 // The main menu (MainMenu, Game+0xc3fc; open while screens->main_menu_c400): MainMenu::FadeIn's fade (+0x8, +0xc).
 struct MainMenuScreen { float timer; std::uint8_t fading; };
+// The help popup (HelpMenu, Game+0x10298; T040-M6): open while screens->help_102a4 (+0xc), and then Game::Process runs only
+// HelpMenu::Process (the game pauses). The topics still to come are finish->help_flags_102d0 (+0x38): each shows once. Its
+// texts, box layout and fades are the renderer's.
+struct HelpPopup {
+    std::uint8_t closing;          // +0xd: fading out
+    float timer;                   // +0x10: the 0.2 s fade (no input until it runs out)
+    std::int32_t previous_phase;   // +0x24 (HelpMenu::Show sets 1: a touch must end before a new one counts)
+    std::int32_t text;             // the shown text: a topic 0..22 (HelpMenu::Initialise) or a screen text (HelpMenu::QueueHelp):
+                                   // 100..104 the setup screen's, 105..109 / 110..113 / 114..117 / 118..122 the class screen's
+                                   // tabs 0..3
+    Point at;                      // HelpMenu::Show's position and size: a topic's as the game gives them (a screen text's and
+    float width,height;            // topics 19 / 20's position are the renderer's: 0)
+    std::int32_t skill_slot;       // topics 19 / 20: the skill button it points at, else -1
+    std::uint32_t queued;          // the screen texts waiting behind it (std::list<HelpItem> +0x3c), oldest first (at most 64; more cannot
+                                   // occur: the screens that queue them take no input while the popup is open)
+    std::int32_t queue[64];
+};
 // The objects of a session. Pointers stay valid for the session's lifetime; the embedding may read
 // them every frame and write the renderer-owned inputs (release_inputs->health_target, current_label_active,
 // screens, input_target).
@@ -96,6 +113,7 @@ struct SessionObjects {
     OverlayMenu* stats_menu;             // StatsMenu (open while screens->menus[2])
     InterfaceButtons* interface_buttons;
     MainMenuScreen* main_menu;
+    HelpPopup* help;                     // the help popup (open while screens->help_102a4)
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
@@ -110,8 +128,9 @@ struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 // The game menu, the stats menu and Interface's two buttons (T040-M5). Sound: Game::QueueSound(a). Setting: a game menu
 // switch changed (index = its button: 10 sound, 11 help, 12 clock, 13 attack dimming, 14 high frame rate; a = the new
 // state): GameMenu::Set*State, Interface::SetClockState (12) and MainMenu::SetSoundState (10) are presentation.
-// MainMenu: the game menu's quit button (15) ran MainMenu::FadeIn.
-enum class InterfaceEventKind : std::int32_t { Sound=1, Setting, MainMenu };
+// MainMenu: the game menu's quit button (15) ran MainMenu::FadeIn. Help: the help popup shows a text (HelpMenu::Show,
+// index = SessionObjects.help->text; T040-M6); when the last queued topic shows, the help switch goes off first (Setting 11, 0).
+enum class InterfaceEventKind : std::int32_t { Sound=1, Setting, MainMenu, Help };
 struct SessionHost {
     void* context;
     void (*event)(void*,SessionSource,const void*);
@@ -182,7 +201,8 @@ void dr_session_class_done(dungeonraid::Session*);
 // queued help topics (Game+0x102d0) are HelpMenu::ResetHelp's (tutorial: topics 0..22 added) or ClearHelp's (none). The
 // new-game setup screen (NameScreen::Show) follows; StartCyclingGamesColour and Interface::Process(0, false) are
 // presentation. The new-game setup screen opens (NameScreen::Show(the name, challenge), T040-M3): the name (16
-// characters at most, counted as entered) or, without one, the placeholder "Enter name".
+// characters at most, counted as entered) or, without one, the placeholder "Enter name". Last, Interface::Process(0, false)
+// (dr_session_interface_process with dt 0, input not ready; T040-M6).
 void dr_session_start_game(dungeonraid::Session*,std::int32_t kind,std::uint32_t time);
 // Interface::Process 0x20c64 for one frame's input (T040-M5; dr_session_frame runs it as Game::Process does, with the
 // frame's dt and touch). An open FoldoutMenu runs (dr_menu_process), else an open game menu (GameMenu::Process 0x32580),
@@ -197,8 +217,20 @@ void dr_session_start_game(dungeonraid::Session*,std::int32_t kind,std::uint32_t
 // tab. Interface::ProcessInput: besides the skill buttons (dr_skill_input), a touch's start on the menu button
 // (skill_button 4) or the stats button (5) touches it (sound 0); the touch's end opens its menu (GameMenu::Show /
 // StatsMenu::Show: fade-in, nothing pressed, the first page). Interface::Reset (a new game) closes both menus and
-// clears the touched buttons and the pressed skill button.
+// clears the touched buttons and the pressed skill button. Then, with no FoldoutMenu open, Interface::ProcessHeartbeat:
+// help 14 when the shown health is at most 0.35 of the shown ceiling (ResourceState.ui_health / PlayerStats
+// .ui_health_ceiling_5998; the heartbeat's beat and sound are presentation).
 void dr_session_interface_process(dungeonraid::Session*,float dt,bool input_ready);
+// The help popup (T040-M6). Topics: HelpMenu::Initialise 0x380b8, wherever the game shows one (dr_session_frame and the
+// other calls run them): nothing while the popup is open or when the topic is not queued (help_flags_102d0 bit); else its
+// bit clears (none left: the help switch goes off) and the popup shows it (fade-in 0.2 s, previous phase 1). Screen texts:
+// HelpMenu::QueueHelp 0x38268, shown at once when the popup is closed, else queued. HelpMenu::Process 0x38128 (route Help):
+// after the fade, a touch's start (phase 1 after phase 0) inside the box (menu_button >= 0; -1 outside) fades it out; when
+// that ends it closes and the oldest queued text shows. The setup screen's help button (NameScreen::ProcessInput: sound 0,
+// texts 100..104) and the class screen's (ClassScreen::Process, released on it: the shown tab's texts; false for another
+// tab) queue the screen texts; while the popup is open Game::Process runs neither screen.
+void dr_session_setup_help(dungeonraid::Session*);
+bool dr_session_class_help(dungeonraid::Session*,std::int32_t tab);
 // One Game::Process frame (dr_process_frame with every step wired) for the touch (phase, position).
 dungeonraid::FrameRoute dr_session_frame(dungeonraid::Session*,float dt,std::int32_t touch_phase,dungeonraid::Point touch);
 // Game::SerialiseState now: the saved game into SessionObjects.save, its length and changed flag into end (the
@@ -208,7 +240,8 @@ void dr_session_save(dungeonraid::Session*);
 // new game); false when the buffer has no 0xff header (the format before version 1, not recovered).
 bool dr_session_deserialise(dungeonraid::Session*);
 // Game::ContinueGame: with a saved game, a new game (time seeds the random streams) that the save then overwrites
-// (DeserialiseState) and the tile positions; false without one (the main menu shows Continue only with one).
+// (DeserialiseState) and the tile positions, then Interface::Process(0, false) (dr_session_interface_process: the
+// heartbeat's help 14 may show); false without one (the main menu shows Continue only with one).
 bool dr_session_continue_game(dungeonraid::Session*,std::uint32_t time);
 // Game::SerialiseClasses now: the class records into SessionObjects.class_save (the session runs it itself at a game's
 // end and a class scroll's level-up; the class screen calls it after the player changes a class).

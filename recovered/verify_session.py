@@ -74,6 +74,19 @@ switches, the stats tabs, released on the button or elsewhere), then the close b
 of some continued games quits to the main menu from the game menu, then starts a new game from the main menu (InitNewGame runs
 Interface::Reset as original code, display skipped: the game menu left open closes). Both menus, Interface's touched buttons, the nine switch bytes and the main menu's fade
 are compared with the flow fields.
+Help popups (T040-M6): HelpMenu (Game+0x10298) runs as original code wherever the game calls it -- HelpMenu::Initialise
+(every unit's topics), Interface::ShowHelp* / UpdateSkills / ProcessHeartbeat (from every caller: the unit harnesses'
+boundaries for them are bypassed; Interface::Process runs its dispatch as at 0x20c64 and then, with no FoldoutMenu open,
+ProcessHeartbeat, also from the new games and ContinueGame), HelpMenu::QueueHelp (the setup screen's help button as
+NameScreen::ProcessInput, the class screen's as ClassScreen::Process's calls for the shown tab) and HelpMenu::Process
+(Game::Process's help route) -- with Show, Game::SetHelpState, Clamp and Interpolate as original code, std::string /
+std::list<HelpItem> modelled and display calls skipped; Show's box is fixed (0.1, 0.5, 0.8 x 0.5) so that a touch can be
+inside or outside it. While a popup is open the turn's script waits: after the fade the touch ends, sometimes a touch
+outside the box, then one inside. The tutorial games and some carried games have topics queued. The
+current-damage label (Game+0xb550, SetColour(10) and duration 0.2 as Game::Start leaves it) runs as original code too and
+its active byte is given to the session as the renderer's (help 8 and ShowHelpBaseDmg / WeaponDmg need it shown). The popup (open, closing,
+timer, previous phase, queued texts), the queued topics and the texts shown (topic or screen text, with position and size
+where the game gives them) are compared with the flow fields.
 High scores (T030-N5d): a game's end runs ScoreScreen::AddScore (the GameMode or Difficulty overload) and SetSkills as
 original code (strcpy modelled); the whole table memory (ScoreScreen+0x1e0..+0x132e) is compared every frame. In the
 skill phase a press mostly takes the equipped skill used least so far, so that every type gets used.
@@ -153,10 +166,13 @@ class Objects(C.Structure):
               ('skill_button',C.c_void_p),('skill_input',C.c_void_p),('items',C.c_void_p),('menu',C.c_void_p),('menu_button',C.c_void_p),('dimmed',C.c_void_p),
               ('save',C.c_void_p),('name',C.c_void_p),('settings',C.c_void_p),('class_save',C.c_void_p),('scores',C.c_void_p),
               ('damage_labels',C.c_void_p),('setup',C.c_void_p),('game_menu',C.c_void_p),('stats_menu',C.c_void_p),
-              ('interface_buttons',C.c_void_p),('main_menu',C.c_void_p)]
+              ('interface_buttons',C.c_void_p),('main_menu',C.c_void_p),('help',C.c_void_p)]
 class Setup(C.Structure):_fields_=[('challenge',U8),('name',U8*19),('length',I32),('named',U8)]
 class Overlay(C.Structure):_fields_=[('previous_phase',I32),('pressed',I32),('closing',U8),('timer',C.c_float)]
 class MainMenuScreen(C.Structure):_fields_=[('timer',C.c_float),('fading',U8)]
+class HelpPopup(C.Structure):_fields_=[('closing',U8),('timer',C.c_float),('previous_phase',I32),('text',I32),('at',Point),('width',C.c_float),
+                                       ('height',C.c_float),('skill_slot',I32),('queued',C.c_uint32),('queue',I32*64)]
+SOURCE_INTERFACE=35   # SessionSource::Interface
 EVENT=C.CFUNCTYPE(None,C.c_void_p,I32,C.c_void_p)
 TARGET=C.CFUNCTYPE(None,C.c_void_p,I32,I32,C.POINTER(Point))
 START=C.CFUNCTYPE(None,C.c_void_p,I32,C.POINTER(Point))
@@ -236,20 +252,21 @@ LOAD_STUBS=(0x194f60,0x194fb0)
 HELP_SWITCH,DIFFICULTY_CHANGED=0x13ec8,0x14ae4
 # The damage labels (T040-K6): leech, flame, spike SimpleLabel; their calls from Game::Process run as original code
 DAMAGE_LABELS,LABEL_SIZE=(0xbfc0,0x14afc,0x14e70),0x358
+CURRENT_LABEL=0xb550   # T040-M6: the current-damage label runs as original code too; its active byte is given to the session
 LABEL_FUNCTIONS=('__ZN11SimpleLabel7ProcessEf','__ZN11SimpleLabel10InitialiseE15SimpleLabelTypeRK8GLfloat2if',
                  '__ZN11SimpleLabel11SetPositionERK8GLfloat2','__ZN11SimpleLabel9SetNumberEi','__ZN11SimpleLabel8SetAlphaEh')
 LABEL_CTOR,LABEL_COLOUR,LABEL_DIGITS,DIVSI3,MODSI3=0x22194,0x221c4,0x313c,0x194d78,0x194d8c
 LABEL_CALLS={}        # by function: the damage labels' calls in play
 # The main menu's new games (T040-M1): Game::NewGame / StartTutorial / StartChallenge from their entries
 START_ENTRIES,START_LO,START_HI,INIT_NEW_GAME,HELP_STATE_RETURN=(0x16590,0x164c0,0x1652c),0x164c0,0x165f4,0x15c50,0x95e8
-START_SKIP=('__ZN8MainMenu23StartCyclingGamesColourEv','__ZN9Interface7ProcessEfb','__ZN8GameMenu12SetHelpStateEb')
+START_SKIP=('__ZN8MainMenu23StartCyclingGamesColourEv','__ZN8GameMenu12SetHelpStateEb')
 RECORD,DIFFICULTY,MAIN_MENU,HELP_QUEUE=0x14aed,0x14ae0,0xc400,0x102d0
 STARTS={}             # new games by kind (0 NewGame, 1 StartTutorial, 2 StartChallenge)
 # The new-game setup screen (NameScreen, Game+0x102dc) and the story screen (IntroScreen, Game+0xc330), T040-M3
 NAME_SCREEN,INTRO,NAME_SHOW,NAME_INPUT,NAME_INPUT_END,INTRO_PROCESS,INTRO_INIT=0x102dc,0xc330,0x3bd60,0x3bff8,0x3cac0,0x2dd04,0x2de90
 RANDOM_NAME,SET_NAME,SET_CURRENT,SET_MODE,SET_DIFFICULTY=(0x3882c,0x38920),(0x8470,0x84a4),(0x1a390,0x1a3ec),0x83e8,0x842c
 STRLEN,STRNCPY,MEMCPY,SPRINTF,STRCMP=0x194fbc,0x194fc4,0x194ef0,0x194f60,0x194fac
-SETUP_BUTTONS=dict(random=lambda a:0x2e0,klass=lambda a:0x8ec+76*a,difficulty=lambda a:0x3e8+76*a,mode=lambda a:(0x6b4,0x700)[a])
+SETUP_BUTTONS=dict(help=lambda a:0x868,random=lambda a:0x2e0,klass=lambda a:0x8ec+76*a,difficulty=lambda a:0x3e8+76*a,mode=lambda a:(0x6b4,0x700)[a])
 NAME_NAME,NAME_LENGTH,NAME_NAMED,NAME_CHALLENGE,NAME_START_ALPHA,NAME_PREVIOUS=0x2935,0x2948,0x294c,0x3bbc,0x2993,0x2960
 MODE,MODE_CHANGED,NAME_CHANGED,CURRENT_CLASS,NAME_OPEN,INTRO_OPEN=0x14ae8,0x14aec,0xbe49,0x1648c,0x12c09,0xc3f0
 SETUPS={}             # setup presses by kind and result
@@ -267,6 +284,21 @@ OVERLAY_COUNT={'__ZN8GameMenu4ShowEv':'game_menu','__ZN9StatsMenu4ShowEv':'stats
                '__ZN4Game21SetAttackDimmingStateEb':'dimming','__ZN4Game16SetHighFramerateEb':'framerate','__ZN8MainMenu6FadeInEv':'quit'}
 OVERLAY_SCRATCH,SETTINGS_BYTES=0x3400000,0x13ec6   # the stats menu's labels; Game+0x13ec6..0x13ece
 SETTINGS_NATIVE=[4,5,0,6,8,10,7,9,11]   # the SaveSettings byte of each
+# T040-M6: HelpMenu (Game+0x10298) as original code; the screen texts QueueHelp is given (setup 100..104, class tabs 105..122)
+HELP_MENU,IFACE_TRAMP,HEARTBEAT,QUEUE_HELP=0x10298,0x20cb4,0x1e8e8,0x38268
+HELP_ENTRIES=('__ZN8HelpMenu10InitialiseEffff8HelpType','__ZN8HelpMenu7ProcessEf','__ZN8HelpMenu9QueueHelpEPKcfff',
+              '__ZN9Interface12ShowHelpGoldEv','__ZN9Interface14ShowHelpHealthEv','__ZN9Interface10ShowHelpXPEv','__ZN9Interface10ShowHelpUPEv',
+              '__ZN9Interface17ShowHelpWeaponDmgEv','__ZN9Interface14ShowHelpArmourEv','__ZN9Interface15ShowHelpBaseDmgEv',
+              '__ZN9Interface12UpdateSkillsEv','__ZN9Interface16ProcessHeartbeatEf')
+HELP_RUN=HELP_ENTRIES+('__ZN8HelpMenu4ShowEPKcffff','__ZN4Game12SetHelpStateEb','__Z5Clampfff','__Z11Interpolatefff')
+HELP_TEXTS=[0x155f9c,0x156008,0x1560d8,0x156184,0x1561d4,0x16e298,0x16e310,0x16e3b4,0x16e488,0x16e510,0x16e5b0,0x16e658,0x16e6ac,
+            0x16e760,0x16e808,0x16e8a0,0x16e91c,0x16e97c,0x16ea3c,0x16eaa0,0x16eb40,0x16ebb0,0x16ec84]
+HELP_TEXT_IDS={a:100+i for i,a in enumerate(HELP_TEXTS)};CLASS_HELP=[HELP_TEXTS[5:10],HELP_TEXTS[10:14],HELP_TEXTS[14:18],HELP_TEXTS[18:23]]
+HELP_BOX=(0.1,0.5,0.8,0.5);HELP_IN,HELP_OUT=[0.5,0.75],[0.05,0.2]
+STRING_CTOR,STRING_COPY,STRING_DTOR=0x194d10,0x194d18,0x194d1c
+HELP={}               # popups shown by text, taps outside / inside, setup and class help presses
+def help_show(s):   # a text shown as compared: a screen text's place is the renderer's, so are topics 19 / 20's positions
+    return s[:1] if s[0]>=100 else [s[0],s[3],s[4]] if s[0] in (19,20) else s
 OVERLAY={}            # in play: menus opened (from the buttons), closed (the close button), switches, tabs, quits; Interface::Reset runs
 MENU_OBJECTS,CLASS_ARRAYS,SET_NODES_K5=0x3280000,0x3290000,0x32a0000
 ITEM_SET_OPS={'__ZNSt8_Rb_treeI8ItemTypeS0_St9_IdentityIS0_ESt4lessIS0_ESaIS0_EE13_Rb_tree_implIS4_Lb0EEC2ERKSaISt13_Rb_tree_nodeIS0_EERKS4_':'init',
@@ -334,6 +366,11 @@ class OriginalMixin:
         self.gm_cursor,self.sm_cursor=addr('__ZN8GameMenu12CursorInQuadEi'),addr('__ZN9StatsMenu12CursorInQuadEi')
         self.sm_outside,self.get_item=addr('__ZN9StatsMenu17CursorOutsideMenuEv'),addr('__ZN4Game7GetItemE8ItemType')
         self.u.mem_map(OVERLAY_SCRATCH,0x10000)
+        self.helping=False;self.help_entries={addr(n) for n in HELP_ENTRIES};self.help_run={addr(n) for n in HELP_RUN};self.iface_return=None
+        self.help_init,self.help_show=addr('__ZN8HelpMenu10InitialiseEffff8HelpType'),addr('__ZN8HelpMenu4ShowEPKcffff')
+        self.list_push,self.list_pop=addr('__ZNSt4listI8HelpItemSaIS0_EE9push_backERKS0_'),addr('__ZNSt4listI8HelpItemSaIS0_EE9pop_frontEv')
+        self.help_type=-1;self.help_shows=[];self.help_nodes=0
+        assert [addr(n) for n in ('__ZN9Interface16ProcessHeartbeatEf','__ZN8HelpMenu9QueueHelpEPKcfff')]==[HEARTBEAT,QUEUE_HELP]
         assert [addr(n) for n in ('__ZN8GameMenu7ProcessEf','__ZN9StatsMenu7ProcessEf','__ZN8GameMenu4ShowEv','__ZN9StatsMenu4ShowEv','__ZN9Interface5ResetEv')]==[
             GM_PROCESS,SM_PROCESS,GM_SHOW,SM_SHOW,IFACE_RESET]
         assert addr('__ZN9Interface8ShowMenuE8MenuType')==SHOW_MENU and addr('__ZN11FoldoutMenu7ProcessEf')==FM_PROCESS
@@ -346,6 +383,41 @@ class OriginalMixin:
     def hook(self,u,address,size,context):
         for undo in self.returns.pop(address,[]):undo()
         lr=u.reg_read(self.LR)&~1
+        if address in self.help_entries and not self.helping:self.until_return(u,'helping')   # T040-M6: HelpMenu as original code
+        if self.helping:
+            r=[u.reg_read(v) for v in self.regs];sp=u.reg_read(self.SP)
+            if address==self.help_init:self.help_type=C.c_int32(self.read(sp+4)).value
+            if address==self.help_show:   # the text shown (topic or screen text) with its position and size; the box fixed
+                text=self.help_type if self.help_init<=lr<self.help_init+0x70 else HELP_TEXT_IDS.get(r[1],-1)
+                self.help_shows.append([text,r[2],r[3],self.read(sp),self.read(sp+4)]);HELP[text]=HELP.get(text,0)+1
+                def box(G=self.GAME):
+                    for k,v in enumerate(HELP_BOX):self.write(G+HELP_MENU+0x14+4*k,struct.unpack('<I',struct.pack('<f',v))[0])
+                self.returns.setdefault(lr,[]).append(box)
+            if address in self.func_starts or 0x194000<=address<0x196000:
+                if address in self.help_run:return
+                if address==STRING_CTOR:self.write(r[0],r[1])
+                elif address==STRING_COPY:self.write(r[0],self.read(r[1]))
+                elif address==self.list_push:   # std::list<HelpItem>::push_back: a node {next, prev, text, x, y, size}
+                    node=OVERLAY_SCRATCH+0x4000+0x20*self.help_nodes;self.help_nodes+=1;tail=self.read(r[0]+4)
+                    for k,v in enumerate([r[0],tail,self.read(r[1]),self.read(r[1]+4),self.read(r[1]+8),self.read(r[1]+12)]):self.write(node+4*k,v)
+                    self.write(tail,node);self.write(r[0]+4,node)
+                elif address==self.list_pop:
+                    first=self.read(r[0]);nxt=self.read(first);self.write(r[0],nxt);self.write(nxt+4,r[0])
+                u.reg_write(self.PC,lr|1)
+            return
+        if address==IFACE_PROCESS:   # Interface::Process: its dispatch as at 0x20c64, then (no FoldoutMenu open) ProcessHeartbeat
+            G=self.GAME;self.iface_return=(lr|1,u.reg_read(self.regs[1]));u.reg_write(self.LR,IFACE_TRAMP|1)   # via 0x20cb4
+            if u.mem_read(G+0x59f4,1)[0]:   # an open FoldoutMenu: its Process
+                u.reg_write(self.regs[0],G+FM);self.until_return(u,'menu_running');u.reg_write(self.PC,FM_PROCESS|1);return
+            for menu,entry in ((GM,GM_PROCESS),(SM,SM_PROCESS)):   # T040-M5: an open game / stats menu
+                if u.mem_read(G+menu+0xc,1)[0]:u.reg_write(self.regs[0],G+menu);self.until_return(u,'overlay_running');u.reg_write(self.PC,entry|1);return
+            if u.reg_read(self.regs[2])&0xff:   # the skill buttons as original code (verify_skill_input.py)
+                self.write(G+INTERFACE+0x1030,G);self.until_return(u,'skill_input');u.reg_write(self.PC,IFACE_INPUT|1);return
+            u.reg_write(self.PC,IFACE_TRAMP|1);return
+        if address==IFACE_TRAMP and self.iface_return:
+            ret,dt=self.iface_return;self.iface_return=None;u.reg_write(self.LR,ret)
+            if u.mem_read(self.GAME+0x59f4,1)[0]:u.reg_write(self.PC,ret);return
+            u.reg_write(self.regs[0],self.GAME+INTERFACE);u.reg_write(self.regs[1],dt);u.reg_write(self.PC,HEARTBEAT|1);return
         if self.overlay_running or self.resetting:   # T040-M5: the menus and Interface::Reset; their display calls skipped
             if address in self.func_starts or 0x194000<=address<0x196000:
                 if self.overlay_running and address in self.overlay_count:n=self.overlay_count[address];OVERLAY[n]=OVERLAY.get(n,0)+1
@@ -361,7 +433,7 @@ class OriginalMixin:
         if address==IFACE_RESET and getattr(self,'initialising',False):   # InitNewGame's Interface::Reset: original code (recorded as the harness does)
             assert u.reg_read(self.regs[0])==self.GAME+INTERFACE;self.new_events.append([12,-1,0,0]);OVERLAY['reset']=OVERLAY.get('reset',0)+1
             self.until_return(u,'resetting');return
-        if address in self.label_functions and not self.label_running and u.reg_read(self.regs[0])-self.GAME in DAMAGE_LABELS:
+        if address in self.label_functions and not self.label_running and u.reg_read(self.regs[0])-self.GAME in DAMAGE_LABELS+(CURRENT_LABEL,):
             assert PROCESS<=lr<PROCESS_END,hex(lr)   # the damage labels' calls (Game::Process): original code
             n=self.label_functions[address];LABEL_CALLS[n]=LABEL_CALLS.get(n,0)+1;self.until_return(u,'label_running');return
         if self.label_running:   # the runtime's __divsi3 / __modsi3 modelled
@@ -455,8 +527,6 @@ class OriginalMixin:
         if address==SHOW_MENU:   # (Game::Upgrade from a skill button, or from a scroll bought in the shop: a menu opened inside the menu)
             if not self.menu_running:self.until_return(u,'menu_running')
             self.until_return(u,'skill_input',False)
-        if address==IFACE_PROCESS and PROCESS<=lr<PROCESS_END and u.mem_read(self.GAME+0x59f4,1)[0]:   # an open FoldoutMenu: its Process
-            u.reg_write(self.regs[0],self.GAME+FM);self.until_return(u,'menu_running');u.reg_write(self.PC,FM_PROCESS|1);return
         if self.menu_running and not self.skill_input:
             r=[u.reg_read(v) for v in self.regs];s=lambda v:C.c_int32(v).value
             op=self.menu_set_ops.get(address)
@@ -487,13 +557,6 @@ class OriginalMixin:
                 u.reg_write(self.PC,lr|1);return
             if address==self.skill_activate:   # the bought scroll: Skill::Activate with the skill hooks of the skill buttons
                 self.write(r[0]+0x7c,self.GAME);self.until_return(u,'skill_input')
-        if address==IFACE_PROCESS and PROCESS<=lr<PROCESS_END:   # the skill buttons run as original code (verify_skill_input.py)
-            G=self.GAME
-            for menu,entry in ((GM,GM_PROCESS),(SM,SM_PROCESS)):   # T040-M5: an open game / stats menu (no FoldoutMenu open)
-                if u.mem_read(G+menu+0xc,1)[0]:u.reg_write(self.regs[0],G+menu);self.until_return(u,'overlay_running');u.reg_write(self.PC,entry|1);return
-            if u.reg_read(self.regs[2])&0xff and not any(u.mem_read(G+a,1)[0] for a in MENUS):
-                self.write(G+INTERFACE+0x1030,G);self.until_return(u,'skill_input');u.reg_write(self.PC,IFACE_INPUT|1);return
-            u.reg_write(self.PC,lr|1);return
         if self.skill_input:
             r=[u.reg_read(v) for v in self.regs]
             if address==self.cursor:u.reg_write(self.regs[0],int(C.c_int32(r[1]).value==self.button));u.reg_write(self.PC,lr|1);return
@@ -574,6 +637,9 @@ class OriginalMixin:
             at=bytes(self.u.mem_read(G+a+0x334,8))   # the case's label position (the release harness wrote it)
             self.u.mem_write(G+a,bytes(LABEL_SIZE));self.run_label(LABEL_CTOR,G+a);self.run_label(LABEL_COLOUR,G+a,17+i)
             self.write(G+a+0x34c,0x3e4ccccd);self.u.mem_write(G+a+0x334,at)
+        # T040-M6: the current-damage label as Game::Start leaves it (SetColour(10), duration 0.2), not shown
+        self.u.mem_write(G+CURRENT_LABEL,bytes(LABEL_SIZE));self.run_label(LABEL_CTOR,G+CURRENT_LABEL);self.run_label(LABEL_COLOUR,G+CURRENT_LABEL,10)
+        self.write(G+CURRENT_LABEL+0x34c,0x3e4ccccd)
         k=c['k5'];self.item_allocs=0;self.int_vectors_k5={}
         for i,rec in enumerate(k['items']):
             base=ITEM_OBJECTS+0x200*i;self.write(base+0x7c,G);self.write(G+0xbe88+4*i,base);self.write(VEC_DATA-0x100+4*i,G+0xbe88+4*i)
@@ -604,6 +670,8 @@ class OriginalMixin:
             self.write(base+8,G);self.u.mem_write(base+0xc,b'\0');self.write(base+0x10,0);self.write(base+0x14,0xffffffff);self.u.mem_write(base+0x18,b'\0');self.write(base+0x1c,0)
         for k in range(24):self.write(OVERLAY_SCRATCH+0x800+4*k,OVERLAY_SCRATCH+0x1000+0x40*k)
         for v in (0xdc,0xe8,0xf4):self.write(G+SM+v,OVERLAY_SCRATCH+0x800);self.write(G+SM+v+4,OVERLAY_SCRATCH+0x800+16)
+        H=G+HELP_MENU;self.write(H+4,OVERLAY_SCRATCH+0x2000);self.write(H+8,G);self.u.mem_write(H+0xc,b'\0\0');self.write(H+0x10,0)
+        self.write(H+0x24,0);self.write(H+0x34,0);self.write(H+0x3c,H+0x3c);self.write(H+0x40,H+0x3c);self.help_nodes=0;self.help_shows=[]
         self.u.mem_write(I+0xcb4,b'\0\0');self.u.mem_write(G+SETTINGS_BYTES,bytes(9));self.write(G+MAIN_MENU_OBJ+8,0);self.u.mem_write(G+MAIN_MENU_OBJ+0xc,b'\0')
     def set_button(self,button):self.button=button
     def match_status(self):   # the current class's type, level and race (Game::MatchTile reads them at Game+0x1648c's index)
@@ -656,7 +724,13 @@ class OriginalMixin:
     def overlay_state(self):   # T040-M5: the game and stats menus, Interface's touched buttons, the switches, the main menu's fade
         G=self.GAME;b=lambda a:self.u.mem_read(G+a,1)[0];i32=lambda a:C.c_int32(self.read(G+a)).value
         menu=lambda m:[b(m+0xc),i32(m+0x10),i32(m+0x14),b(m+0x18),self.read(G+m+0x1c)]
-        return [menu(GM),menu(SM),list(self.u.mem_read(G+INTERFACE+0xcb4,2)),list(self.u.mem_read(G+SETTINGS_BYTES,9)),[self.read(G+MAIN_MENU_OBJ+8),b(MAIN_MENU_OBJ+0xc)]]
+        return [menu(GM),menu(SM),list(self.u.mem_read(G+INTERFACE+0xcb4,2)),list(self.u.mem_read(G+SETTINGS_BYTES,9)),[self.read(G+MAIN_MENU_OBJ+8),b(MAIN_MENU_OBJ+0xc)],
+                self.help_state()]
+    def help_state(self):   # T040-M6: the popup, its queued texts, the queued topics and the texts shown so far
+        G=self.GAME;H=G+HELP_MENU;b=lambda a:self.u.mem_read(a,1)[0];queue=[];node=self.read(H+0x3c)
+        while node!=H+0x3c and len(queue)<70:queue.append(HELP_TEXT_IDS.get(self.read(node+8),-1));node=self.read(node)
+        return [b(H+0xc),b(H+0xd),self.read(H+0x10),C.c_int32(self.read(H+0x24)).value,queue,self.read(H+0x38),len(self.help_shows)]+[help_show(s) for s in self.help_shows[-3:]]
+    def help_popup(self):return dict(timer=struct.unpack('<f',struct.pack('<I',self.read(self.GAME+HELP_MENU+0x10)))[0])
     def libc(self,u,address,lr):   # strlen / strncpy / memcpy / strcmp / sprintf (%s only) for the setup screen
         r=[u.reg_read(x) for x in self.regs];cstr=lambda a:bytes(u.mem_read(a,64)).split(b'\0')[0]
         if address==STRLEN:res=len(cstr(r[0]))
@@ -701,6 +775,8 @@ class OriginalMixin:
             if self.call(RACE_UNLOCKED,G,a)&0xff and self.call(CAN_CHOOSE,rec)&0xff:self.write(rec+8,a)
         elif kind in ('perk','flaw','skill'):self.call({'perk':SET_PERK,'flaw':SET_FLAW,'skill':SET_SKILL}[kind],rec,a,b)
         elif kind=='tab':self.call(SERIALISE_CLASSES,G)
+        elif kind=='help':
+            for text in CLASS_HELP[a]:self.call(QUEUE_HELP,G+HELP_MENU,text,0,0)
         else:self.call(VALIDATE,rec);self.call(SET_CURRENT[0],G,C.c_int32(self.read(rec+4)).value);self.call(SERIALISE_CLASSES,G)
     def record_state(self):   # the current class record and the class save
         G=self.GAME;rec=G+CLASSES+CLASS_STRIDE*self.read(G+CURRENT_CLASS);i32=lambda a:C.c_int32(self.read(a)).value
@@ -731,6 +807,9 @@ class OriginalMixin:
         return u.reg_read(self.regs[0])&0xff
     def continue_game(self):   # Game::ContinueGame: InitNewGame (the new-game harness), DeserialiseState, CalculateTilePositions
         NewGameOriginal.run(self);self.run_entry(DESERIALISE,['loading','gen_active']);self.run_entry(TILE_POSITIONS,['initialising','gen_active'])
+        u=self.u;u.reg_write(self.regs[0],self.GAME+INTERFACE);u.reg_write(self.regs[1],0);u.reg_write(self.regs[2],0);u.reg_write(self.SP,0x140fe00)
+        u.reg_write(self.LR,self.STOP|1);u.emu_start(IFACE_PROCESS|1,self.STOP,timeout=0,count=1000000);assert u.reg_read(self.PC)==self.STOP   # Interface::Process(0, false)
+        for undo in self.returns.pop(self.STOP&~1,[]):undo()   # ProcessHeartbeat returned to STOP
         self.class_current=True;self.moving_list=[self.index(v) for v in self.list_values(self.GAME+0xb3f8)]
     def save_state(self):   # the saved game: length, changed flag and bytes
         G=self.GAME;n=C.c_int32(self.read(G+SAVE_LENGTH)).value
@@ -751,13 +830,16 @@ class SessionMixin:
         lib.dr_session_set_motions.argtypes=[C.c_void_p,C.POINTER(Motion),C.c_uint32];lib.dr_session_set_motions.restype=None
         lib.dr_session_new_game.argtypes=[C.c_void_p,C.c_uint32];lib.dr_session_new_game.restype=None
         lib.dr_session_frame.argtypes=[C.c_void_p,C.c_float,I32,Point];lib.dr_session_frame.restype=I32
-        self.sources={}
+        self.sources={};self.help_shows=[]
         def event(_,source,p):
             k=(source,C.cast(p,C.POINTER(I32))[1 if source==6 else 0]);self.sources[k]=self.sources.get(k,0)+1   # (unit, event kind) seen in play (RoundEvent: kind second)
             if source==SOURCE_NEW_GAME:
                 e=C.cast(p,C.POINTER(I32*4)).contents;self.new_events.append(list(e))
             elif source==SOURCE_GENERATION:
                 e=C.cast(p,C.POINTER(I32*6)).contents;self.gen_events.append(list(e))
+            elif source==SOURCE_INTERFACE and C.cast(p,C.POINTER(I32))[0]==4:   # T040-M6: a text shown, with the popup's position and size
+                h=HelpPopup.from_address(self.session_lib.dr_session_objects(self.session).help);bits=lambda x:struct.unpack('<I',struct.pack('<f',x))[0]
+                self.help_shows.append([h.text,bits(h.at.x),bits(h.at.y),bits(h.width),bits(h.height)])
         def get_target(_,kind,index,out):out[0]=Point(*motion_target(kind,index))
         def start(_,kind,out):out[0]=Point(*TARGET_POINT)
         self.host_cb=(EVENT(event),TARGET(get_target),START(start));self.host=Host(None,*self.host_cb)
@@ -765,7 +847,7 @@ class SessionMixin:
         if self.session:self.q=self.own_queue   # the loaders replace the harness's own token queue, not the session's
         super().load(c);lib=self.session_lib;self.own_queue=self.q
         if self.session:lib.dr_session_destroy(self.session)
-        self.session=lib.dr_session_create(C.byref(self.host),1);o=lib.dr_session_objects(self.session)
+        self.session=lib.dr_session_create(C.byref(self.host),1);o=lib.dr_session_objects(self.session);self.help_shows=[]
         # the case, as the harness loaders built it, becomes the session's state
         pairs=dict(stroke=self.state,preview=self.p,match=self.m,rune=self.rune,resources=self.r,path=self.path_state,refill=self.refill,
                    generation=self.gen,damage=self.damage,animation=self.anim,overlay_alpha=self.overlay,attack_inputs=self.inputs,
@@ -829,7 +911,13 @@ class SessionMixin:
         o=self.session_lib.dr_session_objects(self.session);settings=(U8*12).from_address(o.settings);bits=lambda x:struct.unpack('<I',struct.pack('<f',x))[0]
         menu=lambda m,k:[self.screens.menus[k],m.previous_phase,m.pressed,m.closing,bits(m.timer)];mm=MainMenuScreen.from_address(o.main_menu)
         return [menu(Overlay.from_address(o.game_menu),1),menu(Overlay.from_address(o.stats_menu),2),list((U8*2).from_address(o.interface_buttons)),
-                [settings[i] for i in SETTINGS_NATIVE],[bits(mm.timer),mm.fading]]
+                [settings[i] for i in SETTINGS_NATIVE],[bits(mm.timer),mm.fading],self.help_state()]
+    def help_state(self):
+        o=self.session_lib.dr_session_objects(self.session);h=HelpPopup.from_address(o.help);bits=lambda x:struct.unpack('<I',struct.pack('<f',x))[0]
+        return [self.screens.help_102a4,h.closing,bits(h.timer),h.previous_phase,list(h.queue[:h.queued]),self.fin_flags.help_flags_102d0,
+                len(self.help_shows)]+[help_show(s) for s in self.help_shows[-3:]]
+    def help_popup(self):
+        o=self.session_lib.dr_session_objects(self.session);return HelpPopup.from_address(o.help)
     def overlay_menu(self,k):
         o=self.session_lib.dr_session_objects(self.session);return Overlay.from_address(o.game_menu if k==1 else o.stats_menu)
     def setup_press(self,kind,arg=0):
@@ -840,6 +928,7 @@ class SessionMixin:
         if kind=='type':   # a name typed on the keyboard (the renderer's)
             n=Setup.from_address(lib.dr_session_objects(s).setup);C.memmove(n.name,arg+b'\0',len(arg)+1);n.length=len(arg);n.named=1;result=True
         elif kind=='random':lib.dr_session_setup_random_name(s);result=True
+        elif kind=='help':lib.dr_session_setup_help.argtypes=[C.c_void_p];lib.dr_session_setup_help.restype=None;lib.dr_session_setup_help(s);result=True
         elif kind=='klass':result=lib.dr_session_setup_select_class(s,arg)
         elif kind=='mode':result=lib.dr_session_setup_mode(s,arg)
         elif kind=='difficulty':result=lib.dr_session_setup_difficulty(s,arg)
@@ -850,7 +939,8 @@ class SessionMixin:
         for f,n in (('dr_session_class_select',1),('dr_session_class_set_race',1),('dr_session_class_set_perk',2),('dr_session_class_set_flaw',2),
                     ('dr_session_class_set_skill',2),('dr_session_class_tab',0),('dr_session_class_done',0)):
             getattr(lib,f).argtypes=[C.c_void_p]+[I32]*n;getattr(lib,f).restype=C.c_bool if n==1 else None
-        if kind in ('select','race'):getattr(lib,'dr_session_class_'+('select' if kind=='select' else 'set_race'))(s,a)
+        if kind=='help':lib.dr_session_class_help.argtypes=[C.c_void_p,I32];lib.dr_session_class_help.restype=C.c_bool;lib.dr_session_class_help(s,a)
+        elif kind in ('select','race'):getattr(lib,'dr_session_class_'+('select' if kind=='select' else 'set_race'))(s,a)
         elif kind in ('perk','flaw','skill'):getattr(lib,'dr_session_class_set_'+kind)(s,a,b)
         else:getattr(lib,'dr_session_class_'+kind)(s)
         self.sync()
@@ -894,6 +984,8 @@ class SessionMixin:
         o=self.session_lib.dr_session_objects(self.session);I32.from_address(o.skill_button).value=button
     def set_menu_button(self,button):
         o=self.session_lib.dr_session_objects(self.session);I32.from_address(o.menu_button).value=button
+    def set_label_active(self,active):
+        o=self.session_lib.dr_session_objects(self.session);U8.from_address(o.current_label_active).value=active
     def menu_state(self):
         m=self.menu
         return dict(type=m.type,first=m.first,second=m.second,ready=m.confirm_ready,pressed=m.confirm_pressed,timer=struct.unpack('<I',struct.pack('<f',m.timer))[0],
@@ -922,6 +1014,10 @@ def set_health(old,new,health,maximum=None):
 
 def main():
     menus_seen={};items_rng=random.Random(0x14c04);rng=random.Random(0x5e55);overlay_rng=random.Random(0x32580);frames=turns=moves=ended=presses=busy_presses=busy_blocked=0;routes={};sources={};phases={};used={}
+    help_rng=random.Random(0x38128)
+    def with_help(c,game):   # T040-M6: every topic queued in some carried games
+        if game%3==0 and game<SKILL_GAMES-PROMOTE_GAMES:c['release']['help_flags']=c['finish']['help_flags_102d0']=0x7fffff   # (both loaders)
+        return c
     def signed_states(x):
         if isinstance(x,dict):return {k:(C.c_int32(v).value if k=='enemy_state' and isinstance(v,int) else signed_states(v)) for k,v in x.items()}
         if isinstance(x,list):return [signed_states(v) for v in x]
@@ -948,12 +1044,13 @@ def main():
                 path=first_path if first_path and turn==0 else new.pick_path(rng);moves+=len(path)>=3
                 script=[(1,i) for i in path]+[(2,path[-1])] if len(path)>=3 else []
             busy=len(script)+rng.randrange(1,12) if skills and count_>0 and len(path)>=3 and rng.random()<.6 else None   # a press while the turn runs
-            menu_plan=[];menu_taps=0;menu_open=False;overlay_plan=[];overlay_taps=0
+            menu_plan=[];menu_taps=0;menu_open=False;overlay_plan=[];overlay_taps=0;help_plan=[];step=0
             for frame in range(3000):
-                dt=f32(rng.choice([1/60,1/30]))
-                button=-1
-                if frame<len(script):
-                    phase,i=script[frame]
+                dt=f32((help_rng if new.screens.help_102a4 else rng).choice([1/60,1/30]))   # (the help popup's frames: their own draws)
+                button=-1;paused=False
+                new.set_label_active(old.u.mem_read(old.GAME+CURRENT_LABEL,1)[0])   # T040-M6: the renderer's current-damage label
+                if step<len(script):
+                    phase,i=script[step]
                     if isinstance(i,tuple):button,touch=i[1],BUTTON_TOUCH
                     else:centre=new.state.selection.tiles[i].geometry.center;touch=[centre.x,centre.y]
                 else:phase,touch=0,[0.5,0.5]
@@ -961,7 +1058,14 @@ def main():
                     phase,touch,button=1 if frame==busy else 2,BUTTON_TOUCH,turn%count_
                     if frame==busy:busy_presses+=1;busy_blocked+=not ready_before
                 menu_button=-1
-                if new.screens.menus[0]:   # the FoldoutMenu: wait for the animation, choose (two in the level-up menu), confirm
+                if not new.screens.help_102a4:help_plan=[]
+                if new.screens.help_102a4:   # T040-M6: the help popup (the game pauses, the script waits): after the fade the touch
+                    h=new.help_popup();button=-1;paused=True   # ends, sometimes a touch outside the box, then one inside
+                    if not help_plan and h.timer<=0 and not h.closing:
+                        help_plan+=[(0,HELP_OUT,-1)]+([(1,HELP_OUT,-1),(0,HELP_OUT,-1)] if help_rng.random()<.25 else [])+[(1,HELP_IN,0)]
+                    phase,touch,menu_button=help_plan.pop(0) if help_plan else (0,HELP_OUT,-1)
+                    if phase==1:k='tap_in' if menu_button>=0 else 'tap_out';HELP[k]=HELP.get(k,0)+1
+                elif new.screens.menus[0]:   # the FoldoutMenu: wait for the animation, choose (two in the level-up menu), confirm
                     m=new.menu;touch=BUTTON_TOUCH;button=-1
                     if not menu_plan and m.timer<0:
                         if menu_taps<3 and rng.random()<.25:
@@ -992,7 +1096,8 @@ def main():
                 routes[new.frame_route]=routes.get(new.frame_route,0)+1
                 if new.frame_route==11 or new.flags.game_over_screen:ended+=1;return
                 if new.screens.main_menu_c400:assert quitting;return   # T040-M5: quit to the main menu (the game menu stays open beneath it)
-                if frame>=len(script) and a['common']['input_ready'] and a['common']['phase']==0 and not new.moving_list and not a['common']['pending'] and not any(new.screens.menus):break
+                if not paused:step+=1
+                if step>=len(script) and a['common']['input_ready'] and a['common']['phase']==0 and not new.moving_list and not a['common']['pending'] and not any(new.screens.menus) and not new.screens.help_102a4:break
             else:raise AssertionError('turn did not finish')
             if script and isinstance(script[0][1],tuple) and pressed_type is not None and new.sources.get((SOURCE_SKILL,SKILL_USED),0)>used_before:
                 used[pressed_type]=used.get(pressed_type,0)+1
@@ -1022,6 +1127,7 @@ def main():
                  ('flaw',rng.randrange(-1,5),rng.choice([255,rng.randrange(10)])),('skill',rng.randrange(-1,21),rng.choice([255,rng.randrange(40)])),('tab',0,0)])
                  for _ in range(rng.randrange(2,8))]+[('done',0,0)]
             if high:ops.insert(2,('race_pick',0,0))   # a race the original unlocks, other than the class's own
+            if help_rng.random()<.5:ops.insert(help_rng.randrange(1,len(ops)),('help',help_rng.randrange(4),0))   # T040-M6: a tab's help
             for op in ops:
                 if op[0]=='race_pick':
                     G=old.GAME;rec=G+CLASSES+CLASS_STRIDE*old.read(G+CURRENT_CLASS);own=C.c_int32(old.read(rec+8)).value
@@ -1030,6 +1136,7 @@ def main():
                     op=('race',picks[0],0)
                 old.class_op(*op);new.class_op(*op);CLASS_OPS[op[0]]=CLASS_OPS.get(op[0],0)+1
                 compare('class screen',[old.flow_state(),old.record_state()],[new.flow_state(),new.record_state()],game=game,op=op)
+        if help_rng.random()<.4:setup_presses.insert(help_rng.randrange(len(setup_presses)+1),('help',0))   # T040-M6: the help button
         for press in setup_presses+[('start',0)]:
             a=old.setup_press(*press);result=new.setup_press(*press);key=f'{press[0]}:{int(result)}';SETUPS[key]=SETUPS.get(key,0)+1
             compare('setup',old.flow_state(),new.flow_state(),game=game,press=press)
@@ -1073,7 +1180,7 @@ def main():
         else:   # enemies 28 one turn from their ability: Game::DestroyUpgrade
             for t in c['board']:
                 if t['type']==1 and rng.random()<.5:t['enemy']=28;t['enemy_state']=1
-        with_mana(with_class(c,class_rng),mana_rng)
+        with_help(with_mana(with_class(c,class_rng),mana_rng),game+1)
         old.load(c);new.load(c);set_health(old,new,5000,5000)
         compare('load',old.game_state(),new.game_state(),game=game)
         play(old,new,200+game,CARRIED_TURNS,first_path=long)
@@ -1083,7 +1190,7 @@ def main():
     rng=random.Random(0x2ad40)   # the skill phase's own sequence (independent of the phases before it)
     old,new=CarriedSessionOriginal(),CarriedSession();mark=dict(turns=turns,frames=frames,ended=ended)
     for game in range(SKILL_GAMES):
-        c=with_mana(with_class(with_items(skill_variant(turn_case(rng),rng,game),items_rng),class_rng),mana_rng);old.load(c);new.load(c);set_health(old,new,5000,5000)
+        c=with_help(with_mana(with_class(with_items(skill_variant(turn_case(rng),rng,game),items_rng),class_rng),mana_rng),game);old.load(c);new.load(c);set_health(old,new,5000,5000)
         compare('load',old.game_state(),new.game_state(),game=game)
         play(old,new,100+game,SKILL_TURNS if game<SKILL_GAMES-PROMOTE_GAMES else 5*SKILL_TURNS,skills=True)
     phases['skills']=dict(games=SKILL_GAMES,presses=presses,presses_while_busy=busy_presses,presses_input_not_ready=busy_blocked,used={k:used[k] for k in sorted(used)},**{k:v-mark[k] for k,v in dict(turns=turns,frames=frames,ended=ended).items()})
@@ -1094,16 +1201,17 @@ def main():
     assert set(used)==set(SKILL_TYPES) and sources.get((SOURCE_SKILL,SKILL_FLAME),0)>3,(set(SKILL_TYPES)-set(used),sources.get((SOURCE_SKILL,SKILL_FLAME)))
     assert set(menus_seen)=={0,1,2},menus_seen
     assert all(OVERLAY.get(k,0) for k in ('game_menu','stats_menu','closed','sound','help','clock','dimming','framerate','quit','tab','reset','restart')),OVERLAY
+    assert set(range(23))|set(range(100,105))|{'tap_in','tap_out'}<=set(HELP) and len([k for k in HELP if isinstance(k,int) and k>=105])>=8,HELP
     assert SPECIAL_CALLS[0]>0,SPECIAL_CALLS   # mana potion tokens: Interface::GetSpecialTarget
     assert all(LABEL_CALLS.get(n,0)>0 for n in LABEL_FUNCTIONS),LABEL_CALLS   # the damage labels shown, moved, renumbered, dimmed, faded
     assert SAVE_CALLS[0]>100 and CONTINUES[0]>0 and CLASS_SAVES[0]>0 and len(SCORE_CALLS)==3,(SAVE_CALLS,CONTINUES,CLASS_SAVES,SCORE_CALLS)   # saves; continued games; class saves; scores
-    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],starts=STARTS,class_ops=dict(sorted(CLASS_OPS.items())),overlay=dict(sorted(OVERLAY.items())),setup_presses=dict(sorted(SETUPS.items())),label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
+    report=dict(status='passed',phases=phases,menus=dict(sorted(menus_seen.items())),special_targets=SPECIAL_CALLS[0],saves=SAVE_CALLS[0],continued=CONTINUES[0],class_saves=CLASS_SAVES[0],starts=STARTS,class_ops=dict(sorted(CLASS_OPS.items())),help={str(k):v for k,v in sorted(HELP.items(),key=lambda kv:str(kv[0]))},overlay=dict(sorted(OVERLAY.items())),setup_presses=dict(sorted(SETUPS.items())),label_calls={n.split('SimpleLabel')[1]:v for n,v in LABEL_CALLS.items()},score_calls={k.split('E')[-1] if 'AddScore' in k else 'SetSkills':v for k,v in SCORE_CALLS.items()},turns=turns,moves=moves,frames=frames,games_ended=ended,frame_routes=routes,
                 events_by_unit_kind={f'{k[0]}:{k[1]}':v for k,v in sorted(sources.items())},
                 original='Original InitNewGame (new games) or a loaded state (carried), then the whole original Game::Process every frame',
                 native='One recovered_session: dr_session_new_game (new games), then dr_session_frame (the session wires every unit itself)',
                 boundaries=['time() returns the case seed',
                             'the harness picks the paths, the skill button and the menu button under the touch; GameMenu / StatsMenu closed',
-                            'the current-damage label (Game+0xb550) and the label pools stay presentation (their calls skipped)',
+                            'the current-damage label (Game+0xb550) runs as original code (its active byte given to the session); the label pools stay presentation',
                             'events and presentation mirrors not compared here (unit tests)'],
                 scope='games from their start through many turns up to the end of the game, carried mid-game states, skill use, items, the three menus, saves, continued games and high scores')
     (HERE/'session_verification.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
