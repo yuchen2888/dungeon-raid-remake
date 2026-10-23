@@ -570,3 +570,13 @@
 - verify_session：整局测试第一次点到职业卷轴（此前从未覆盖）：职业卷轴分支里的 MatchTile(7)、MoveMatchedTiles、CheckEndGame 改为原代码执行；提示弹出、暂停、完全显示后点掉，逐帧一致。技能局改用独立的随机序列（SKILL_SEED，挑选能覆盖全部技能类型、敌人跳下与忙时按键的种子），不再受前面各局走向影响。
 - 整局测试的覆盖改为不靠运气：技能局用独立随机序列（SKILL_SEED=6）；职业卷轴提示不足两次时补跑带卷轴的延续局（独立随机序列）。
 - `./scripts/relay.sh verify --full` → exit 0：95 步全部通过（新增 verify_unlock_screen）。运行目录 `.relay/runs/20261023T092857.503675Z`，输入指纹 `509f0f19…8a1c76`，inputs_unchanged true。
+
+## 2026-10-23 T040-N1..N5：前端对照台提出的后端需求（Claude）
+
+- 新 verify_startup：原版 Game::Game 0xdd9c 与 Game::Start(true) 0xb880 在模拟器里从入口执行（只跳过 SetupRenderer 与库函数；new 用顺序分配，memset / memcpy / memmove 照做，time() 固定），与 dr_session_create + dr_session_seed 逐项对照：难度、设置字节、最高分页、格距 / 半距、36 格的编号 / 中心 / 静止位置 / 大小 / 下落速度与加速度、攻击变暗、伤害数字位置与缩放、显示值、技能与升级菜单的技能类型、当前职业及其副本、6 路随机流、心跳。改动前的会话这些值几乎全部不同，改动后全部一致。
+- 新 verify_enemy_uv：原 Tile::UpdateEnemyUV 从入口执行对照 dr_session_update_enemy_uv，4000 次（宿敌 1847、清除 938、无敌人 1215），旋转标志与随机流一致。
+- verify_help：低血心跳的三个计时与音效 32 逐步对照原 Interface::ProcessHeartbeat（130 次心跳）。
+- verify_motion / verify_path：原版侧照原版为代币换图抽 RandI(0, 7, 流 0)。
+- verify_load：恢复职业存档后原版侧也执行 Game::Start 的 SetCurrentClass（会话的 dr_session_restore_classes 照原版这样做）；读档时宿敌旋转的抽签与音效在原版侧照样发生，单元的事件记录保留。
+- verify_session：起始设定改用原版开机值；原版每次 Game::QueueSound（只在声音开时入队）都记下，与会话的音效队列每帧对照，并在下一帧前照 GetSoundMapping 为每个音效抽变体——新局、延续局、商店局约 1.2 万个音效逐一相同；护盾碎裂改为原代码执行；故事编号与原版同一时刻的抽签对照；职业编辑的打开与分页照原版先 Validate；伤害数字位置照原版写入。整局测试顺带查出并修正两处会话差异：开新局时 Interface::Reset 清空心跳、职业卷轴提示的音效 12（测试替身原先漏排）。覆盖改为不靠运气：漏用的技能类型补一局（四格都是它）、没有敌人跳下时补“提拔”局、职业编辑的帮助按分页轮流、主菜单优先选没开过的开局方式；原版“下落格子”列表读取上限由 40 放宽到 400（同一格一回合可多次排队下落）。
+- `./scripts/relay.sh verify --full` → exit 0：97 步全部通过（新增 verify_startup、verify_enemy_uv）。运行目录 `.relay/runs/20261023T105108.504251Z`，输入指纹 `90c8263c…685ea9`，inputs_unchanged true。这次技能局补局：4 种技能各补 1 局，敌人跳下补 7 局。

@@ -53,8 +53,6 @@ int main() {
     int ended=0,total_turns=0;long total_frames=0;
     for(int game=0;game<3;++game) {
         Session* s=dr_session_create(&host,1);SessionObjects o=dr_session_objects(s);
-        auto& sel=o.stroke->selection;sel.geometry.pitch=1.0f/6;sel.half_spacing=1.0f/12;
-        for(int k=0;k<4;++k){sel.character.flaws[k]=255;o.match->perks[k]=255;}
         const std::uint32_t seed=20261020u+static_cast<std::uint32_t>(game);
         dr_session_start_game(s,game,seed);
         // a press on the setup screen is a touch it takes (T040-M7d): an open help popup closed first (a touch inside its box

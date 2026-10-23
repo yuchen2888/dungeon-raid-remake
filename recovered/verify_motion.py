@@ -8,9 +8,11 @@ import re
 import struct
 from verify_resources import Native as ResourceNative,Original as ResourceOriginal,configure,bits,Resource,Hooks as ResourceHooks
 from verify_tokens import TOKEN_EVENT,Hooks as TokenHooks
-from verify_match import Match
+from verify_match import Match, RandomState
 from verify_stroke import I32,U8,HERE,initial,Point,State as Stroke
 from verify_rune import rectangles
+SEEDS=0x1eac20   # the six random streams (RandI's)
+RANDOM=C.CDLL(str(HERE/'recovered_motion_native.dylib'))   # (its dr_random_int)
 
 class Motion(C.Structure):
     _fields_=[('position',Point),('scale',Point),('active',U8),('reward',I32),('token',I32),('direction',Point),
@@ -118,8 +120,9 @@ class Original(ResourceOriginal):
                 assert bytes(u.mem_read(r[2],8))==struct.pack('<II',0x3ee78000,0x3cb80000)
                 self.motion_events.append([3,0])
         elif name=='size':assert bytes(u.mem_read(r[1],8))==struct.pack('<II',0x3df9999a,0x3d933333)
-        elif name=='tile_uv':
-            self.motion_events.append([4,r[0]]);u.mem_write(r[1],b'\0'*8);u.mem_write(r[2],b'\0'*8)
+        elif name=='tile_uv':   # T040-N3: its RandI(0, 7, stream 0) on the harness's streams (the UVs are the renderer's)
+            self.motion_events.append([4,r[0]]);seeds=RandomState((C.c_uint32*6)(*struct.unpack('<6I',u.mem_read(SEEDS,24))))
+            RANDOM.dr_random_int(C.byref(seeds),0,7,0);u.mem_write(SEEDS,struct.pack('<6I',*seeds.seeds))
         u.reg_write(self.PC,u.reg_read(self.LR))
     def load(self,c):
         super().load(c);self.motion_running=False;self.motion_return=None;self.motion_direct=False;self.motion_events=[];self.motion_slots=set()

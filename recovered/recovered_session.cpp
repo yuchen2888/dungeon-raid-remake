@@ -113,6 +113,9 @@ struct Session {
     std::uint32_t clock=0;                // the platform's time() (SessionObjects.time)
     bool setup_press=false;               // the last frame began a touch the setup screen takes (T040-M7d)
     UnlockPopup unlock{};                 // UnlockMenu (Game+0x164d8; T040-M8)
+    Heartbeat heart{};                    // Interface::ProcessHeartbeat's timers (T040-N4)
+    std::vector<std::int32_t> sounds;     // Game::QueueSound's queue (Game+0x13e9c, its count +0x13ea8; T040-N4)
+    std::size_t sound_next=0;             // Game::GetNextSound's index (+0x13eac)
     ScorePages score_pages{};             // ScoreScreen (Game+0xef68)
     GameOverTally game_over{};            // GameOverScreen (Game+0xcac0)
     StatsTargets stats_targets{};
@@ -123,7 +126,49 @@ struct Session {
 }
 namespace {
 Session& self(void* c) {return *static_cast<Session*>(c);}
-void forward(Session& s,SessionSource source,const void* e) {if(s.host.event)s.host.event(s.host.context,source,e);}
+void queue_sound(Session& s,std::int32_t sound);
+void queue_tile_sound(Session& s,std::int32_t tile);
+// Game::QueueSound 0x903c: queued only while the sound switch is on (T040-N4)
+void queue_sound(Session& s,std::int32_t sound) {if(s.settings.sound_13ec6)s.sounds.push_back(sound);}
+// Game::QueueTileSound 0x9094: a tile's sound by its type -- 0: 24 with potion flag 0x234 or 0x233, else 5; 1: 14; 2: 1;
+// 3: 7; 4: 3; 6: 8; others none
+void queue_tile_sound(Session& s,std::int32_t tile) {
+    if(tile<0 || tile>=36)return;
+    static const std::int32_t sound[7]={5,14,1,7,3,-1,8};
+    const std::int32_t type=s.stroke.selection.tiles[tile].rule.type;
+    if(type<0 || type>6 || sound[type]<0)return;
+    const PotionFlags& p=s.preview.potions[tile];
+    queue_sound(s,type==0 && (p.flag_234 || p.flag_233)?24:sound[type]);
+}
+// Every unit's sound reaches Game::QueueSound in the original: here the units' Sound events, as they are forwarded
+// (T040-N4). The event's kind is its first field (RoundEvent: second); the sound is the field the unit fills.
+void collect_sound(Session& s,SessionSource source,const void* e) {
+    const auto* w=static_cast<const std::int32_t*>(e);
+    switch(source) {
+    case SessionSource::Selection:if(w[0]==static_cast<std::int32_t>(SelectionEvent::TileSound))queue_tile_sound(s,w[1]);break;   // QueueTileSound
+    case SessionSource::Match:if(w[0]==static_cast<std::int32_t>(MatchEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Resource:if(w[0]==static_cast<std::int32_t>(ResourceEventKind::Sound))queue_sound(s,w[1]);break;
+    case SessionSource::Path:if(w[1]==static_cast<std::int32_t>(BattleEvent::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Generation:if(w[0]==static_cast<std::int32_t>(GenerationEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Encounter:case SessionSource::Vampires:if(w[0]==static_cast<std::int32_t>(EncounterEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::AttackFlare:if(w[0]==static_cast<std::int32_t>(AttackFlareEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::AttackAnim:if(w[0]==static_cast<std::int32_t>(AttackAnimEventKind::Sound))queue_sound(s,w[1]);break;
+    case SessionSource::AttackShield:if(w[0]==static_cast<std::int32_t>(AttackShieldEventKind::Sound))queue_sound(s,w[1]);break;
+    case SessionSource::AttackWeaken:if(w[0]==static_cast<std::int32_t>(AttackWeakenEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::AttackHealth:if(w[0]==static_cast<std::int32_t>(AttackHealthEventKind::Sound))queue_sound(s,w[1]);break;
+    case SessionSource::AttackAll:if(w[0]==static_cast<std::int32_t>(AttackAllEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Turn:case SessionSource::EndGame:case SessionSource::GameOver:
+        if(w[0]==static_cast<std::int32_t>(TurnEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Release:if(w[0]==static_cast<std::int32_t>(ReleaseEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Label:if(w[0]==static_cast<std::int32_t>(LabelEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Skill:if(w[0]==static_cast<std::int32_t>(SkillEventKind::Sound))queue_sound(s,w[1]);break;
+    case SessionSource::Stats:if(w[0]==static_cast<std::int32_t>(StatsEventKind::Sound))queue_sound(s,w[2]);break;
+    case SessionSource::Menu:if(w[0]==static_cast<std::int32_t>(MenuEventKind::Sound))queue_sound(s,w[1]);break;
+    case SessionSource::Interface:if(w[0]==static_cast<std::int32_t>(InterfaceEventKind::Sound))queue_sound(s,w[2]);break;
+    default:break;
+    }
+}
+void forward(Session& s,SessionSource source,const void* e) {collect_sound(s,source,e);if(s.host.event)s.host.event(s.host.context,source,e);}
 void open_menu(Session& s,std::int32_t type);
 void save_state(Session& s);
 void help_topic(Session& s,std::int32_t type,Point at,float width,float height,std::int32_t slot=-1);
@@ -145,6 +190,11 @@ void show_help(Session& s,std::int32_t type) {
     }
 }
 template<SessionSource source,class Event> void forward_event(void* c,const Event* e) {forward(self(c),source,e);}
+// ProcessAttack's shield: an attack that breaks it calls Game::InialiseShieldShatter there (T040-N2)
+void shield_event(void* c,const AttackShieldEvent* e) {
+    Session& s=self(c);forward(s,SessionSource::AttackShield,e);
+    if(e->kind==AttackShieldEventKind::ShieldShatter)dr_initialise_shield_shatter(&s.shatter,&s.effect_hooks);
+}
 
 // Game::AddFlare: every unit's Flare event is one call (dr_add_flare: rotation from stream 0, count + 1).
 void add_flare(Session& s) {dr_add_flare(&s.animation.flare_count,&s.match.random);}
@@ -231,8 +281,20 @@ void encounter_event(void* c,const EncounterEvent* e) {
     else if(e->kind==EncounterEventKind::Flare)add_flare(s);
     else if(e->kind==EncounterEventKind::Label)label(s,e->a);
 }
+// Tile::UpdateEnemyUV 0x3ef64, its rules (T040-N3; the picture and label colours are the renderer's): a tile showing the
+// current class's mortal enemy (CharacterClass::GetMortalEnemyType of its race) spins (flag_224) at Rand(30, 45, stream
+// 0) a second (Tile+0x228, the renderer's: drawn after the event); any other tile stops spinning. Its callers --
+// Tile::Promote, MakePhylactery, ActivateAbility, Deserialise2 and Game::DemoteSpecialEnemy -- raise EnemyUV events.
+void update_enemy_uv(Session& s,std::int32_t tile) {
+    if(tile<0 || tile>=36)return;
+    const std::int32_t enemy=s.stroke.selection.tiles[tile].rule.enemy_type;
+    if(enemy!=0 && enemy==dr_mortal_enemy(s.stroke.selection.character.race)) {
+        s.generation.tiles[tile].flag_224=1;(void)dr_random_float(&s.match.random,30.0f,45.0f,0);
+    } else s.generation.tiles[tile].flag_224=0;
+}
 void path_event(void* c,const RoundEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Path,e);
+    if(e->kind==BattleEvent::UpdateEnemyUV)update_enemy_uv(s,e->tile_index);   // Tile::MakePhylactery
     if(e->kind==BattleEvent::MoveMatchedTiles)move_matched_tiles(s);   // Game::MoveMatchedTiles at its place inside MatchTiles
     else if(e->kind==BattleEvent::Flare)add_flare(s);                 // AttackSkull's flare
     else if(e->kind==BattleEvent::Particles)particles(s,e->a);
@@ -251,6 +313,7 @@ void refill_event(void* c,RefillEventKind kind,std::int32_t i,std::int32_t j) {
 void generation_event(void* c,const GenerationEvent* e) {
     Session& s=self(c);forward(s,SessionSource::Generation,e);
     if(e->kind==GenerationEventKind::JumpDown)dr_jump_down(&s.generation,static_cast<std::uint32_t>(e->tile),&s.encounter_hooks);
+    else if(e->kind==GenerationEventKind::EnemyUV)update_enemy_uv(s,e->tile);   // Promote, ActivateAbility, Deserialise2
     else if(e->kind==GenerationEventKind::ShieldShatter)dr_initialise_shield_shatter(&s.shatter,&s.effect_hooks);
 }
 // ProcessAttack
@@ -260,6 +323,9 @@ void flare_event(void* c,const AttackFlareEvent* e) {
 }
 void anim_event(void* c,const AttackAnimEvent* e) {
     Session& s=self(c);forward(s,SessionSource::AttackAnim,e);if(e->kind==AttackAnimEventKind::AddLabel)label(s,e->a);
+    if(e->kind==AttackAnimEventKind::LabelPosition && e->a==0) {   // SimpleLabel::SetPosition of the damage number (T040-N5):
+        s.animation.bd30=as_float(e->b);s.animation.bd34=as_float(e->c);   // its +0x334 is Game+0xbd30 / bd34
+    }
     if(e->kind==AttackAnimEventKind::HelpMenu)help_topic(s,e->c,Point{as_float(e->a),as_float(e->b)},0.0f,e->c==17?as_float(0x3dcccccd):0.0f);
 }
 void absorb_event(void* c,const AttackAbsorbEvent* e) {
@@ -366,6 +432,7 @@ void new_game_event(void* c,const NewGameEvent* e) {
     else if(e->kind==NewGameEventKind::UpdateStats)update_stats(s);
     else if(e->kind==NewGameEventKind::InterfaceReset) {   // Interface::Reset 0x204a4: its input state (the rest is presentation)
         s.skill_input.pressed=-1;s.interface_buttons=InterfaceButtons{};s.screens.menus[1]=s.screens.menus[2]=0;
+        s.heart=Heartbeat{0.0f,1.0f,0.0f};   // and the heartbeat stopped (T040-N4)
     }
 }
 void turn_swap(void* c,std::int32_t x1,std::int32_t y1,std::int32_t x2,std::int32_t y2) {
@@ -434,6 +501,7 @@ void skill_event(void* c,const SkillEvent* e) {
     const auto tile=static_cast<std::uint32_t>(e->b);
     switch(e->kind) {
     case SkillEventKind::Flare:add_flare(s);break;
+    case SkillEventKind::EnemyUV:update_enemy_uv(s,e->b);break;   // Game::DemoteSpecialEnemy
     case SkillEventKind::Particles:particles(s,e->a);break;
     case SkillEventKind::Label:label(s,e->a);break;
     case SkillEventKind::MoveMatchedTiles:move_matched_tiles(s);break;
@@ -541,6 +609,7 @@ void main_menu_set_active(Session& s,bool active);
 // MainMenu::Show 0x2f60c: Continue and High scores shown or not
 void main_menu_show(Session& s) {
     s.main_menu.has_save=static_cast<std::int32_t>(s.end.flag_146d0)>0;s.main_menu.has_scores=dr_score_count(&s.scores)>0;
+    interface_event(s,InterfaceEventKind::MainMenuShow,-1,0);
 }
 float interpolate(float a,float b,float t) {return a*t+(1.0f-t)*b;}   // Interpolate 0x1b800
 // ScoreScreen::Process 0x367f8 (route Score)
@@ -787,9 +856,21 @@ void update_skills(Session& s) {
     }
 }
 // Interface::ProcessHeartbeat 0x1e8e8: help 14 at low health (the beat is presentation)
+float clamp_float(float x,float lo,float hi) {if(x>=hi)return hi;if(x<=lo)return lo;return x;}   // Clamp 0x1b73c
 void heartbeat(Session& s) {
     const float ratio=static_cast<float>(s.resources.ui_health)/static_cast<float>(s.player.ui_health_ceiling_5998);
-    if(ratio<=0.35f)help_topic(s,14,Point{as_float(0x3f5b9999),as_float(0x3fa26666)},0.0f,0.0f);
+    Heartbeat& h=s.heart;
+    if(ratio<=as_float(0x3eb33333))help_topic(s,14,Point{as_float(0x3f5b9999),as_float(0x3fa26666)},0.0f,0.0f);
+    else {h.wait=0.0f;if(h.beat==0.0f)return;}   // (T040-N4: the beat still running ends)
+    const float t=clamp_float((ratio-as_float(0x3e19999a))/as_float(0x3e4ccccc),0.0f,1.0f);
+    if(h.wait>0.0f) {
+        h.wait-=s.dt;
+        if(h.wait>0.0f)return;
+        h.wait=0.0f;h.beat=h.beat_length=interpolate(0.5f,as_float(0x3e99999a),t);interface_event(s,InterfaceEventKind::Sound,-1,32);
+        return;
+    }
+    h.beat-=s.dt;
+    if(!(h.beat>0.0f)) {h.beat=0.0f;h.wait=interpolate(2.0f,as_float(0x3dcccccd),t);}
 }
 void effect_event(void* c,const BoardEffectEvent* e) {
     Session& s=self(c);forward(s,SessionSource::BoardEffect,e);
@@ -808,6 +889,7 @@ void interface_process(Session& s,bool input_ready) {
 }
 void frame_event(void* c,const GameFrameEvent* e) {
     Session& s=self(c);forward(s,SessionSource::GameFrame,e);
+    if(e->kind==GameFrameEventKind::QueuesReset){s.sounds.clear();s.sound_next=0;}   // (T040-N4)
     if(e->kind==GameFrameEventKind::InterfaceProcess)interface_process(s,e->a!=0);
     else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::Help))help_process(s);
     else if(e->kind==GameFrameEventKind::Screen && e->a==static_cast<std::int32_t>(FrameRoute::MainMenu))main_menu_process(s);
@@ -856,7 +938,9 @@ bool frame_tokens(void* c) {
     counters.pending=pending;dr_token_queue_restore(s.tokens,&counters);
     return continued;
 }
-void frame_pools(void*) {}   // Particles / SimpleLabel pools: presentation, owned by the renderer
+void frame_pools(void* c) {   // Particles / SimpleLabel pools: presentation, owned by the renderer (the moment forwarded)
+    const GameFrameEvent e{GameFrameEventKind::Pools,0,0};forward(self(c),SessionSource::GameFrame,&e);
+}
 void frame_flare_fade(void* c) {Session& s=self(c);dr_process_flare_fade(&s.frame_state,s.dt,&s.part_hooks);}
 void frame_damage_label(void* c) {Session& s=self(c);dr_process_damage_label(&s.frame_state,s.current_label_active,s.dt,&s.part_hooks);}
 bool frame_damage_labels(void* c) {Session& s=self(c);return dr_process_damage_labels(&s.labels,s.dt,s.touch.position,&s.label_hooks);}
@@ -941,7 +1025,7 @@ void link(Session& s) {
     s.flare_hooks={c,flare_event};
     s.anim_hooks={c,anim_event,counterattack};
     s.absorb_hooks={c,absorb_event};
-    s.shield_hooks={c,forward_event<SessionSource::AttackShield,AttackShieldEvent>};
+    s.shield_hooks={c,shield_event};
     s.weaken_hooks={c,weaken_event};
     s.all_hooks={c,all_event,all_attack_skull,all_move};
     s.health_hooks={c,health_event};
@@ -968,6 +1052,15 @@ void link(Session& s) {
     s.skill_hooks={c,skill_event,skill_action,&s.match_hooks,&s.path_hooks};
 }
 }
+namespace {
+void views_from_record(Session& s);
+// Game::SetCurrentClass(Game+0x1648c's value) as Game::Start makes it: the current record is the class of that type and
+// the units' views follow it (no old record takes the views first: they hold nothing yet)
+void start_current_class(Session& s) {
+    s.scroll.current=static_cast<std::size_t>(dr_current_class(s.classes,static_cast<std::int32_t>(s.scroll.current)));
+    views_from_record(s);
+}
+}
 extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t difficulty) {
     auto* s=new Session;s->host=*host;s->difficulty=difficulty;dr_scores_init(&s->scores);
     for(int i=0;i<3;++i) {   // SimpleLabel::SimpleLabel, then Game::Start: colours 17, 18, 19 and duration 0.2
@@ -976,7 +1069,42 @@ extern "C" Session* dr_session_create(const SessionHost* host,std::int32_t diffi
     for(int i=0;i<10;++i)dr_class_initialise(&s->classes[i],i,s->class_replacements[i]);   // Game::Start: the class roster
     s->tokens=dr_token_queue_create(&s->match);
     s->screens.main_menu_c400=1;s->main_menu.splash=255;s->main_menu.pressed=-1;   // MainMenu::MainMenu (T040-M7)
-    link(*s);return s;
+    // Game::Game 0xdd9c and Game::Start 0xb880 (T040-N1): the start-up values the rules read
+    s->match.spawn_enabled_14ae0=1;s->settings.sound_13ec6=1;s->settings.score_page_1660c=1;   // Normal, sound on, page 1
+    for(auto& f:s->refill.falling){f.speed=1.0f;f.acceleration=0.5f;}                           // Tile::Tile
+    for(int k=0;k<4;++k){s->skills.id[k]=-1;s->menu.options[k].type=-1;}s->menu.scroll.type=-1;   // Skill::Skill
+    ResourceState& r=s->resources;r.ui_health=r.ui_xp=r.ui_up=r.ui_gold=r.ui_armour=-1;          // Interface::Interface:
+    PlayerStats& p=s->player;p.ui_health_ceiling_5998=p.ui_sword_59bc=p.ui_armour_max_59c4=p.ui_skull_59c8=-1;   // shown values
+    s->overlay_alpha=120;                                                                       // the attack dimming (0,0,0,120)
+    s->heart.beat_length=1.0f;                                                                  // the heartbeat's pulse (T040-N4)
+    AttackAnimation& a=s->animation;a.label_y=0.6675f;a.bd30=0.5f;a.bd34=0.6675f;               // the damage number: its place
+    a.damage_label_alpha=1.0f;a.poison_label_alpha=1.0f;                                       // and the two numbers' scale
+    link(*s);
+    SelectionState& sel=s->stroke.selection;sel.geometry.pitch=0.165625f;sel.half_spacing=0.0828125f;
+    dr_calculate_tile_positions(&s->stroke,&s->new_game_hooks);   // Game::CalculateTilePositions
+    start_current_class(*s);
+    return s;
+}
+// Game::Start's SetRandSeed(time(), every stream) and FlushRandSeeds, then its SimpleLabel::Initialise of the attack's two
+// numbers (Game+0xb9fc type 2, Game+0x151e4 type 7, at (0.5, 0.6675), 0, scale 1: the renderer's labels) and their
+// Rand(0.1, 0.2) on stream 0 (T040-N2)
+extern "C" void dr_session_seed(Session* s,std::uint32_t time) {
+    dr_random_set_seed(&s->match.random,time,6);dr_random_flush(&s->match.random);
+    for(const std::int32_t type:{2,7}) {
+        SimpleLabelState label;dr_label_construct(&label);dr_label_initialise(&label,type,Point{0.5f,0.6675f},0,1.0f,&s->match.random);
+    }
+}
+extern "C" void dr_session_update_enemy_uv(Session* s,std::int32_t tile) {update_enemy_uv(*s,tile);}
+extern "C" void dr_session_queue_sound(Session* s,std::int32_t sound) {queue_sound(*s,sound);}
+// Game::GetNextSound 0x9f18, then GetSoundMapping 0x1bdf8's RandI(0, variants - 1, stream 0) (GetSoundVariations 0x1b9f0:
+// the files the platform loads for each sound)
+extern "C" bool dr_session_next_sound(Session* s,std::int32_t* sound,std::int32_t* variant) {
+    static const std::int32_t variations[38]={1,3,3,3,3,3,3,3,3,3,1,1,1,1,3,2,1,1,1,1,1,1,1,1,1,1,1,3,3,3,3,1,4,1,1,1,1,1};
+    if(s->sound_next>=s->sounds.size())return false;
+    const std::int32_t id=s->sounds[s->sound_next++];
+    const std::int32_t n=id>=0 && id<38?variations[id]:0;
+    *sound=id;*variant=n>0?dr_random_int(&s->match.random,0,n-1,0):-1;
+    return true;
 }
 extern "C" void dr_session_destroy(Session* s) {dr_token_queue_destroy(s->tokens);delete s;}
 extern "C" SessionObjects dr_session_objects(Session* s) {
@@ -986,7 +1114,7 @@ extern "C" SessionObjects dr_session_objects(Session* s) {
         &s->skill_input.pressed,&s->current_label_active,s->motions.data(),static_cast<std::uint32_t>(s->motions.size()),
         s->falling.data(),static_cast<std::uint32_t>(s->falling.size()),&s->skill_button,&s->skill_input,s->items,&s->menu,&s->menu_button,s->dimmed,
         s->save,s->name,&s->settings,&s->class_save,&s->scores,s->damage_labels,&s->setup,&s->game_menu,&s->stats_menu,
-        &s->interface_buttons,&s->main_menu,&s->help,&s->score_pages,&s->game_over,&s->clock,&s->unlock};
+        &s->interface_buttons,&s->main_menu,&s->help,&s->score_pages,&s->game_over,&s->clock,&s->unlock,&s->heart};
 }
 extern "C" void dr_session_link(Session* s) {link(*s);}
 // Game::SerialiseState now (the session runs it where the original does; IntroScreen::Process also calls it).
@@ -1006,7 +1134,9 @@ extern "C" std::int32_t dr_session_save_changed_scores(Session* s) {return dr_sc
 extern "C" bool dr_session_restore_classes(Session* s,const std::uint8_t* bytes,std::uint32_t length) {
     if(length>class_save_capacity)return false;
     std::copy(bytes,bytes+length,s->class_save.bytes);s->class_save.length_14ad8=static_cast<std::int32_t>(length);
-    const SaveSources src=save_sources(*s);return dr_deserialise_classes(&src,&s->class_save);
+    const SaveSources src=save_sources(*s);
+    if(!dr_deserialise_classes(&src,&s->class_save))return false;
+    start_current_class(*s);return true;   // Game::Start: SetCurrentClass after DeserialiseClasses (T040-N1)
 }
 // The platform's start-up: the stored save back into Game+0x13ecf and its length (stored data over 0x800 bytes is ignored).
 extern "C" void dr_session_restore_save(Session* s,const std::uint8_t* bytes,std::uint32_t length) {
@@ -1028,6 +1158,7 @@ extern "C" void dr_session_set_difficulty(Session* s,std::int32_t difficulty) {
 extern "C" void dr_session_set_name(Session* s,const char* name) {set_name(*s,name);}
 extern "C" void dr_session_setup_random_name(Session* s) {
     if(!setup_ready(*s))return;
+    menu_sound(*s);   // (the setup screen's buttons: sound 0 when their press is taken; T040-N4)
     SetupScreen& n=s->setup;RandomState* r=&s->match.random;
     if(dr_random_int(r,0,1,0)==0) {
         const std::int32_t a=dr_random_int(r,0,49,0),b=dr_random_int(r,0,48,0);
@@ -1044,19 +1175,22 @@ bool select_class(Session* s,std::int32_t type) {
     dr_session_set_current_class(s,type);return true;
 }
 }
-extern "C" bool dr_session_setup_select_class(Session* s,std::int32_t type) {return setup_ready(*s) && select_class(s,type);}
+extern "C" bool dr_session_setup_select_class(Session* s,std::int32_t type) {   // (only an unlocked class's button is there)
+    if(!setup_ready(*s) || type<0 || type>9 || !s->classes[type].level)return false;
+    menu_sound(*s);return select_class(s,type);
+}
 extern "C" bool dr_session_setup_mode(Session* s,std::int32_t mode) {
     if(!setup_ready(*s) || !s->setup.challenge || mode<0 || mode>1)return false;
-    dr_session_set_mode(s,mode);return true;
+    menu_sound(*s);dr_session_set_mode(s,mode);return true;
 }
 extern "C" bool dr_session_setup_difficulty(Session* s,std::int32_t difficulty) {
     if(!setup_ready(*s) || s->setup.challenge || difficulty<0 || difficulty>3)return false;
-    dr_session_set_difficulty(s,difficulty);return true;
+    menu_sound(*s);dr_session_set_difficulty(s,difficulty);return true;
 }
 extern "C" bool dr_session_setup_start(Session* s,std::uint32_t time) {
     if(!setup_ready(*s) || !s->setup.named || s->setup.length<=0)return false;
-    set_name(*s,s->setup.name);
-    s->screens.intro_c3f0=1;          // IntroScreen::Initialise
+    menu_sound(*s);set_name(*s,s->setup.name);
+    s->screens.intro_c3f0=1;s->setup.story=dr_random_int(&s->match.random,0,60,0);   // IntroScreen::Initialise: its story
     dr_session_new_game(s,time);
     s->screens.name_12c09=0;
     return true;
@@ -1115,7 +1249,8 @@ extern "C" void dr_session_class_set_flaw(Session* s,std::int32_t slot,std::int3
 extern "C" void dr_session_class_set_skill(Session* s,std::int32_t slot,std::int32_t skill) {
     edit_current(*s,[=](ClassProfile& c){dr_class_set_replacement(&c,slot,skill);});
 }
-extern "C" void dr_session_class_tab(Session* s) {dr_session_save_classes(s);}
+extern "C" void dr_session_class_open(Session* s) {edit_current(*s,[](ClassProfile& c){dr_class_validate(&c);});}   // SelectTab(0)
+extern "C" void dr_session_class_tab(Session* s) {dr_session_class_open(s);dr_session_save_classes(s);}   // SelectTab, SerialiseClasses
 extern "C" void dr_session_class_done(Session* s) {
     edit_current(*s,[](ClassProfile& c){dr_class_validate(&c);});
     dr_session_set_current_class(s,s->classes[s->scroll.current].class_type);

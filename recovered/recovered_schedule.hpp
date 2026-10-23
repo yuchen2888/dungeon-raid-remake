@@ -200,7 +200,8 @@ struct GameFrame {
 // ScoreScreen::Show(a=mode or difficulty, b=record, show). InterfaceProcess: Interface::Process(dt, a=input_ready).
 enum class FrameRoute : std::int32_t { Done=0, GameOver, Help, Unlock, MainMenu, Name, Intro, Score, Menu, MenuAfterInput,
     TokensExit, Ended };
-enum class GameFrameEventKind : std::int32_t { QueuesReset=1, UpdateTime, CalculateFPS, Screen, ScoreShow, InterfaceProcess };
+// Pools: the frame's Particles / SimpleLabel pools step (the renderer's; the session forwards the moment, T040-N2).
+enum class GameFrameEventKind : std::int32_t { QueuesReset=1, UpdateTime, CalculateFPS, Screen, ScoreShow, InterfaceProcess, Pools };
 struct GameFrameEvent { GameFrameEventKind kind; std::int32_t a,b; };
 // Each step is a verified unit, wired by the embedding: input (dr_input_gate and the touch dispatch: stroke,
 // release, scroll), effects (dr_process_board_effects), falling (falling tiles: Tile::Process / refill, or

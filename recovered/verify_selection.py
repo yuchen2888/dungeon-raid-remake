@@ -129,7 +129,7 @@ class Original:
     def list_values(self,sentinel):
         result=[];p=self.read(sentinel)
         while p!=sentinel:
-            assert len(result)<40
+            assert len(result)<400,len(result)   # (only a loop gets this long: a tile can be queued to fall more than once)
             result.append(self.read(p+8));p=self.read(p)
         return result
     def push(self,sentinel,tile):

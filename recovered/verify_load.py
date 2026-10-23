@@ -16,12 +16,13 @@ chances and stat counts, the current class record (race, perks, flaws, class typ
 switch and the difficulty flag, and every random draw and tile event (colour, UV, text, countdown, enemy UV) of the load.
 Each case also saves one state's class records with the original Game::SerialiseClasses (random replacement skills,
 levels and progress; sometimes a count byte that is not 10) and restores them into another state: the original
-Game::DeserialiseClasses vs dr_session_restore_classes, comparing the ten records and the current class's views.
+Game::DeserialiseClasses and then Game::Start's SetCurrentClass(Game+0x1648c) vs dr_session_restore_classes, comparing
+the ten records and the current class's views.
 """
 import ctypes as C
 import json
 import random
-from verify_session import CarriedSessionOriginal, CarriedSession, SERIALISE, SAVE_BUFFER, NAME, I32, U8, DESERIALISE, HELP_SWITCH as HELP, DIFFICULTY_CHANGED, SERIALISE_CLASSES, CLASS_SAVE
+from verify_session import SET_CURRENT, CarriedSessionOriginal, CarriedSession, SERIALISE, SAVE_BUFFER, NAME, I32, U8, DESERIALISE, HELP_SWITCH as HELP, DIFFICULTY_CHANGED, SERIALISE_CLASSES, CLASS_SAVE
 from verify_release import CLASSES, CLASS_STRIDE, CLASS_INDEX_ADDR
 from verify_save import case as save_case
 from verify_stroke import HERE
@@ -162,6 +163,8 @@ def main():
         if rng.random()<.1:classes=classes[:1]+bytes([9])+classes[2:]   # not ten records: nothing read
         b=case(rng);old.load(b);new.load(b);old.u.mem_write(old.GAME+CLASS_SAVE,classes)
         old.run_entry(DESERIALISE_CLASSES,[]);ok=lib.dr_session_restore_classes(new.session,classes,472);new.sync()
+        if classes[1]==10:   # then Game::Start's SetCurrentClass(Game+0x1648c) (T040-N1: the native restore makes it too)
+            old.u.reg_write(old.regs[1],old.read(old.GAME+CLASS_INDEX_ADDR));old.run_entry(SET_CURRENT[0],[])
         x=[records_original(old),old.extra_state()];y=[records_native(new),new.extra_state()]
         if ok!=(classes[1]==10) or x!=y:
             (HERE/'load_failure.json').write_text(json.dumps(dict(stage='classes',original=x,native=y,ok=ok),indent=2,default=str))

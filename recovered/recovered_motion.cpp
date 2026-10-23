@@ -34,7 +34,9 @@ extern "C" void dr_initialise_token(TokenMotion* t,MatchState* m,std::uint32_t t
     if(reward==1 && incoming!=3) {
         emit(h,MotionEventKind::XPVisual);
         t->speed=dr_random_float(&m->random,4.0f,6.0f,0);
-    } else if(reward!=source.rule.type)emit(h,MotionEventKind::TileVisual,reward);
+    } else if(reward!=source.rule.type) {   // Tile::GetTileUV 0x3d480: the picture, RandI(0, 7, stream 0) (T040-N3)
+        emit(h,MotionEventKind::TileVisual,reward);(void)dr_random_int(&m->random,0,7,0);
+    }
 }
 extern "C" void dr_process_token(TokenMotion* t,const StrokeState* s,float dt,const MotionHooks* h) {
     Point destination;

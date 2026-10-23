@@ -23,6 +23,8 @@ struct SetupScreen {
     float timer;              // +0x2930 (T040-M7d): NameScreen::Show's 0.3 s fade-in, Back's 0.3 s fade-out
     std::uint8_t closing;     // +0x2934: fading out after Back (the screen closes when the timer runs out)
     std::int32_t previous_phase;   // +0x2960: the touch phase of its last input frame (1 after Show and the class screen)
+    std::int32_t story;       // T040-N2: the story screen's story 0..60 (IntroScreen::Initialise's RandI(0, 60, stream 0)
+                              // when Start is pressed, before Game::InitNewGame re-seeds the streams)
 };
 // The setup calls below stand for a press in the last frame (call them after dr_session_frame): one is taken only when
 // that frame ran the screen's input (the Name route with no fade running) and began a touch there (phase 1 after an input
@@ -89,6 +91,14 @@ struct ScorePages {
     std::int32_t direction;       // +0x17c: 1 the page before, -1 the page after, 0 back where it was
     std::uint8_t back,left,right; // +0x1cc / +0x1cd / +0x1ce: buttons touched
     std::int32_t page;            // +0x1d0
+};
+// The low-health heartbeat (Interface::ProcessHeartbeat 0x1e8e8; T040-N4): while the shown health is at most 0.35 of its
+// ceiling, a beat every 2.0 .. 0.1 s (by the health, t = (ratio - 0.15) / 0.2 clamped: 2.0 at t 1), each lasting 0.5 ..
+// 0.3 s and sounding 32. The health bar's pulse (Interface::UpdateHealthColour) is the renderer's, read from beat.
+struct Heartbeat {
+    float beat;        // Interface+0x109c: the beat running (counts down)
+    float beat_length; // +0x10a0: its length (the pulse's scale)
+    float wait;        // +0x10a4: until the next beat (0 while the health is above 0.35)
 };
 // The unlock popup (UnlockMenu, Game+0x164d8; T040-M8): a class levelled up or unlocked by a class scroll
 // (UnlockMenu::Show(ClassType, level): sound 12). Open while screens->unlock_165a0 (+0xc8), and then Game::Process runs only
@@ -188,6 +198,7 @@ struct SessionObjects {
     std::uint32_t* time;                 // platform-owned (T040-M7): its time() -- the games the main menu starts seed their
                                          // random streams with it (as dr_session_start_game's time)
     UnlockPopup* unlock;                 // the unlock popup (open while screens->unlock_165a0; T040-M8)
+    Heartbeat* heartbeat;                // the low-health heartbeat (T040-N4)
 };
 // Every presentation event of the units, unchanged, with the unit it came from. The pointer is the
 // unit's own event struct (for Selection, Motion, Refill and Ability a SessionSmallEvent).
@@ -209,8 +220,10 @@ struct SessionSmallEvent { std::int32_t kind,index,a,b; };
 // MainMenuButton: a main-menu button 0..6 acted (index; 0 Continue, 1 New game, 2 Challenge, 3 Tutorial, 4 High scores,
 // 5 sound, 6 Dashboard), before its action -- for 1..3 over a saved game when the confirmation's yes starts it.
 // NagScreen: the game-over tally ended (Game::ShowNagScreen: the platform's, the original's promotion).
+// MainMenuShow: MainMenu::Show 0x2f60c ran (Continue / High scores shown or not: SessionObjects.main_menu) -- the high
+// scores' and the setup screen's Back bring the menu back without a fade (T040-N2).
 enum class InterfaceEventKind : std::int32_t { Sound=1, Setting, MainMenu, Help, MoreGames, BonusRequest, Dashboard, MainMenuButton,
-    NagScreen };
+    NagScreen, MainMenuShow };
 struct SessionHost {
     void* context;
     void (*event)(void*,SessionSource,const void*);
@@ -221,8 +234,27 @@ struct SessionHost {
 };
 }
 extern "C" {
-// A session with zeroed state, wired; difficulty is the Game::QueueAchievement gate (1 in the tests).
+// A new session, wired, as Game::Game and Game::Start(true) leave the game (T040-N1; verify_startup.py): the main menu
+// open with its title, difficulty 1 (Normal), sound on, high-score page 1, the board laid out (pitch 0.165625, half
+// spacing 0.0828125, Game::CalculateTilePositions; tiles falling at speed 1, acceleration 0.5), the attack dimming at
+// 120, the damage number at (0.5, 0.6675) with scale 1, the shown values at -1 (the first update always happens), no
+// skills (type -1), the class roster with class 0 current and the units' class views following its record; the
+// random streams zero (each game seeds them). The platform then restores its settings, saves and class records.
+// difficulty is the Game::QueueAchievement gate (1 in the tests).
 dungeonraid::Session* dr_session_create(const dungeonraid::SessionHost*,std::int32_t difficulty);
+// Game::Start's seeding: every random stream from the platform's time() (once after create; each game re-seeds them).
+void dr_session_seed(dungeonraid::Session*,std::uint32_t time);
+// The sound queue (T040-N4): every sound the units make reaches it as in Game::QueueSound (dropped while the sound switch
+// is off); it empties at each frame's start. dr_session_queue_sound: the renderer-owned screens' sounds (the class,
+// mode and story screens). dr_session_next_sound: Game::GetNextSound and GetSoundMapping -- the next sound and its
+// variant (RandI(0, variants - 1, stream 0); -1 for a sound without files); false when none is left. The platform takes
+// them all after each dr_session_frame (and after the calls it makes before the next frame), as EAGLView does after
+// rendering, and plays the variant's file.
+void dr_session_queue_sound(dungeonraid::Session*,std::int32_t sound);
+bool dr_session_next_sound(dungeonraid::Session*,std::int32_t* sound,std::int32_t* variant);
+// Tile::UpdateEnemyUV's rules on a tile (T040-N3): the session runs it itself on the units' EnemyUV events (a spinning
+// mortal enemy: GeneratedTile.flag_224 and Rand(30, 45, stream 0) drawn after the event, its speed the renderer's).
+void dr_session_update_enemy_uv(dungeonraid::Session*,std::int32_t tile);
 void dr_session_destroy(dungeonraid::Session*);
 // Pointers to every object (the token queue's request storage is reached through recovered_tokens).
 dungeonraid::SessionObjects dr_session_objects(dungeonraid::Session*);
@@ -269,14 +301,17 @@ void dr_session_intro_done(dungeonraid::Session*);
 // dr_class_other_skills). A class icon selects an unlocked class (Game::SetCurrentClass); a race icon can be dropped on
 // the class when the race is unlocked and the class can choose (dr_race_unlocked / dr_class_can_choose_race: the
 // record's race is set); perk, flaw and skill slots take CharacterClass::SetPerk / SetFlaw / SetReplacementSkill (255
-// takes one off). A tab change saves the records (Game::SerialiseClasses); Done validates the current record
-// (CharacterClass::Validate), makes its type the current class (Game::SetCurrentClass) and saves the records.
+// takes one off). Opening the class screen (ClassScreen::Initialise: SelectTab(0)) validates the current record
+// (CharacterClass::Validate; T040-N2); a tab change (ClassScreen::Process: SelectTab, then Game::SerialiseClasses)
+// validates it and saves the records; Done validates the current record, makes its type the current class
+// (Game::SetCurrentClass) and saves the records.
 void dr_session_class_choices(dungeonraid::Session*,std::uint8_t perks[10],std::uint8_t flaws[10],std::uint8_t skills[20]);
 bool dr_session_class_select(dungeonraid::Session*,std::int32_t type);
 bool dr_session_class_set_race(dungeonraid::Session*,std::int32_t race);
 void dr_session_class_set_perk(dungeonraid::Session*,std::int32_t slot,std::int32_t perk);
 void dr_session_class_set_flaw(dungeonraid::Session*,std::int32_t slot,std::int32_t flaw);
 void dr_session_class_set_skill(dungeonraid::Session*,std::int32_t slot,std::int32_t skill);
+void dr_session_class_open(dungeonraid::Session*);
 void dr_session_class_tab(dungeonraid::Session*);
 void dr_session_class_done(dungeonraid::Session*);
 // The main menu's three new games (T040-M1): kind 0 Game::NewGame 0x16590, 1 StartTutorial 0x164c0, 2 StartChallenge
@@ -351,7 +386,8 @@ bool dr_session_restore_scores(dungeonraid::Session*,std::int32_t type,const std
 // -1 when none changed (the platform stores it under its type and calls again).
 std::int32_t dr_session_save_changed_scores(dungeonraid::Session*);
 // The platform's start-up: stored class records back (Game+0x146d5) and Game::Start's DeserialiseClasses (false: the
-// bytes do not hold ten records, nothing read).
+// bytes do not hold ten records, nothing read), then its Game::SetCurrentClass: the current class (by the restored
+// Game+0x1648c) and the units' views of it.
 bool dr_session_restore_classes(dungeonraid::Session*,const std::uint8_t* bytes,std::uint32_t length);
 // The platform's start-up: stored save bytes back into the session (Game+0x13ecf and its length).
 void dr_session_restore_save(dungeonraid::Session*,const std::uint8_t* bytes,std::uint32_t length);
