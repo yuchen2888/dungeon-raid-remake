@@ -56,6 +56,7 @@ var over_shot := ""     # "--over-shot=<file.png>"
 var scores_shot := ""   # "--scores-shot=<file.png>"
 var shots_dir := ""     # "--shots=<folder>:<n>"
 var shots_every := 0
+var edge_fill: ColorRect = null   # the strips beside the game on a taller or wider screen (see _layout)
 var over_frames := 0    # frames the game-over tally / the high scores after it have been open
 var scores_frames := 0
 var frames := 0
@@ -70,6 +71,14 @@ var next_player := 0
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color.BLACK)   # Game::Render clears to black
+	edge_fill = ColorRect.new()
+	edge_fill.top_level = true
+	edge_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	edge_fill.material = ShaderMaterial.new()
+	edge_fill.material.shader = preload("res://edge_fill.gdshader")
+	add_child(edge_fill)
+	get_viewport().size_changed.connect(_layout)
+	_layout()
 	get_window().title = "Dungeon Raid"   # (the project's name keeps the earlier saves' folder)
 	var args := OS.get_cmdline_user_args()
 	autoplay = args.has("--autoplay")
@@ -147,6 +156,19 @@ func _ready() -> void:
 		var file: String = store_dir + key + ".bin"
 		if FileAccess.file_exists(file):
 			session.restore(key, FileAccess.get_file_as_bytes(file))
+
+# The game in the middle of the screen (project.godot's stretch aspect "expand": a screen taller than the game's 2:3,
+# as an iPhone's, makes the view taller, a wider one wider), and the strips beside it filled from its edges
+# (edge_fill.gdshader) instead of black bars. Input follows the node's position (make_input_local).
+func _layout() -> void:
+	var view := get_viewport().get_visible_rect().size
+	var game := Vector2(SCALE, SCALE * 1.5)
+	position = ((view - game) * 0.5).max(Vector2.ZERO).floor()
+	edge_fill.visible = view.x > game.x + 1.0 or view.y > game.y + 1.0
+	edge_fill.position = Vector2.ZERO
+	edge_fill.size = view
+	var r := Vector4(position.x / view.x, position.y / view.y, (position.x + game.x) / view.x, (position.y + game.y) / view.y)
+	(edge_fill.material as ShaderMaterial).set_shader_parameter("game", r)
 
 # A picture's file, or its HD replacement (T050-C) when res://assets/hd/<name>.png exists: the same atlas at a whole
 # multiple of the original's size (the drawing's UVs and the fonts' .fnt files are relative to the texture, so nothing
