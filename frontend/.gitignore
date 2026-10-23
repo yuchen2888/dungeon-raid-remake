@@ -5,4 +5,6 @@ godot/bin/
 godot/.godot/
 # The original game's art, fonts and sounds: local only (frontend/tools/import_original_assets.py), never in Git.
 godot/assets/original/
+# Their HD replacements (T050-C, frontend/tools/make_hd.py): made from the original art, so local only as well.
+godot/assets/hd/
 dist/

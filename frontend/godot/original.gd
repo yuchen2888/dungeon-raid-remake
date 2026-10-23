@@ -4,8 +4,9 @@ extends Node2D
 # draw list, and this script only paints that list with the original textures, passes the mouse on as touches and
 # stores the session's bytes under user://. The textures are loaded as the original loads them (ES1Renderer
 # loadTexture: premultiplied alpha, linear filtering, clamped) and drawn with its blending (source alpha, one minus
-# source alpha). It starts on the original main menu (its buttons are the session's: Continue, New game, Challenge,
-# Tutorial, the sound switch), then the original setup screen (name, difficulty, class, the class screen behind Edit,
+# source alpha); on today's screens they are replaced by HD pictures where assets/hd/ has them (T050-C,
+# _texture_path) and sampled sharper where still enlarged more than twice (sharp.gdshader). It starts on the original
+# main menu (its buttons are the session's: Continue, New game, Challenge, Tutorial, the sound switch), then the original setup screen (name, difficulty, class, the class screen behind Edit,
 # the challenge's mode screen) and the story; after a game's end the original game-over tally and the high scores
 # (their Back returns to the main menu, whose High scores button opens them too). The original sounds play as the
 # original queues them (each frame's Game::QueueSound calls in order, the recording drawn as GetSoundMapping does).
@@ -88,13 +89,17 @@ func _ready() -> void:
 		return
 	var assets := _asset_folder()
 	for id in TEXTURES:
-		var image := Image.load_from_file(assets + "/" + TEXTURES[id] + ".png")
+		var image := _load_picture(_texture_path(assets, TEXTURES[id]))
 		if image == null:
 			error_text = "The original pictures are missing (frontend/godot/assets/original).\nRun frontend/tools/import_original_assets.py."
 			return
 		image.convert(Image.FORMAT_RGBA8)
 		image.premultiply_alpha()
+		image.generate_mipmaps()   # (an HD picture is drawn smaller than its pixels; see sharp.gdshader)
 		textures[id] = ImageTexture.create_from_image(image)
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	material = ShaderMaterial.new()
+	material.shader = preload("res://sharp.gdshader")
 	var table := FileAccess.get_file_as_string(assets + "/sounds.json")
 	if table != "":
 		sound_table = JSON.parse_string(table)
@@ -110,6 +115,36 @@ func _ready() -> void:
 		var file: String = store_dir + key + ".bin"
 		if FileAccess.file_exists(file):
 			session.restore(key, FileAccess.get_file_as_bytes(file))
+
+# A picture's file (GetTextureName), or its HD replacement (T050-C) when res://assets/hd/<name>.png exists: the same
+# atlas at a whole multiple of the original's size (the drawing's UVs and the fonts' .fnt files are relative to the
+# texture, so nothing else changes). <name> may hold a sub-folder (lang/zh/tiles: folder/lang/zh/tiles.png, or
+# assets/hd/lang/zh/tiles.png). Like the originals the HD pictures stay local only and are exported as plain files.
+func _texture_path(folder: String, name: String) -> String:
+	var original := folder + "/" + name + ".png"
+	var hd := "res://assets/hd/" + name + ".png"
+	if not FileAccess.file_exists(hd):
+		return original
+	var o := _png_size(original)
+	var s := _png_size(hd)
+	if o.x > 0 and o.y > 0 and s.x % o.x == 0 and s.y % o.y == 0 and s.x / o.x == s.y / o.y:
+		return hd
+	push_warning("%s is not a whole multiple of the original %dx%d; the original is used" % [hd, o.x, o.y])
+	return original
+
+# A PNG's width and height from its header (IHDR), without decoding it; (0, 0) when it cannot be read.
+func _png_size(path: String) -> Vector2i:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null or f.get_length() < 24:
+		return Vector2i.ZERO
+	f.big_endian = true
+	f.seek(16)
+	return Vector2i(f.get_32(), f.get_32())
+
+# A picture read from its bytes (a res:// file inside the exported package as well as a plain file); null if unreadable.
+func _load_picture(path: String) -> Image:
+	var image := Image.new()
+	return image if image.load_png_from_buffer(FileAccess.get_file_as_bytes(path)) == OK else null
 
 # The original files the game reads as plain files (the pictures, and the fonts and texts the library opens itself):
 # the project's own folder when it is one on disk (the editor, the Mac app); in an exported game (iOS) they sit inside
