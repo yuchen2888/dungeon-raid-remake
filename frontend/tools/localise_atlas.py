@@ -28,7 +28,8 @@ SIZES = {"tiles": 1024, "menus": 512}
 
 # (atlas, (x0, y0, x1, y1) in the original's pixels, kind, rotation, weight, lines[, "left": the main menu's words
 # start where the English did; others are centred])
-# kind: "free" (letters on transparency: every letter touching the region is cleared, descenders too), "button" (a
+# kind: "free" (letters on transparency: every letter touching the region is cleared, descenders too), "inside" (the
+# same, clearing nothing outside the region: letters close to a frame), "button" (a
 # purple button: redrawn from the empty button picture at BUTTON, letters in the buttons' own colours), or a patch
 # rectangle (letters on a panel: they are erased into the panel around them, erase_letters, with the grain of that
 # clean piece of the panel)
@@ -80,6 +81,11 @@ ZH = [
     ("tiles", (767, 212, 810, 233), "free", 0, "Bold", ["+防御"]),
     ("tiles", (821, 212, 854, 233), "free", 0, "Bold", ["+生命"]),
     ("tiles", (865, 212, 913, 233), "free", 0, "Bold", ["+魅力"]),
+    # the stat upgrades' icons (menu.cpp ItemUpgrade: rows 5 and 6 of the skill icons, kinds 8, 9, 18, 19)
+    ("tiles", (922, 269, 953, 281), "inside", 0, "Heavy", ["+力量"]),
+    ("tiles", (970, 269, 1004, 281), "inside", 0, "Heavy", ["+幸运"]),
+    ("tiles", (921, 319, 954, 331), "inside", 0, "Heavy", ["+敏捷"]),
+    ("tiles", (973, 319, 1002, 331), "inside", 0, "Heavy", ["+体力"]),
     # the popping labels' words (recovered_labels.cpp type_glyphs, plural_glyph, type8_last_glyph)
     ("tiles", (424, 1, 463, 22), "free", 0, "Heavy", ["1经验"]),     # the XP token's picture (presenter.cpp XPVisual)
     ("tiles", (425, 23, 471, 36), "free", 0, "Bold", ["奖励!"]),
@@ -319,8 +325,10 @@ def localise(atlas, base, regions):
         if rotation:
             region = region.rotate(90, expand=True)   # read it as it is shown
         w, h = region.size
-        if kind == "free":
+        if kind in ("free", "inside"):
             window = (max(0, x0 - 4 * k), max(0, y0 - 4 * k), min(img.width, x1 + 4 * k), min(img.height, y1 + 4 * k))
+            if kind == "inside":   # (letters close to a frame: nothing outside the region is cleared)
+                window, kind = (x0, y0, x1, y1), "free"
             clear_letters(img, window, (x0, y0, x1, y1), original)
             bbox = region.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox() or (0, 0, w, h)
             fill, outline = letters_style(region.crop(bbox), 0.25)
