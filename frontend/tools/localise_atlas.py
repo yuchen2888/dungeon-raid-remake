@@ -187,9 +187,10 @@ def text_image(lines, weight, box_w, box_h, fill, outline, align="centre"):
     return img
 
 
-def clear_letters(img, window, rect, original):
+def clear_letters(img, window, rect, original, k=1):
     """Clears (in img) every opaque piece of the window that reaches into rect in the original picture: the letters
-    with their tails."""
+    with their tails, and the faint shadow around them (the see-through pixels within 3k of a cleared one, which
+    otherwise leave a ghost of the old word)."""
     wx0, wy0, wx1, wy1 = window
     px = original.load()
     out = img.load()
@@ -206,6 +207,17 @@ def clear_letters(img, window, rect, original):
         stack += [(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
     for x, y in seen:
         out[x, y] = (0, 0, 0, 0)
+    if not seen:
+        return
+    near = Image.new("L", (wx1 - wx0, wy1 - wy0), 0)
+    mark = near.load()
+    for x, y in seen:
+        mark[x - wx0, y - wy0] = 255
+    near = near.filter(ImageFilter.MaxFilter(2 * (3 * k) + 1)).load()
+    for y in range(wy0, wy1):
+        for x in range(wx0, wx1):
+            if near[x - wx0, y - wy0] and 0 < px[x, y][3] <= 60:
+                out[x, y] = (0, 0, 0, 0)
 
 
 def bitmap_text(text, font_name, box_w, box_h, fill, outline, align):
@@ -329,14 +341,14 @@ def localise(atlas, base, regions):
             window = (max(0, x0 - 4 * k), max(0, y0 - 4 * k), min(img.width, x1 + 4 * k), min(img.height, y1 + 4 * k))
             if kind == "inside":   # (letters close to a frame: nothing outside the region is cleared)
                 window, kind = (x0, y0, x1, y1), "free"
-            clear_letters(img, window, (x0, y0, x1, y1), original)
+            clear_letters(img, window, (x0, y0, x1, y1), original, k)
             bbox = region.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox() or (0, 0, w, h)
             fill, outline = letters_style(region.crop(bbox), 0.25)
             out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             out.alpha_composite(text_image(lines, weight, bbox[2] - bbox[0], bbox[3] - bbox[1], fill, outline, align), (bbox[0], bbox[1]))
         elif kind == "bitmap":
             window = (max(0, x0 - 4 * k), max(0, y0 - 4 * k), min(img.width, x1 + 4 * k), min(img.height, y1 + 4 * k))
-            clear_letters(img, window, (x0, y0, x1, y1), original)
+            clear_letters(img, window, (x0, y0, x1, y1), original, k)
             bbox = region.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox() or (0, 0, w, h)
             fill, outline = letters_style(region.crop(bbox))
             out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
