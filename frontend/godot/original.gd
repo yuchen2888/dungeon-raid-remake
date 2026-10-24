@@ -139,8 +139,9 @@ func _ready() -> void:
 	var names := _plain_folder("res://assets/lang", "user://lang", ["names.png"])   # (the settings page's)
 	_load_texture(10, names + "/names.png", "lang/names")
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	material = ShaderMaterial.new()
-	material.shader = preload("res://sharp.gdshader")
+	if not args.has("--no-hd"):   # (the plain pictures, plainly drawn)
+		material = ShaderMaterial.new()
+		material.shader = preload("res://sharp.gdshader")
 	var table := FileAccess.get_file_as_string(assets + "/sounds.json")
 	if table != "":
 		sound_table = JSON.parse_string(table)
@@ -176,7 +177,7 @@ func _layout() -> void:
 # lang/names). Like the originals the HD pictures stay local only and are exported as plain files.
 func _texture_path(original: String, name: String) -> String:
 	var hd := "res://assets/hd/" + name + ".png"
-	if not FileAccess.file_exists(hd):
+	if not FileAccess.file_exists(hd) or OS.get_cmdline_user_args().has("--no-hd"):   # ("--no-hd": quicker in the simulator)
 		return original
 	var o := _png_size(original)
 	var s := _png_size(hd)
