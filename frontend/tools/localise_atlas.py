@@ -17,6 +17,7 @@ originals they stay on this machine.
 import os
 import sys
 
+import numpy
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -29,7 +30,8 @@ SIZES = {"tiles": 1024, "menus": 512}
 # start where the English did; others are centred])
 # kind: "free" (letters on transparency: every letter touching the region is cleared, descenders too), "button" (a
 # purple button: redrawn from the empty button picture at BUTTON, letters in the buttons' own colours), or a patch
-# rectangle (letters on a panel: the region is covered with that clean piece of the panel, repeated)
+# rectangle (letters on a panel: they are erased into the panel around them, erase_letters, with the grain of that
+# clean piece of the panel)
 # rotation: 0, or 90 when the word is stored turned (drawn turned back by the game: it reads top to bottom)
 ZH = [
     # the main menu (screens.cpp MainMenuView)
@@ -265,6 +267,42 @@ def button_picture(tiles, k, w, h):
 base_tiles = None
 
 
+def box_blur(a, r):
+    """Each pixel the mean of the (2r+1)-square around it (rows and columns of a height x width x channels array; the
+    edges repeat)."""
+    for axis in (0, 1):
+        pad = [(0, 0)] * a.ndim
+        pad[axis] = (r + 1, r)
+        c = numpy.cumsum(numpy.pad(a, pad, mode="edge"), axis=axis)
+        n = a.shape[axis]
+        a = (c.take(range(2 * r + 1, 2 * r + 1 + n), axis=axis) - c.take(range(0, n), axis=axis)) / (2 * r + 1)
+    return a
+
+
+def erase_letters(region, patch, k):
+    """The panel without its yellow letters: the letters (and a rim for their shading) are filled with the colour
+    around them (a blur of the rest, so the panel's light and its tilted border stay as they are) plus the grain of
+    an empty piece of the panel (only its fine detail, so the repeats leave no seams)."""
+    rgba = numpy.asarray(region, dtype=numpy.float32)
+    letters = Image.fromarray(((rgba[:, :, 1] > 70) * 255).astype(numpy.uint8)).filter(ImageFilter.MaxFilter(2 * (3 * k) + 1))
+    keep = 1.0 - numpy.asarray(letters, dtype=numpy.float32)[:, :, None] / 255.0
+    blur = lambda a, r=5 * k: box_blur(box_blur(box_blur(a, r), r), r)   # (about a Gaussian)
+    rgb = rgba[:, :, :3]
+    keep3 = numpy.repeat(keep, 3, axis=2)
+    near, around = blur(keep3), blur(keep3, 15 * k)
+    smooth = blur(rgb * keep) / numpy.maximum(near, 1e-3)
+    wide = blur(rgb * keep, 15 * k) / numpy.maximum(around, 1e-3)   # (where little is left nearby)
+    t = numpy.clip(near / 0.3, 0.0, 1.0)
+    smooth = smooth * t + wide * (1.0 - t)
+    p = numpy.asarray(patch.convert("RGB"), dtype=numpy.float32)
+    grain_piece = p - blur(p)
+    reps = (-(-rgb.shape[0] // p.shape[0]), -(-rgb.shape[1] // p.shape[1]), 1)
+    grain = numpy.tile(grain_piece, reps)[:rgb.shape[0], :rgb.shape[1]]
+    filled = numpy.clip(smooth + grain, 0, 255)
+    out = rgb * keep + filled * (1.0 - keep)
+    return Image.fromarray(numpy.dstack([out, rgba[:, :, 3:]]).round().astype(numpy.uint8), "RGBA")
+
+
 def localise(atlas, base, regions):
     """All the old letters are taken away first (from the unchanged picture's view of them), then every word drawn, so
     one word's clearing never takes a neighbour's new letters."""
@@ -300,14 +338,10 @@ def localise(atlas, base, regions):
         elif kind == "button":
             out = button_picture(base_tiles, k, w, h)
             out.alpha_composite(text_image(lines, weight, w - 12 * k, h - 6 * k, BUTTON_TEXT, BUTTON_OUTLINE), (6 * k, 3 * k))
-        else:   # a patch of the panel
+        else:   # letters on a panel
             fill, outline = letters_style(region, 0.12)
             px0, py0, px1, py1 = (v * k for v in kind)
-            patch = original.crop((px0, py0, px1, py1))
-            out = region.copy()
-            for y in range(0, h, patch.height):   # (the empty part of the panel, repeated both ways)
-                for x in range(0, w, patch.width):
-                    out.paste(patch.crop((0, 0, min(patch.width, w - x), min(patch.height, h - y))), (x, y))
+            out = erase_letters(region, original.crop((px0, py0, px1, py1)), k)
             mx, my = round(w * 0.08), round(h * 0.12)   # (a margin: the panel's words smaller than the place)
             out.alpha_composite(text_image(lines, weight, w - 2 * mx, h - 2 * my, fill, outline), (mx, my))
         if rotation:
