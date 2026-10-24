@@ -168,6 +168,7 @@ void Label::set_text(const char* s,int length) {
         char c=s[i];
         if(c=='\t')c=' ';
         Quad& q=glyphs[static_cast<std::size_t>(i)];
+        textures[static_cast<std::size_t>(i)]=font->texture;   // (an earlier wide text's glyph textures do not carry over)
         if(!(static_cast<std::size_t>(i)<text.size() && text[static_cast<std::size_t>(i)]==s[i])) {
             q.set_uv(font->top_left(c),font->bottom_right(c));
             q.set_size(font->size(c));
