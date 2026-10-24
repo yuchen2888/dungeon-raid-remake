@@ -22,11 +22,12 @@ FRONTEND = os.path.dirname(HERE)
 ORIGINAL = os.path.join(FRONTEND, "godot", "assets", "original")
 FONTS = os.path.join(HERE, "fonts")
 # name: (weight, pixels per em, outline in em, the Chinese em square over the original capitals' height, the small
-# capitals' scale or 1, the step from one character to the next in ems): fontMenu's English is mostly small capitals
-# (0.75, Font::UseSmallCaps), whose middle sits lower, so its Chinese is smaller and centred where they are; the steps
-# leave a little room between characters (the owner: "字和字之间拉开一点")
+# capitals' scale or 1, the step from one character to the next in ems): fontMenu's and fontScore's English is mostly
+# small capitals (0.75, Font::UseSmallCaps), whose middle sits lower, so their Chinese is smaller and centred where
+# they are (fontScore: the challenge's "Score" and "Turn" over the board); the steps leave a little room between
+# characters (the owner: "字和字之间拉开一点")
 STYLES = {"font": ("Medium", 56, 0.0, 1.3, 1.0, 1.04), "fontMenu": ("Heavy", 56, 0.0, 0.8, 0.75, 1.12),
-          "fontScore": ("Bold", 48, 0.07, 1.2, 1.0, 1.06)}
+          "fontScore": ("Bold", 48, 0.07, 0.85, 0.75, 1.08)}
 PAD = 4         # empty pixels around each glyph in the atlas
 WIDTH = 2048    # atlas width; the height is what the characters take
 EXTRA = "，。！？；：、（）《》「」『』…—·％＋－"

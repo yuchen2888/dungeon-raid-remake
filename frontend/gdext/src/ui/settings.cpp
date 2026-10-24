@@ -46,7 +46,7 @@ void SettingsView::open(const Texts& t,std::int32_t language) {
     back_.set_text(text_or(t,"settings.back","Back").c_str());
     place(title_,0.5f,(kPanelY+34.0f)/320.0f,0.09f);
     place(language_,0.5f,(kPanelY+64.0f)/320.0f,0.08f);
-    place(back_,(kButtons[2][0]+kButtonW*0.5f)/320.0f,(kButtons[2][1]+kButtonH*0.5f)/320.0f,0.07f);
+    place(back_,(kButtons[2][0]+kButtonW*0.5f)/320.0f,(kButtons[2][1]+kButtonH*0.5f+5.0f)/320.0f,0.07f);   // (+5: the menu font's middle sits above its line)
     for(int n=0;n<2;++n) {   // the shown language's button bright, the other dimmer
         const std::uint8_t c=n==language?255:150;
         quads_.set_quad_colour(9+n,c,c,c,255);quads_.set_quad_colour(12+n,c,c,c,255);
