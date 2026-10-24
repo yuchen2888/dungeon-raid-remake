@@ -13,6 +13,13 @@ config/features=PackedStringArray("4.5")
 boot_splash/bg_color=Color(0, 0, 0, 1)
 boot_splash/image="res://assets/original/Default.png"
 
+[audio]
+
+; (T050-H) iOS: the media channel like other games and videos, so the ring/silent switch does not mute the game and the
+; volume buttons set the media volume; other apps' music keeps playing alongside
+general/ios/session_category=3
+general/ios/mix_with_others=true
+
 [display]
 
 window/size/viewport_width=640
