@@ -11,7 +11,10 @@ config/name="Dungeon Raid 原型"
 run/main_scene="res://original.tscn"
 config/features=PackedStringArray("4.5")
 boot_splash/bg_color=Color(0, 0, 0, 1)
-boot_splash/image="res://assets/original/Default.png"
+boot_splash/image="res://assets/hd/Default.png"
+; (T050-I) the launch picture (frontend/tools/make_splash.py: sharp, from the HD art) at the screen's width, where the main
+; menu then appears (it showed at its 320-pixel size first, then the game jumped to full width)
+boot_splash/stretch_mode=1
 
 [audio]
 
