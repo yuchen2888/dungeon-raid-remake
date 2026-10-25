@@ -785,6 +785,7 @@ void Presenter::event(const SessionObjects& o,SessionSource source,const void* p
         if(e.tile<0 || e.tile>35)break;
         if(e.kind==TurnEventKind::Text)update_text(o,e.tile,e.a!=0,e.b!=0,e.c!=0);
         else if(e.kind==TurnEventKind::Freeze)freeze(e.tile,e.a!=0);
+        else if(e.kind==TurnEventKind::FlameOverlay)flame(e.tile,true);   // (a burning elite's flames, and a loaded game's)
         break;
     }
     case SessionSource::Encounter: {
