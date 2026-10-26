@@ -20,6 +20,13 @@ iPhone 版需要：Xcode、`/Applications` 里的 Godot 4.7.2 和它的官方导
 - 图片里的英文字（主菜单按钮、“Level Up!”、弹出标签、游戏菜单按钮、确认框等 88 处）：`tools/localise_atlas.py zh` 在原图同样位置画成中文（`lang/zh/tiles.png`、`menus.png`）；英文只把 OpenFeint 改成 Settings（`lang/en/tiles.png`，用原版菜单字体拼出）。
 - 中文按字换行，句末标点不放行首；英文的排版与原版逐帧一致（对照台 `lockstep.py 80` 已复验）。
 
+第一批新语言（T050-K）：繁体中文 `zh_TW`、日文 `ja`、韩文 `ko`、西班牙文 `es`，做法同上：
+
+- 字体：繁中、日、韩用各自地区的思源黑体（`tools/fonts/SourceHanSans{TW,JP,KR}-*.otf`，2026-10-26 经用户同意下载，不进 Git），共享的汉字是各地区的写法。西班牙文只缺 á é í ó ú ñ ü ¡ ¿：`make_cjk_font.py es` 用原版位图字体自己的笔画拼出来（字母加上从原版 ` ~ . / , 剪出的重音，倒过来的 ! ?）。
+- 图片：`localise_atlas.py <代码>` 在同样 93 处写上各语言的字（西班牙文用原版位图字体）；高清版 `make_hd.py --lang <代码...>`。
+- 换行：韩文只在空格处断行；日文的小假名、长音符不放行首。西班牙文装备名的形容词随名词变阴阳性（名词写成 `Espada|1`，前缀写成 `roto|rota`）。
+- 不进设置页也能试：游戏启动参数 `--lang=ja` 等。
+
 这些文件和原版素材一样只在本机（`godot/assets/lang/` 不进 Git），iPhone 导出时一起打包。生成顺序：`python3 frontend/tools/localise_atlas.py zh`、`localise_atlas.py en`，再 `python3 frontend/tools/make_cjk_font.py zh`。
 
 ## 结构
