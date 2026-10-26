@@ -13,12 +13,18 @@ frontend/godot/assets/lang/<lang>/ with atlas.txt (the drawn words, for make_cjk
 originals they stay on this machine.
 
 --base takes the pictures from another folder (e.g. HD versions of the same layout, any whole multiple of the size).
+
+T050-K: the other languages draw their words in the same places (WORDS): Traditional Chinese, Japanese and Korean in
+their region's Source Han Sans, Spanish in the original's own bitmap fonts (bitmap_text), with the accented letters
+make_cjk_font.py puts together from their strokes.
 """
 import os
 import sys
 
 import numpy
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+from make_cjk_font import REGION, LatinFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FRONTEND = os.path.dirname(HERE)
@@ -28,12 +34,14 @@ SIZES = {"tiles": 1024, "menus": 512}
 
 # (atlas, (x0, y0, x1, y1) in the original's pixels, kind, rotation, weight, lines[, "left": the main menu's words
 # start where the English did; others are centred])
-# kind: "free" (letters on transparency: every letter touching the region is cleared, descenders too), "inside" (the
+# kind: "free" (letters on transparency: every letter touching the region is cleared, descenders too; "bitmap": the
+# same), "inside" (the
 # same, clearing nothing outside the region: letters close to a frame), "button" (a
 # purple button: redrawn from the empty button picture at BUTTON, letters in the buttons' own colours), or a patch
 # rectangle (letters on a panel: they are erased into the panel around them, erase_letters, with the grain of that
 # clean piece of the panel)
 # rotation: 0, or 90 when the word is stored turned (drawn turned back by the game: it reads top to bottom)
+# weight: Source Han Sans's (Heavy, Bold), or one of the original's bitmap fonts (font, fontMenu, fontScore)
 ZH = [
     # the main menu (screens.cpp MainMenuView)
     ("tiles", (881, 472, 1023, 511), "free", 0, "Heavy", ["挑战模式"], "left"),
@@ -139,7 +147,82 @@ ZH = [
 # English keeps the original's pictures but for the settings button (was OpenFeint), lettered with the original's own
 # menu font (fontMenu, small capitals) in the main menu's colours.
 EN = [("tiles", (1, 984, 145, 1023), "bitmap", 0, "fontMenu", ["Settings"], "left")]
-REGIONS = {"zh": ZH, "en": EN}
+# T050-K: the words of the other languages, ZH's places one by one
+WORDS = {
+    "zh_TW": [["挑戰模式"], ["繼續遊戲"], ["新遊戲"], ["新手教學"], ["最高分"], ["設定"], ["獎勵物品！"], ["更多遊戲！"],
+              ["載入中…"], ["聲音：開"], ["聲音：關"], ["升級了！"], ["選擇 1 件裝備購買"], ["選擇 2 個技能提升"],
+              ["裝備商店！"], ["升級裝備！"], ["選擇 1 項升級"], ["怪物發動攻擊"], ["反擊！"], ["麻花大師！！"],
+              ["麻花傳奇！！！"], ["麻花英雄！"], ["你逃出來了！"], ["你被殺死了"], ["最高分"], ["屬性"], ["選單"],
+              ["繼續"], ["聲音"], ["說明"], ["離開"], ["時鐘"], ["變暗"], ["流暢"], ["+力量"], ["+敏捷"], ["+體力"],
+              ["+幸運"], ["+傷害"], ["+防禦"], ["+生命"], ["+魅力"], ["+力量"], ["+幸運"], ["+敏捷"], ["+體力"],
+              ["1經驗"], ["獎勵!"], ["傷害"], ["再生"], ["鈍化"], ["尖刺"], ["毒"], ["吸血"], ["火焰"], ["祝福"],
+              ["治療"], ["偷竊"], ["酸液"], ["跳躍"], ["冰凍"], ["集結"], ["刺擊"], ["模仿"], ["鍊金"], ["踐踏"],
+              ["油滑"], ["咆哮"], ["吸引"], ["鮮血"], ["復仇"], ["背水一戰"], ["狂暴"], ["無傷害!"], ["投擲"], ["吞噬"],
+              ["模仿!"], ["膽魄"], ["上撩"], ["致殘"], ["逃跑"], ["復活"], ["尖刺"], ["生命"], ["是"], ["否"],
+              ["開始新遊戲會刪除", "你目前的遊戲。", "確定嗎？"], ["否"], ["是"], ["返回"], ["說明"], ["麻花", "英雄"],
+              ["地城", "衝刺"]],
+    "ja": [["チャレンジ"], ["つづきから"], ["はじめから"], ["チュートリアル"], ["ハイスコア"], ["設定"],
+           ["ボーナスアイテム！"], ["ほかのゲーム！"], ["ロード中…"], ["サウンド：オン"], ["サウンド：オフ"],
+           ["レベルアップ！"], ["買う装備を1つ選ぼう"], ["強化するスキルを2つ選ぼう"], ["装備屋！"], ["装備強化！"],
+           ["強化を1つ選ぼう"], ["モンスターの攻撃"], ["反撃！"], ["プレッツェルマスター！！"], ["プレッツェル伝説！！！"],
+           ["プレッツェルヒーロー！"], ["脱出成功！"], ["やられてしまった"], ["ハイスコア"], ["ステータス"], ["メニュー"],
+           ["続ける"], ["サウンド"], ["ヘルプ"], ["やめる"], ["時計"], ["暗転"], ["なめらか"], ["+力"], ["+器用"],
+           ["+体力"], ["+運"], ["+ダメージ"], ["+防御"], ["+HP"], ["+魅力"], ["+力"], ["+運"], ["+器用"], ["+体力"],
+           ["1EXP"], ["ボーナス!"], ["ダメージ"], ["再生"], ["鈍化"], ["トゲ"], ["毒"], ["吸血"], ["炎"], ["祝福"],
+           ["回復"], ["盗む"], ["酸"], ["ジャンプ"], ["凍結"], ["集結"], ["突き"], ["模倣"], ["錬金"], ["踏みつけ"],
+           ["ぬるぬる"], ["咆哮"], ["引き寄せ"], ["血"], ["復讐"], ["背水の陣"], ["バーサーク"], ["ノーダメージ!"],
+           ["投げ"], ["貪食"], ["模倣!"], ["根性"], ["切り上げ"], ["足払い"], ["逃走"], ["復活"], ["トゲ"], ["HP"],
+           ["はい"], ["いいえ"], ["新しいゲームを始めると", "今のゲームは消えます。", "よろしいですか？"], ["いいえ"],
+           ["はい"], ["戻る"], ["ヘルプ"], ["プレッツェル", "ヒーロー"], ["ダンジョン", "スプリント"]],
+    "ko": [["도전 모드"], ["이어하기"], ["새 게임"], ["튜토리얼"], ["최고 점수"], ["설정"], ["보너스 아이템!"],
+           ["더 많은 게임!"], ["로딩 중…"], ["소리: 켬"], ["소리: 끔"], ["레벨 업!"], ["구매할 장비 1개 선택"],
+           ["강화할 스킬 2개 선택"], ["장비 상점!"], ["장비 강화!"], ["업그레이드 1개 선택"], ["몬스터의 공격"],
+           ["반격!"], ["프레첼 마스터!!"], ["프레첼 전설!!!"], ["프레첼 영웅!"], ["탈출 성공!"], ["당신은 죽었다"],
+           ["최고 점수"], ["능력치"], ["메뉴"], ["계속"], ["소리"], ["도움말"], ["나가기"], ["시계"], ["어둡게"],
+           ["부드럽게"], ["+힘"], ["+민첩"], ["+활력"], ["+행운"], ["+피해"], ["+방어"], ["+생명"], ["+매력"], ["+힘"],
+           ["+행운"], ["+민첩"], ["+활력"], ["1EXP"], ["보너스!"], ["피해"], ["재생"], ["둔화"], ["가시"], ["독"],
+           ["흡혈"], ["화염"], ["축복"], ["치유"], ["훔치기"], ["산성"], ["점프"], ["빙결"], ["집결"], ["찌르기"],
+           ["모방"], ["연금"], ["짓밟기"], ["미끌미끌"], ["포효"], ["끌어당김"], ["피"], ["복수"], ["배수진"],
+           ["광폭화"], ["피해 없음!"], ["투척"], ["포식"], ["모방!"], ["배짱"], ["올려 베기"], ["불구"], ["도주"],
+           ["부활"], ["가시"], ["생명"], ["예"], ["아니요"], ["새 게임을 시작하면", "현재 게임이 삭제됩니다.", "계속할까요?"],
+           ["아니요"], ["예"], ["돌아가기"], ["도움말"], ["프레첼", "영웅"], ["던전", "스프린트"]],
+    "es": [["Desafío"], ["Continuar"], ["Nueva partida"], ["Tutorial"], ["Récords"], ["Ajustes"], ["¡Objeto extra!"],
+           ["¡Más juegos!"], ["Cargando..."], ["Sonido: sí"], ["Sonido: no"], ["¡Nuevo nivel!"],
+           ["Elige 1 objeto para comprar"], ["Elige 2 habilidades para mejorar"], ["¡Tienda!"], ["¡Mejora!"],
+           ["Elige 1 mejora"], ["Ataque enemigo"], ["¡Contraataque!"], ["¡¡Maestro Pretzel!!"],
+           ["¡¡¡Leyenda Pretzel!!!"], ["¡Héroe Pretzel!"], ["¡Escapaste!"], ["Moriste"], ["Récords"], ["Estado"],
+           ["Menú"], ["Seguir"], ["Sonido"], ["Ayuda"], ["Salir"], ["Reloj"], ["Oscurecer"], ["Fluido"], ["+FUE"],
+           ["+DES"], ["+VIT"], ["+SUE"], ["+DAÑO"], ["+DEF"], ["+PV"], ["+CAR"], ["+FUE"], ["+SUE"], ["+DES"],
+           ["+VIT"], ["1EXP"], ["¡EXTRA!"], ["DAÑO"], ["REGENERA"], ["EMBOTA"], ["PÚAS"], ["VENENO"], ["ROBO"],
+           ["FUEGO"], ["BENDICE"], ["CURA"], ["ROBA"], ["ÁCIDO"], ["SALTO"], ["HIELO"], ["REÚNE"], ["PUNZA"],
+           ["IMITA"], ["ALQUIMIA"], ["PISOTÓN"], ["GRASA"], ["RUGIDO"], ["ATRAE"], ["SANGRE"], ["VENGANZA"],
+           ["¡AGUANTE!"], ["FURIA"], ["¡ILESO!"], ["LANZA"], ["DEVORA"], ["¡IMITA!"], ["AGALLAS"], ["¡GANCHO!"],
+           ["LISIADO"], ["HUYE"], ["REVIVE"], ["PÚAS"], ["PV"], ["Sí"], ["No"],
+           ["Empezar de nuevo", "borrará tu partida", "actual. ¿Seguro?"], ["No"], ["Sí"], ["Volver"], ["Ayuda"],
+           ["Héroe", "Pretzel"], ["Carrera de", "mazmorra"]],
+}
+# Spanish: the bitmap font each place's words take (by ZH's index): the popping labels and stat words in fontScore
+# (bold capitals with a black outline, as theirs), the "Choose ..." lines in font (they need lower case and digits),
+# the rest in fontMenu (as the main menu's words and the English settings button)
+ES_FONTS = {i: "fontScore" for i in range(34, 84)}
+ES_FONTS.update({12: "font", 13: "font", 16: "font"})
+
+
+def language_regions(code):
+    """The places and words of a language (ZH's places with WORDS for the T050-K languages)."""
+    if code in ("zh", "en"):
+        return {"zh": ZH, "en": EN}[code]
+    out = []
+    for i, (atlas, rect, kind, rotation, weight, lines, *align) in enumerate(ZH):
+        if code == "es":
+            weight = ES_FONTS.get(i, "fontMenu")
+        out.append((atlas, rect, kind, rotation, weight, WORDS[code][i], *align))
+    return out
+
+
+REGIONS = ["zh", "en"] + list(WORDS)   # (the languages with pictures)
+LANG = "zh"   # (the language main() draws: text_image's Source Han Sans region)
+BITMAP_FONTS = ("font", "fontMenu", "fontScore")
 BUTTON = (425, 698, 497, 724)   # tiles.png: the empty purple button (interface.cpp, the menu button's "on" picture)
 BUTTON_TEXT, BUTTON_OUTLINE = (122, 103, 211, 255), (28, 25, 53, 255)   # the buttons' letters (sampled)
 
@@ -163,7 +246,7 @@ def letters_style(region, bright_part=0.5):
 def text_image(lines, weight, box_w, box_h, fill, outline, align="centre"):
     """The lines drawn as large as they fit box_w x box_h (centred, or from the left), with an outline when the
     original had one; placed by the letters' own ink (the font's line box sits lower than its letters)."""
-    font_path = os.path.join(FONTS, "SourceHanSansCN-%s.otf" % weight)
+    font_path = os.path.join(FONTS, "SourceHanSans%s-%s.otf" % (REGION.get(LANG, "CN"), weight))
     n = len(lines)
     size = max(4, int(box_h / n * 1.2))
     while True:
@@ -220,52 +303,71 @@ def clear_letters(img, window, rect, original, k=1):
                 out[x, y] = (0, 0, 0, 0)
 
 
-def bitmap_text(text, font_name, box_w, box_h, fill, outline, align):
-    """text in one of the original's bitmap fonts (as Label::SetText lays it out: small capitals 0.75 for lower case,
-    the font's spacing), coloured fill with an outline, scaled to fit box_w x box_h."""
-    glyphs, lh, base = {}, 0, 0
-    with open(os.path.join(ORIGINAL, font_name + ".fnt"), encoding="latin-1") as f:
-        for line in f:
-            p = dict(kv.split("=", 1) for kv in line.split()[1:] if "=" in kv)
-            if line.startswith("common"):
-                lh, base = int(p["lineHeight"]), int(p["base"])
-            elif line.startswith("char "):
-                glyphs[int(p["id"])] = tuple(int(p[k]) for k in ("x", "y", "width", "height", "xoffset", "yoffset", "xadvance"))
-    sheet = Image.open(os.path.join(ORIGINAL, font_name + ".png")).convert("RGBA")
-    spacing = {"fontMenu": -0.225, "fontScore": -0.05}.get(font_name, 0.0) * lh
-    scale = 4   # drawn at 4x, then fitted
-    pieces, pen = [], 0.0
-    for ch in text:
-        small = ch.islower() and font_name in ("fontMenu", "fontScore")
-        g = glyphs.get(ord(ch.upper() if small else ch))
-        if not g:
-            pen += lh * 0.3
-            continue
-        x, y, w, h, ox, oy, adv = g
-        s = 0.75 if small else 1.0
-        centre = pen + w * s / 2
-        # the glyph's centre, from the line's base (Font::LoadFont's offsets, scaled for a small capital)
-        cy = base + s * (oy + h / 2 - base)
-        pieces.append((sheet.crop((x, y, x + w, y + h)), centre + s * ox / 2, cy, s))
-        pen = centre + s * adv / 2 + spacing
-    width = int(pen + lh) * scale
-    line = Image.new("RGBA", (width, lh * scale), (0, 0, 0, 0))
-    for glyph, cx, cy, s in pieces:
-        g = glyph.resize((max(1, round(glyph.width * s * scale)), max(1, round(glyph.height * s * scale))), Image.LANCZOS)
-        line.alpha_composite(g, (round(cx * scale - g.width / 2), round(cy * scale - g.height / 2)))
-    mask = line.getchannel("A")
-    bbox = mask.getbbox()
-    mask = mask.crop(bbox)
-    ring = mask.filter(ImageFilter.MaxFilter(2 * scale + 1)) if outline else None
-    out = Image.new("RGBA", mask.size, (0, 0, 0, 0))
-    if ring:
-        out.paste(Image.new("RGBA", mask.size, outline), (0, 0), ring)
-    out.paste(Image.new("RGBA", mask.size, fill), (0, 0), mask)
-    k = min(box_w / out.width, box_h / out.height)
-    out = out.resize((max(1, round(out.width * k)), max(1, round(out.height * k))), Image.LANCZOS)
+def bitmap_text(lines, font_name, box_w, box_h, fill, outline, align):
+    """lines in one of the original's bitmap fonts (as Label::SetText lays them out: small capitals for lower case,
+    the font's spacing; T050-K: the accented letters make_cjk_font.py builds from its strokes, a sign the font lacks
+    from font), coloured fill with an outline (fontScore: its own black one), scaled to fit box_w x box_h."""
+    font, plain = LatinFont(font_name), None
+    k = font.k
+    rows = []
+    for text in lines:
+        pieces, pen = [], 0.0
+        for ch in text:
+            img, m = font.glyph(ch)
+            s = 1.0
+            if img is None:   # (not in this font: font's, as tall as this font's capitals)
+                plain = plain or LatinFont("font")
+                img, m = plain.glyph(ch)
+                if img is None:
+                    continue
+                s = font.cap_h / plain.cap_h
+                img = img.resize((max(1, round(img.width * s)), max(1, round(img.height * s))), Image.LANCZOS)
+                top = (font.cap_top + (m["yoffset"] / plain.k - plain.cap_top) * s) * k
+            else:
+                top = m["yoffset"]
+            if ch == " ":   # (a space a little wider than the font's, as the pictures' own words have them)
+                m = dict(m, xadvance=round((2.0 if font_name == "font" else 1.4) * (m["xadvance"] + img.width)) - img.width)
+            centre = pen + img.width / 2
+            if img.width:
+                pieces.append((img, centre + m["xoffset"] * s / 2, top))
+            pen = centre + m["xadvance"] * s / 2
+        line = Image.new("RGBA", (int(pen + font.lh * k), 2 * font.lh * k), (0, 0, 0, 0))
+        for img, cx, top in pieces:
+            line.alpha_composite(img, (max(0, round(cx - img.width / 2)), round(top + font.lh * k / 2)))
+        rows.append(line)
+    lum = lambda im: im.convert("RGB").convert("L")
+    masks, rings = [], []
+    for line in rows:
+        a = line.getchannel("A")
+        if font_name == "fontScore":   # (white letters on their own black outline)
+            masks.append(Image.composite(lum(line), Image.new("L", line.size, 0), a))
+            rings.append(a)
+        else:
+            masks.append(a)
+            rings.append(a.filter(ImageFilter.MaxFilter(2 * k + 1)) if outline else None)
+    boxes = [(rings[i] or masks[i]).getbbox() or (0, 0, 1, 1) for i in range(len(rows))]
+    gap = round(0.1 * font.lh * k)
+    width = max(b[2] - b[0] for b in boxes)
+    height = sum(b[3] - b[1] for b in boxes) + gap * (len(rows) - 1)
+    out = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    y = 0
+    for mask, ring, b in zip(masks, rings, boxes):
+        x = 0 if align == "left" else (width - (b[2] - b[0])) // 2
+        if ring is not None:
+            out.paste(Image.new("RGBA", (b[2] - b[0], b[3] - b[1]), outline or (0, 0, 0, 255)), (x, y), ring.crop(b))
+        out.paste(Image.new("RGBA", (b[2] - b[0], b[3] - b[1]), fill), (x, y), mask.crop(b))
+        y += b[3] - b[1] + gap
+    f = min(box_w / out.width, box_h / out.height)
+    out = out.resize((max(1, round(out.width * f)), max(1, round(out.height * f))), Image.LANCZOS)
     img = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 0))
     img.alpha_composite(out, (0 if align == "left" else (box_w - out.width) // 2, (box_h - out.height) // 2))
     return img
+
+
+def words_image(lines, weight, box_w, box_h, fill, outline, align="centre"):
+    if weight in BITMAP_FONTS:
+        return bitmap_text(lines, weight, box_w, box_h, fill, outline, align)
+    return text_image(lines, weight, box_w, box_h, fill, outline, align)
 
 
 def button_picture(tiles, k, w, h):
@@ -337,33 +439,26 @@ def localise(atlas, base, regions):
         if rotation:
             region = region.rotate(90, expand=True)   # read it as it is shown
         w, h = region.size
-        if kind in ("free", "inside"):
+        if kind in ("free", "inside", "bitmap"):
             window = (max(0, x0 - 4 * k), max(0, y0 - 4 * k), min(img.width, x1 + 4 * k), min(img.height, y1 + 4 * k))
             if kind == "inside":   # (letters close to a frame: nothing outside the region is cleared)
-                window, kind = (x0, y0, x1, y1), "free"
-            clear_letters(img, window, (x0, y0, x1, y1), original, k)
-            bbox = region.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox() or (0, 0, w, h)
-            fill, outline = letters_style(region.crop(bbox), 0.25)
-            out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-            out.alpha_composite(text_image(lines, weight, bbox[2] - bbox[0], bbox[3] - bbox[1], fill, outline, align), (bbox[0], bbox[1]))
-        elif kind == "bitmap":
-            window = (max(0, x0 - 4 * k), max(0, y0 - 4 * k), min(img.width, x1 + 4 * k), min(img.height, y1 + 4 * k))
-            clear_letters(img, window, (x0, y0, x1, y1), original, k)
-            bbox = region.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox() or (0, 0, w, h)
-            fill, outline = letters_style(region.crop(bbox))
-            out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-            out.alpha_composite(bitmap_text(lines[0], weight, bbox[2] - bbox[0], bbox[3] - bbox[1], fill, outline, align),
-                                (bbox[0], bbox[1]))
+                window = (x0, y0, x1, y1)
             kind = "free"
+            clear_letters(img, window, (x0, y0, x1, y1), original, k)
+            bbox = region.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox() or (0, 0, w, h)
+            fill, outline = letters_style(region.crop(bbox), 0.5 if weight in BITMAP_FONTS else 0.25)
+            out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            out.alpha_composite(words_image(lines, weight, bbox[2] - bbox[0], bbox[3] - bbox[1], fill, outline, align),
+                                (bbox[0], bbox[1]))
         elif kind == "button":
             out = button_picture(base_tiles, k, w, h)
-            out.alpha_composite(text_image(lines, weight, w - 12 * k, h - 6 * k, BUTTON_TEXT, BUTTON_OUTLINE), (6 * k, 3 * k))
+            out.alpha_composite(words_image(lines, weight, w - 12 * k, h - 6 * k, BUTTON_TEXT, BUTTON_OUTLINE), (6 * k, 3 * k))
         else:   # letters on a panel
             fill, outline = letters_style(region, 0.12)
             px0, py0, px1, py1 = (v * k for v in kind)
             out = erase_letters(region, original.crop((px0, py0, px1, py1)), k)
             mx, my = round(w * 0.08), round(h * 0.12)   # (a margin: the panel's words smaller than the place)
-            out.alpha_composite(text_image(lines, weight, w - 2 * mx, h - 2 * my, fill, outline), (mx, my))
+            out.alpha_composite(words_image(lines, weight, w - 2 * mx, h - 2 * my, fill, outline), (mx, my))
         if rotation:
             out = out.rotate(-90, expand=True)
         drawn.append((kind in ("free", "bitmap"), out, (x0, y0)))
@@ -392,7 +487,9 @@ def main():
     base_dir = sys.argv[sys.argv.index("--base") + 1] if "--base" in sys.argv else ORIGINAL
     out = os.path.join(FRONTEND, "godot", "assets", "lang", lang)
     os.makedirs(out, exist_ok=True)
-    regions = REGIONS[lang]
+    global LANG
+    LANG = lang
+    regions = language_regions(lang)
     global base_tiles
     base_tiles = Image.open(os.path.join(base_dir, "tiles.png")).convert("RGBA")   # (the empty button's picture)
     for atlas in SIZES:
