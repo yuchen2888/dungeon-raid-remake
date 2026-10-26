@@ -206,6 +206,9 @@ WORDS = {
 # the rest in fontMenu (as the main menu's words and the English settings button)
 ES_FONTS = {i: "fontScore" for i in range(34, 84)}
 ES_FONTS.update({12: "font", 13: "font", 16: "font"})
+# the game menu's buttons with a check box on their left (sound, help, clock, dimming, smooth): their words right of it,
+# as the original's (ZH's two characters fit beside it centred)
+CHECK_BOXES = (28, 29, 31, 32, 33)
 
 
 def language_regions(code):
@@ -216,6 +219,8 @@ def language_regions(code):
     for i, (atlas, rect, kind, rotation, weight, lines, *align) in enumerate(ZH):
         if code == "es":
             weight = ES_FONTS.get(i, "fontMenu")
+        if i in CHECK_BOXES:
+            align = ["box"]
         out.append((atlas, rect, kind, rotation, weight, WORDS[code][i], *align))
     return out
 
@@ -452,7 +457,8 @@ def localise(atlas, base, regions):
                                 (bbox[0], bbox[1]))
         elif kind == "button":
             out = button_picture(base_tiles, k, w, h)
-            out.alpha_composite(words_image(lines, weight, w - 12 * k, h - 6 * k, BUTTON_TEXT, BUTTON_OUTLINE), (6 * k, 3 * k))
+            left = 24 * k if align == "box" else 6 * k   # (a check box's room)
+            out.alpha_composite(words_image(lines, weight, w - left - 6 * k, h - 6 * k, BUTTON_TEXT, BUTTON_OUTLINE), (left, 3 * k))
         else:   # letters on a panel
             fill, outline = letters_style(region, 0.12)
             px0, py0, px1, py1 = (v * k for v in kind)
