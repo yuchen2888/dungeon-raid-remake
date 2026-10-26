@@ -16,12 +16,15 @@ struct Front {
 };
 }
 extern "C" {
-Front* drf_create(const char* assets) {
-    Front* f=new Front();f->ui.load(assets);f->bridge.set_listener(f,Front::listen);
+// language: a language folder as the game's load_presentation takes it, or "" (T050-K: the languages' screens
+// looked at without the simulator).
+Front* drf_create_language(const char* assets,const char* language) {
+    Front* f=new Front();f->ui.load(assets,language);f->bridge.set_listener(f,Front::listen);
     f->bridge.set_targets(f,Front::resource,Front::slot);
     f->ui.set_sound_sink(f,[](void* c,std::int32_t s){static_cast<Front*>(c)->bridge.queue_sound(s);});
     return f;
 }
+Front* drf_create(const char* assets) {return drf_create_language(assets,"");}
 // Game::Start's seeding from the platform's time() (the emulated original's), once after drf_create.
 void drf_seed(Front* f,std::uint32_t time) {f->bridge.seed(time);}
 void drf_destroy(Front* f) {delete f;}
