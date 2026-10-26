@@ -25,9 +25,9 @@ sharper edges and the original's grain; in "other model" areas the pieces come f
 a soft pattern the main model turns into dark lines (the coins' rims); "plain" areas (small repeating patterns the model garbles) are simply
 enlarged (Lanczos) instead. Needs Pillow and numpy.
 
---lang: the languages' pictures (T050-D's localise_atlas.py: tiles / menus with the English words redrawn, and the
-settings page's language names) made again on the HD tiles and menus, into assets/hd/lang/<code>/ and
-assets/hd/lang/names.png, where original.gd's _texture_path looks for them. localise_atlas.py is run as it is, but
+--lang: the languages' pictures (T050-D's localise_atlas.py: tiles / menus with the English words redrawn) made again
+on the HD tiles and menus, into assets/hd/lang/<code>/, where original.gd's _texture_path looks for them (the
+settings page's language names are make_names.py's, already large). localise_atlas.py is run as it is, but
 writing into a temporary folder, so the normal-size pictures in assets/lang/ stay untouched.
 """
 import collections
@@ -198,13 +198,7 @@ def languages():
             if name.endswith(".png"):
                 shutil.copy(os.path.join(out, code, name), os.path.join(HD, "lang", code, name))
                 keep(os.path.join(HD, "lang", code, name))
-    # the language names (make_names) at SCALE x their size
-    names = Image.new("RGBA", (256 * SCALE, 256 * SCALE), (0, 0, 0, 0))
-    for i, n in enumerate(["English", "中文"]):
-        names.alpha_composite(localise_atlas.text_image([n], "Heavy", 128 * SCALE, 32 * SCALE, localise_atlas.BUTTON_TEXT,
-                                                        localise_atlas.BUTTON_OUTLINE), (0, 32 * SCALE * i))
-    names.save(os.path.join(HD, "lang", "names.png"))
-    keep(os.path.join(HD, "lang", "names.png"))
+    # (the language names are frontend/tools/make_names.py's, drawn large enough as they are)
     shutil.rmtree(work)
     print("wrote the languages' HD pictures into %s" % os.path.join(HD, "lang"))
 

@@ -375,18 +375,6 @@ def localise(atlas, base, regions):
     return img
 
 
-def make_names(lang_root):
-    """lang/names.png: each language's name in its own words (the settings page's buttons, texture LangNames): 128 x 32
-    pixels each, one below the other in a 256 x 256 picture, in the purple buttons' letters."""
-    names = ["English", "中文"]
-    img = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
-    for i, n in enumerate(names):
-        img.alpha_composite(text_image([n], "Heavy", 128, 32, BUTTON_TEXT, BUTTON_OUTLINE), (0, 32 * i))
-    img.save(os.path.join(lang_root, "names.png"))
-    with open(os.path.join(lang_root, "names.png.import"), "w", encoding="utf-8") as f:
-        f.write('[remap]\n\nimporter="keep"\n')
-
-
 def main():
     lang = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else "zh"
     base_dir = sys.argv[sys.argv.index("--base") + 1] if "--base" in sys.argv else ORIGINAL
@@ -402,14 +390,12 @@ def main():
         with open(os.path.join(out, atlas + ".png.import"), "w", encoding="utf-8") as f:
             f.write('[remap]\n\nimporter="keep"\n')   # (read as a plain file, exported as it is)
     if lang == "en":
-        make_names(os.path.dirname(out))
         print("wrote the settings button into %s/tiles.png" % os.path.relpath(out, FRONTEND))
         return
     with open(os.path.join(out, "atlas.txt"), "w", encoding="utf-8") as f:
         f.write("# the words localise_atlas.py drew (make_cjk_font.py's character list)\n")
         for i, r in enumerate(regions):
             f.write("atlas.%d\t%s\n" % (i, " ".join(r[5])))
-    make_names(os.path.dirname(out))
     print("wrote %d words into %s/tiles.png, menus.png" % (len(regions), os.path.relpath(out, FRONTEND)))
 
 
