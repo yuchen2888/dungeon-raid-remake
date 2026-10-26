@@ -49,9 +49,14 @@ public:
     godot::Array render(double scale);
     int skill_button_at(godot::Vector2 touch);   // the skill button (0..3), menu button (4) or stats button (5); -1
     int menu_button_at(godot::Vector2 touch);    // the open menu's button under a touch (-1 none)
-    // The settings page (T050-D): open over the main menu (the touches are its own then: the game gets none); a touch
-    // on it gives -1 nothing, 0 / 1 a language chosen (English, 中文: the page stays until the embedding reloads in it),
-    // 100 Back (the page closes).
+    // The settings page (T050-D, T050-J): open over the main menu (the touches are its own then: the game gets none).
+    // settings_configure: the languages offered (each its row in the names picture) and the embedding's values;
+    // settings_touch gives SettingsView::Result (1 a value changed, 2 the language changed, 3 the volume slides, 4 an
+    // original switch flipped, 5 another page, 100 closed, -1 nothing); settings_values reads the values back
+    // (language: an index into the configured ones, volume, vibration, hd, fast).
+    void settings_configure(const godot::PackedInt32Array& name_rows,int language,double volume,bool vibration,bool hd,
+                            bool fast);
+    godot::Dictionary settings_values();
     bool settings_open();
     int settings_touch(int phase,godot::Vector2 touch);
 protected:

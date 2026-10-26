@@ -40,10 +40,9 @@ public:
     // The original's fonts and texts from assets; a language folder (T050-D, e.g. assets/lang/zh) overlays its texts
     // by key and gives the fonts their wide characters.
     bool load(const std::string& assets,const std::string& language="");
-    // The settings page (T050-D): opened by the main menu's settings button (the session's Dashboard event); the shown
-    // language's index in the names picture (0 English, 1 中文), from the language folder's name.
-    SettingsView settings{&menu_font};
-    std::int32_t language_index=0;
+    // The settings page (T050-D, T050-J): opened by the main menu's settings button (the session's Dashboard event);
+    // the platform configures its languages and values.
+    SettingsView settings{&font,&menu_font};
     void event(const dungeonraid::SessionObjects& o,dungeonraid::SessionSource source,const void* e);
     void render(const dungeonraid::SessionObjects& o);
     // What the frame's processing left for after the session's step (Interface::Process's own part, the game-over,

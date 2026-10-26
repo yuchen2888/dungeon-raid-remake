@@ -38,7 +38,6 @@ bool Presenter::load(const std::string& assets,const std::string& language) {
     iface.set_fonts(&font,&score_font);iface.set_texts(texts);
     ok=texts.load(assets+"/texts.txt") && ok;
     if(!language.empty()) {   // (T050-D)
-        language_index=language.size()>=3 && language.compare(language.size()-3,3,"/zh")==0?1:0;
         ok=texts.load(language+"/texts.txt") && ok;
         ok=font.load_wide(language+"/font.fnt",WideFont) && ok;
         ok=menu_font.load_wide(language+"/fontMenu.fnt",WideMenu) && ok;
@@ -677,7 +676,7 @@ void Presenter::event(const SessionObjects& o,SessionSource source,const void* p
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MainMenu))main_menu.fade_in();   // MainMenu::FadeIn
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MainMenuShow))main_menu.show(o);   // MainMenu::Show
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MoreGames))main_menu.stop_cycling();   // ShowMoreGames
-        else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::Dashboard))settings.open(texts,language_index);   // (T050-D)
+        else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::Dashboard))settings.open(texts);   // (T050-D)
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::MainMenuButton))main_menu.button_acted(o,e.index,dt);
         else if(e.kind==static_cast<std::int32_t>(InterfaceEventKind::GameOverLine)) {   // shown by finish_game_over
             game_over_before.ended_line=e.index;game_over_before.ended_value=e.a;
@@ -1006,6 +1005,6 @@ void Presenter::render(const SessionObjects& o) {
     if(screens.unlock_165a0){gl.set_tag(UnlockTag);unlock.render(gl);gl.set_tag(GameTag);}   // Game::Render 0xd6b6
     if(screens.help_102a4){gl.set_tag(HelpTag);help.render(gl);gl.set_tag(GameTag);}   // Game::Render 0xd6ba
     if(o.end->game_over_screen){gl.set_tag(GameOverTag);game_over.render(gl,o);gl.set_tag(GameTag);}
-    if(settings.is_open() && screens.main_menu_c400)settings.render(gl);   // (T050-D, over the main menu)
+    if(settings.is_open() && screens.main_menu_c400)settings.render(gl,*o.settings);   // (T050-D, over the main menu)
 }
 }

@@ -107,7 +107,7 @@ Dictionary DungeonRaidSession::state() {
     d["health"]=r.health;d["health_max"]=r.health_max+r.health_bonus;d["armour"]=o.preview->armour_current;d["armour_max"]=o.preview->armour_max;
     d["xp"]=r.xp;d["gold"]=r.gold;d["up"]=r.up;d["level"]=r.level;d["poison"]=r.poison;
     d["total_xp"]=r.total_xp;d["total_gold"]=r.total_gold;d["total_up"]=r.total_up;
-    d["turn"]=o.path->turn;d["input_ready"]=o.path->input_ready!=0;d["kills"]=o.path->battle.kill_count_165b4;
+    d["turn"]=o.path->turn;d["path_length"]=static_cast<int>(o.stroke->selection.path_length);d["input_ready"]=o.path->input_ready!=0;d["kills"]=o.path->battle.kill_count_165b4;
     d["attack_phase"]=o.damage->phase;d["incoming_damage"]=o.damage->incoming_damage;
     d["falling"]=static_cast<int>(o.falling_count);d["tokens_pending"]=static_cast<int>(dr_token_queue_counters(o.tokens)->pending);
     d["game_over"]=o.end->game_over_screen!=0;d["victory"]=o.end->victory!=0;d["has_save"]=o.end->flag_146d0!=0;
@@ -242,11 +242,27 @@ int DungeonRaidSession::menu_button_at(Vector2 touch) {
 }
 void DungeonRaidSession::leave_game_over() {bridge_->leave_game_over();}
 bool DungeonRaidSession::settings_open() {return ui_ && ui_->settings.is_open();}
+void DungeonRaidSession::settings_configure(const PackedInt32Array& name_rows,int language,double volume,bool vibration,
+                                            bool hd,bool fast) {
+    if(!ui_)return;
+    std::vector<std::int32_t> rows;
+    for(int64_t i=0;i<name_rows.size();++i)rows.push_back(name_rows[i]);
+    drui::SettingsValues v;v.language=language;v.volume=static_cast<float>(volume);v.vibration=vibration;v.hd=hd;v.fast=fast;
+    ui_->settings.configure(rows,v);
+}
+Dictionary DungeonRaidSession::settings_values() {
+    Dictionary d;
+    if(!ui_)return d;
+    const drui::SettingsValues& v=ui_->settings.values();
+    d["language"]=v.language;d["volume"]=v.volume;d["vibration"]=v.vibration;d["hd"]=v.hd;d["fast"]=v.fast;
+    return d;
+}
 int DungeonRaidSession::settings_touch(int phase,Vector2 touch) {
     if(!ui_)return -1;
-    const int r=ui_->settings.touch(phase,Point{touch.x,touch.y});
-    if(r>=0)ui_->queue_sound(0);   // (a button's sound, as the original's menus)
-    if(r==drui::SettingsView::Back)ui_->settings.close();
+    const SessionObjects o=bridge_->objects();
+    const int r=ui_->settings.touch(phase,Point{touch.x,touch.y},*o.settings);
+    if(r==drui::SettingsView::Switch)ui_->iface.set_clock_state(o.settings->clock_13ec9!=0);   // (Game::SetClockState)
+    if(r>=0 && r!=drui::SettingsView::Volume)ui_->queue_sound(0);   // (a button's sound, as the original's menus)
     return r;
 }
 bool DungeonRaidSession::scores_open() {return bridge_->objects().screens->score_ef6c!=0;}
@@ -283,6 +299,9 @@ void DungeonRaidSession::_bind_methods() {
     ClassDB::bind_method(D_METHOD("skill_button_at","touch"),&DungeonRaidSession::skill_button_at);
     ClassDB::bind_method(D_METHOD("menu_button_at","touch"),&DungeonRaidSession::menu_button_at);
     ClassDB::bind_method(D_METHOD("main_menu_open"),&DungeonRaidSession::main_menu_open);
+    ClassDB::bind_method(D_METHOD("settings_configure","name_rows","language","volume","vibration","hd","fast"),
+                         &DungeonRaidSession::settings_configure);
+    ClassDB::bind_method(D_METHOD("settings_values"),&DungeonRaidSession::settings_values);
     ClassDB::bind_method(D_METHOD("settings_open"),&DungeonRaidSession::settings_open);
     ClassDB::bind_method(D_METHOD("settings_touch","phase","touch"),&DungeonRaidSession::settings_touch);
     ClassDB::bind_method(D_METHOD("scores_open"),&DungeonRaidSession::scores_open);

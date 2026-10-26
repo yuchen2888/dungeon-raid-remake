@@ -28,13 +28,21 @@ const RAW_FILES := ["tiles.png", "font.png", "icons.png", "menus.png", "fontMenu
 # T050-D: a language other than English is a folder assets/lang/<code> (frontend/tools/make_cjk_font.py,
 # localise_atlas.py): its texts over the original's, the fonts' wide glyphs (textures 7..9) and, where present, the
 # pictures with the original's English words redrawn (tiles, menus). The choice is kept in user://frontend.cfg.
-const LANGUAGES := ["en", "zh"]
+# T050-J: the languages offered are assets/lang/names.txt's (frontend/tools/make_names.py: the settings page's names
+# picture, a row each) whose folder is here, English always.
+var languages: Array = []
+var name_rows := PackedInt32Array()
 const LANG_FILES := ["texts.txt", "font.fnt", "font.png", "fontMenu.fnt", "fontMenu.png", "fontScore.fnt", "fontScore.png",
 		"tiles.png", "menus.png"]
 const WIDE_TEXTURES := {7: "font", 8: "fontMenu", 9: "fontScore"}
 const LOCALISED := [1, 4]   # tiles, menus
 const SETTINGS_FILE := "user://frontend.cfg"
 var language := "en"
+# T050-J: the settings page's own values (the original's switches are the session's): the sound volume, vibration,
+# the HD pictures, fast animations; kept in user://frontend.cfg with the language.
+var prefs := {"volume": 1.0, "vibration": true, "hd": true, "fast": false}
+var last_path := 0
+var last_health := -1
 
 var session = null
 var textures := {}
@@ -114,6 +122,7 @@ func _ready() -> void:
 		error_text = "The game library did not load (frontend/godot/bin/).\nRun frontend/gdext/build.py extension."
 		return
 	var assets := _asset_folder()
+	_load_prefs()
 	language = _language(args)
 	var lang_dir := ""
 	if language != "en":
@@ -136,7 +145,7 @@ func _ready() -> void:
 	if lang_dir != "":
 		for id in WIDE_TEXTURES:
 			_load_texture(id, lang_dir + "/" + WIDE_TEXTURES[id] + ".png", "lang/" + language + "/" + WIDE_TEXTURES[id])
-	var names := _plain_folder("res://assets/lang", "user://lang", ["names.png"])   # (the settings page's)
+	var names := _plain_folder("res://assets/lang", "user://lang", ["names.png", "names.txt"])   # (the settings page's)
 	_load_texture(10, names + "/names.png", "lang/names")
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	if not args.has("--no-hd"):   # (the plain pictures, plainly drawn)
@@ -153,6 +162,9 @@ func _ready() -> void:
 	if not session.load_presentation(assets, lang_dir):
 		error_text = "The original fonts are missing (frontend/godot/assets/original)."
 		return
+	session.settings_configure(name_rows, maxi(languages.find(language), 0), prefs["volume"], prefs["vibration"],
+		prefs["hd"], prefs["fast"])
+	_apply_volume()
 	for key in STORE_KEYS:
 		var file: String = store_dir + key + ".bin"
 		if FileAccess.file_exists(file):
@@ -177,7 +189,7 @@ func _layout() -> void:
 # lang/names). Like the originals the HD pictures stay local only and are exported as plain files.
 func _texture_path(original: String, name: String) -> String:
 	var hd := "res://assets/hd/" + name + ".png"
-	if not FileAccess.file_exists(hd) or OS.get_cmdline_user_args().has("--no-hd"):   # ("--no-hd": quicker in the simulator)
+	if not FileAccess.file_exists(hd) or OS.get_cmdline_user_args().has("--no-hd") or not prefs["hd"]:   # ("--no-hd": quicker in the simulator)
 		return original
 	var o := _png_size(original)
 	var s := _png_size(hd)
@@ -236,22 +248,76 @@ func _load_texture(id: int, path: String, hd := "") -> bool:
 	textures[id] = ImageTexture.create_from_image(image)
 	return true
 
-# The language (T050-D): "--lang=<code>" for the checks, else the saved choice, else the device's (Chinese for a
-# Chinese system, English otherwise).
+# The language (T050-D): "--lang=<code>" for the checks, else the saved choice, else the device's (Traditional
+# Chinese for Taiwan, Hong Kong and Macau, English when it is not offered).
 func _language(args: PackedStringArray) -> String:
-	for a in args:   # ("--lang=<code>": any language whose files are here, before it is in LANGUAGES)
-		if a.begins_with("--lang=") and (a.substr(7) in LANGUAGES or FileAccess.file_exists("res://assets/lang/" + a.substr(7) + "/texts.txt")):
+	languages = []
+	name_rows = PackedInt32Array()
+	var listed := FileAccess.get_file_as_string("res://assets/lang/names.txt").split("\n", false)
+	for row in listed.size():
+		var code: String = listed[row].strip_edges()
+		if code == "en" or FileAccess.file_exists("res://assets/lang/" + code + "/texts.txt"):
+			languages.append(code)
+			name_rows.append(row)
+	if languages.is_empty():   # (no names picture here: English and Chinese as before)
+		languages = ["en", "zh"]
+		name_rows = PackedInt32Array([0, 1])
+	for a in args:   # ("--lang=<code>": any language whose files are here, before it is offered)
+		if a.begins_with("--lang=") and (a.substr(7) in languages or FileAccess.file_exists("res://assets/lang/" + a.substr(7) + "/texts.txt")):
 			return a.substr(7)
 	var cfg := ConfigFile.new()
-	if cfg.load(SETTINGS_FILE) == OK and cfg.get_value("settings", "language", "") in LANGUAGES:
+	if cfg.load(SETTINGS_FILE) == OK and cfg.get_value("settings", "language", "") in languages:
 		return cfg.get_value("settings", "language")
-	return "zh" if OS.get_locale_language() == "zh" else "en"
+	var locale := OS.get_locale()
+	var device := OS.get_locale_language()
+	if device == "zh" and (locale.contains("TW") or locale.contains("HK") or locale.contains("MO") or locale.contains("Hant")):
+		device = "zh_TW"
+	return device if device in languages else "en"
 
 func _save_language(code: String) -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SETTINGS_FILE)
 	cfg.set_value("settings", "language", code)
 	cfg.save(SETTINGS_FILE)
+
+func _load_prefs() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_FILE) != OK:
+		return
+	for key in prefs:
+		prefs[key] = cfg.get_value("settings", key, prefs[key])
+
+func _save_prefs() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_FILE)
+	for key in prefs:
+		cfg.set_value("settings", key, prefs[key])
+	cfg.save(SETTINGS_FILE)
+
+func _apply_volume() -> void:
+	var v: float = prefs["volume"]
+	AudioServer.set_bus_mute(0, v <= 0.001)
+	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(v, 0.001)))
+
+# The settings page's answer (T050-J): the volume as it slides; the values kept when they change; the pictures or
+# the language changed: the scene again in them (everything is saved as it changes).
+func _settings_changed(result: int) -> void:
+	var v: Dictionary = session.settings_values()
+	prefs["volume"] = v["volume"]
+	_apply_volume()
+	if result == 3:
+		return
+	var reload: bool = v["hd"] != prefs["hd"]
+	prefs["vibration"] = v["vibration"]
+	prefs["hd"] = v["hd"]
+	prefs["fast"] = v["fast"]
+	_save_prefs()
+	var chosen: int = v["language"]
+	if result == 2 and chosen >= 0 and chosen < languages.size() and languages[chosen] != language:
+		_save_language(languages[chosen])
+		reload = true
+	if reload:
+		get_tree().call_deferred("reload_current_scene")
 
 # The bytes the session changed, written whole to a temporary file and renamed; an empty saved game is deleted.
 func _store() -> void:
@@ -312,10 +378,9 @@ func _physics_process(_delta: float) -> void:
 	elif held:
 		phase = 1
 	if session.settings_open():   # (T050-D) the settings page over the main menu takes the touches
-		var chosen: int = session.settings_touch(phase, pos)
-		if chosen >= 0 and chosen < LANGUAGES.size() and LANGUAGES[chosen] != language:
-			_save_language(LANGUAGES[chosen])
-			get_tree().call_deferred("reload_current_scene")   # (everything is saved as it changes)
+		var result: int = session.settings_touch(phase, pos)
+		if result >= 1 and result <= 3:
+			_settings_changed(result)
 		phase = 0
 	var skill_button: int = session.skill_button_at(pos) if phase != 0 else -1
 	# (the main menu and the high scores act on the button under the last touch the frame after it ends)
@@ -323,6 +388,10 @@ func _physics_process(_delta: float) -> void:
 	session.frame(minf(delta, 0.05), phase, pos, skill_button, menu_button)
 	_play_sounds()
 	_store()
+	if prefs["fast"] and phase == 0 and not held and queue.is_empty():   # (T050-J) fast animations: see _fast
+		_fast(delta)
+	if prefs["vibration"]:
+		_vibrate()
 	batches = session.render(SCALE)
 	queue_redraw()
 	menu_frames = menu_frames + 1 if session.state()["menu_open"] else 0
@@ -362,6 +431,32 @@ func _exit_tree() -> void:
 		player.stop()
 		player.stream = null
 	sound_streams.clear()
+
+# Fast animations (T050-J): while the board plays out a turn (the stroke's collecting, the falling tiles, the
+# monsters' attack) with no touch, a second frame of the session's: the same frames, twice as fast; the rules and the
+# touches untouched.
+func _fast(delta: float) -> void:
+	var st: Dictionary = session.state()
+	if not st["started"] or st["main_menu"] or st["menu_open"] or st["game_menu_open"] or st["stats_menu_open"] or st["help_open"] or st["game_over"]:
+		return
+	if st["input_ready"] and st["attack_phase"] == 0 and st["falling"] == 0 and st["tokens_pending"] == 0:
+		return
+	session.frame(minf(delta, 0.05), 0, cursor, -1, -1)
+	_play_sounds()
+	_store()
+
+# Vibration (T050-J): a light tap for each tile the stroke takes in, a stronger one when the hero loses health.
+func _vibrate() -> void:
+	var st: Dictionary = session.state()
+	var path: int = st["path_length"]
+	var health: int = st["health"]
+	if st["started"] and not st["main_menu"]:
+		if path > last_path:
+			Input.vibrate_handheld(12, 0.35)
+		if last_health >= 0 and health < last_health:
+			Input.vibrate_handheld(60, 0.9)
+	last_path = path
+	last_health = health
 
 func _play_sounds() -> void:
 	for s in session.sounds():
