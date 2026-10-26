@@ -239,8 +239,8 @@ func _load_texture(id: int, path: String, hd := "") -> bool:
 # The language (T050-D): "--lang=<code>" for the checks, else the saved choice, else the device's (Chinese for a
 # Chinese system, English otherwise).
 func _language(args: PackedStringArray) -> String:
-	for a in args:
-		if a.begins_with("--lang=") and a.substr(7) in LANGUAGES:
+	for a in args:   # ("--lang=<code>": any language whose files are here, before it is in LANGUAGES)
+		if a.begins_with("--lang=") and (a.substr(7) in LANGUAGES or FileAccess.file_exists("res://assets/lang/" + a.substr(7) + "/texts.txt")):
 			return a.substr(7)
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_FILE) == OK and cfg.get_value("settings", "language", "") in LANGUAGES:
