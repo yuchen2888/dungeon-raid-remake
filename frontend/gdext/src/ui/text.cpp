@@ -95,10 +95,18 @@ bool no_line_start(std::uint32_t code) {
     switch(code) {
     case 0xff0c:case 0x3002:case 0xff01:case 0xff1f:case 0xff1b:case 0xff1a:case 0x3001:case 0xff09:case 0x300b:case 0x300d:
     case 0x300f:case 0x201d:case 0x2019:case 0x2026:case 0xff05:case 0x3009:case 0x3011:return true;
+    // (T050-K) Japanese: the small kana, the long vowel mark and the repeat marks
+    case 0x3041:case 0x3043:case 0x3045:case 0x3047:case 0x3049:case 0x3063:case 0x3083:case 0x3085:case 0x3087:case 0x308e:
+    case 0x30a1:case 0x30a3:case 0x30a5:case 0x30a7:case 0x30a9:case 0x30c3:case 0x30e3:case 0x30e5:case 0x30e7:case 0x30ee:
+    case 0x30f5:case 0x30f6:case 0x30fc:case 0x3005:case 0x309d:case 0x309e:case 0x30fd:case 0x30fe:case 0x30fb:return true;
     default:return false;
     }
 }
-bool breaks_around(std::uint32_t code) {return code>=0x2e80 && !no_line_start(code);}
+// (T050-K) Korean is written with spaces between words: its syllables and letters break only there, as English does
+static bool hangul(std::uint32_t code) {
+    return (code>=0xac00 && code<=0xd7a3) || (code>=0x1100 && code<=0x11ff) || (code>=0x3130 && code<=0x318f);
+}
+bool breaks_around(std::uint32_t code) {return code>=0x2e80 && !no_line_start(code) && !hangul(code);}
 bool has_wide(const char* s) {for(;*s;++s)if(static_cast<std::uint8_t>(*s)>=0x80)return true;return false;}
 std::vector<TextLine> wrap_wide(const Font& font,const char* s,float limit) {
     std::vector<TextLine> lines;

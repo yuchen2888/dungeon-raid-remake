@@ -3,7 +3,8 @@
 original.gd loads in place of the originals (_texture_path). Local only, like assets/original/ (never in Git).
 
   python3 frontend/tools/make_hd.py <realesrgan-ncnn-vulkan folder> [names...]
-  python3 frontend/tools/make_hd.py --lang     the languages' own pictures in HD, from the HD tiles / menus (below)
+  python3 frontend/tools/make_hd.py --lang [codes...]   the languages' own pictures in HD, from the HD tiles / menus
+                                                       (below; all languages, or the ones named)
 
 The upscaler is Real-ESRGAN's macOS build (github.com/xinntao/Real-ESRGAN, release v0.2.5.0,
 realesrgan-ncnn-vulkan-20220424-macos.zip, downloaded with the owner's consent on 2026-10-23; kept outside the
@@ -184,13 +185,13 @@ def upscale(upscaler, name):
     print("%s: %d pieces, %dx%d -> %dx%d" % (name, n, w, h, w * SCALE, h * SCALE), flush=True)
 
 
-def languages():
+def languages(codes=None):
     sys.path.insert(0, HERE)
     import localise_atlas
     work = tempfile.mkdtemp(prefix="make_hd_lang_")
     localise_atlas.FRONTEND = work   # (its output folder: <FRONTEND>/godot/assets/lang/<code>)
     out = os.path.join(work, "godot", "assets", "lang")
-    for code in localise_atlas.REGIONS:
+    for code in codes or localise_atlas.REGIONS:
         sys.argv = ["localise_atlas.py", code, "--base", HD]
         localise_atlas.main()
         os.makedirs(os.path.join(HD, "lang", code), exist_ok=True)
@@ -209,8 +210,8 @@ def keep(png):
 
 
 def main():
-    if sys.argv[1:] == ["--lang"]:
-        languages()
+    if sys.argv[1:2] == ["--lang"]:
+        languages(sys.argv[2:])
         return
     if len(sys.argv) < 2 or not os.path.exists(os.path.join(sys.argv[1], "realesrgan-ncnn-vulkan")):
         sys.exit(__doc__)

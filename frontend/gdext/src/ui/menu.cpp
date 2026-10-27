@@ -159,7 +159,15 @@ void ItemView::item(const Texts& t,const ItemRecord& r) {
         int lo=0,hi=0;std::sscanf(range.c_str(),"%d %d",&lo,&hi);
         if(r.icon>=lo && r.icon<hi) {base=&t.get("item.names."+std::to_string(i),r.name);break;}
     }
-    name=printf_string(t.get("item.name").c_str(),prefix.c_str(),base->c_str());
+    // (T050-K) a language whose adjectives agree with the noun: the noun ends in "|<n>" and the prefix lists its forms
+    // "a|b|...", the n-th taken (the first when the noun has no mark); English has neither
+    std::string noun=*base,adjective=prefix;
+    const std::size_t bar=noun.rfind('|');
+    const int form=bar==std::string::npos?0:std::atoi(noun.c_str()+bar+1);
+    if(bar!=std::string::npos)noun.resize(bar);
+    for(int k=0;k<form && adjective.find('|')!=std::string::npos;++k)adjective.erase(0,adjective.find('|')+1);
+    if(adjective.find('|')!=std::string::npos)adjective.resize(adjective.find('|'));
+    name=printf_string(t.get("item.name").c_str(),adjective.c_str(),noun.c_str());
     std::vector<std::string> parts;std::vector<int> kinds;
     for(int i=0;i<20;++i) {
         const std::string& k=t.get("item.stat",i);

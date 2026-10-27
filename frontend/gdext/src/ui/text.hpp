@@ -54,10 +54,10 @@ struct Label {
 };
 // UTF-8 (T050-D): the code point at s[i] (a stray byte stands for itself), i moved past it.
 std::uint32_t next_code(const char* s,std::size_t& i);
-// Lines may break before or after a CJK character (the Chinese texts have no spaces), except before the punctuation
-// that may not start a line.
+// Lines may break before or after a CJK character (the Chinese and Japanese texts have no spaces), except before the
+// punctuation that may not start a line; Korean only at its spaces (T050-K).
 bool breaks_around(std::uint32_t code);
-bool no_line_start(std::uint32_t code);   // ，。！？；：、）》」』 and their like
+bool no_line_start(std::uint32_t code);   // ，。！？；：、）》」』, Japanese small kana and ー, and their like
 // A text with wide characters (T050-D) cut into lines no wider than limit, counted as the original's line cutters
 // count (each character's half width plus its advance, a space's advance doubled): at a space (dropped) or around a
 // CJK character. Each line: its bytes [start, end) and its width up to there.
