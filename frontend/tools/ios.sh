@@ -3,7 +3,10 @@
 # frontend/dist/ios/ and builds, installs and starts it.
 #
 #   frontend/tools/ios.sh simulator [device name]   the iOS simulator (default "iPhone 18 Pro"), no signing needed
-#   frontend/tools/ios.sh device                    a connected iPhone, signed with the owner's Apple developer team
+#   frontend/tools/ios.sh device                    a connected iPhone, signed with your Apple developer team
+#
+# The team (the 10 letters and digits Xcode shows under Signing & Capabilities) is DR_TEAM_ID or the one line of
+# frontend/godot/team_id.local (not in Git); export_presets.cfg keeps it empty and gets it only while Godot exports.
 #
 # Needs: Xcode, Godot 4.7.2 in /Applications with its export templates (godotengine.org, installed with the owner's
 # consent on 2026-10-23), godot-cpp (see frontend/README.md) and the local original files
@@ -21,7 +24,17 @@ python3 "$FRONTEND/gdext/build.py" ios
 "$GODOT" --headless --path "$FRONTEND/godot" --import >/dev/null 2>&1 || true
 rm -rf "$OUT"
 mkdir -p "$OUT"
-"$GODOT" --headless --path "$FRONTEND/godot" --export-debug iOS "$OUT/DungeonRaid.ipa" >"$OUT/export.log" 2>&1
+TEAM="${DR_TEAM_ID:-$(head -1 "$FRONTEND/godot/team_id.local" 2>/dev/null | tr -d ' \r')}"
+if [ -z "$TEAM" ]; then
+    [ "$WHERE" = simulator ] || { echo "no Apple developer team: put it in frontend/godot/team_id.local (or DR_TEAM_ID)"; exit 1; }
+    TEAM=0000000000   # (the simulator signs nothing)
+fi
+PRESETS="$FRONTEND/godot/export_presets.cfg"
+cp "$PRESETS" "$OUT/export_presets.cfg.orig"
+trap 'cp "$OUT/export_presets.cfg.orig" "$PRESETS"' EXIT
+sed -i '' "s/^application\/app_store_team_id=\"\"/application\/app_store_team_id=\"$TEAM\"/" "$PRESETS"
+"$GODOT" --headless --path "$FRONTEND/godot" --export-debug iOS "$OUT/DungeonRaid.ipa" >"$OUT/export.log" 2>&1 || true
+cp "$OUT/export_presets.cfg.orig" "$PRESETS"
 [ -d "$OUT/DungeonRaid.xcodeproj" ] || { tail -20 "$OUT/export.log"; echo "Godot's iOS export failed ($OUT/export.log)"; exit 1; }
 
 if [ "$WHERE" = simulator ]; then
@@ -41,7 +54,7 @@ if [ "$WHERE" = simulator ]; then
     xcrun simctl launch "$ID" "$BUNDLE"
     echo "running on the simulator $NAME"
 elif [ "$WHERE" = device ]; then
-    # Xcode signs with the team in export_presets.cfg and fetches a development profile for the connected iPhone
+    # Xcode signs with the team and fetches a development profile for the connected iPhone
     # (the Apple account has to be signed in to Xcode; a free account's profile lasts 7 days).
     xcodebuild -project "$OUT/DungeonRaid.xcodeproj" -scheme DungeonRaid -configuration Debug -sdk iphoneos \
         -destination "generic/platform=iOS" -derivedDataPath "$OUT/build" -allowProvisioningUpdates build >"$OUT/build.log" 2>&1 \
