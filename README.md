@@ -47,14 +47,32 @@ The original left the App Store long ago and no longer runs on current iOS. This
 | iPhone (iOS 16+) | Playable; built and installed from a Mac |
 | Languages | 6, all texts and pictures |
 | HD pictures | Done (4x) |
-| A no-Mac install (an app with no game content that imports your original) | In progress |
+| A no-Mac install (an app with no game content that imports your original) | First release: tested on the simulator, not yet on real phones |
 | A new screen layout for tall iPhones | Being designed |
 | Android, Windows | Planned (same Godot project) |
 | New content (skills, classes) | Later, after the remake is complete |
 
 ## Getting started
 
-For now the game is built on a Mac: Apple silicon, with Xcode and Python 3.
+There are two ways: install the ready-made app on your iPhone, or build everything yourself on a Mac.
+
+### On an iPhone, no Mac needed
+
+1. **Download** `DungeonRaid-Remake-unsigned.ipa` from [Releases](https://github.com/yyc0409-ui/dungeon-raid-remake/releases/latest). It holds none of the original's content.
+2. **Install it** with a sideloading tool such as [AltStore](https://altstore.io) or [Sideloadly](https://sideloadly.io), which signs it with your own Apple ID. With a free Apple ID the app has to be refreshed every 7 days.
+3. **Give it your original.** You need your own copy of Dungeon Raid 1.3.4, as an IPA with its program unencrypted. Put it in the Files app, under **On My iPhone → Dungeon Raid**. That folder appears once the app has been opened once.
+4. **Open the game and tap Import.** It takes a few seconds. The game checks every file it takes, so a different version is refused rather than misread. Afterwards you can delete the IPA from that folder.
+
+What differs from a build on a Mac:
+
+- The pictures are the original's pixels: making the HD ones needs a Mac.
+- Spanish shows its accented letters without their accents (á as a). Its accented letters are made from the original font, so they cannot be shipped.
+
+The import screen is in English or Chinese, following your phone's language. Everything after it is in the language you pick in Settings.
+
+### On a Mac
+
+For this you need an Apple silicon Mac with Xcode and Python 3.
 
 1. **Get the original.** You need your own copy of Dungeon Raid 1.3.4 (the IPA), with its program unencrypted.
 2. **Get the tools.**

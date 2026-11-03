@@ -29,6 +29,17 @@ iPhone 版需要：Xcode、`/Applications` 里的 Godot 4.7.2 和它的官方导
 
 这些文件和原版素材一样只在本机（`godot/assets/lang/` 不进 Git），iPhone 导出时一起打包。生成顺序：`python3 frontend/tools/localise_atlas.py zh`、`localise_atlas.py en`，再 `python3 frontend/tools/make_cjk_font.py zh`。
 
+## 空壳版（T081，公开下载用）
+
+不含任何原版内容的 iPhone 版，玩家在游戏里导入自己的原版 IPA：
+
+- `python3 frontend/tools/make_shell_data.py`：生成导入用的数据 `godot/assets/shell/`（本机）。包括原版文件清单（大小和 SHA-256）、英文文字在原版程序里的位置表 `texts.map`、音效表，以及各语言图片的补丁（新图减原图）。生成后会自查：能否从原版完整还原出 Mac 版用的文件。
+- `godot/importer.gd`：游戏里的导入画面和导入过程。用 `ios_png.cpp` 解开原版的 CgBI 格式图片，把 .caf 音效转成 .wav，按位置表从原版程序读出文字，再给图片打补丁。
+- `python3 frontend/tools/make_shell_art.py`：生成空壳版自己的图标、启动图和导入画面的文字图（`godot/shell/`，用思源黑体画，进 Git）。
+- `frontend/tools/shell_ipa.sh`：打出未签名的 `dist/shell/DungeonRaid-Remake-unsigned.ipa`；加参数 `simulator` 则装到模拟器上。
+- `python3 frontend/tools/shell_audit.py`：发布前必须跑。检查安装包里没有原版的路径、文件（按 SHA-256）和较长的英文文字。
+- 自查：`Godot --headless --path frontend/godot -s res://tests/import_check.gd -- --ipa=<原版 IPA>`。在 Mac 上导入一遍，逐个文件和 Mac 版比较。
+
 ## 结构
 
 - `gdext/`：Godot 插件（C++）。`src/dr_bridge.*` 是不依赖 Godot 的转接层，`src/dungeon_raid_session.*` 把它包装成 Godot 对象 `DungeonRaidSession`。规则源码直接从 `recovered/` 编译（文件列表取自 `recovered/run_session_demo.sh`），不复制。

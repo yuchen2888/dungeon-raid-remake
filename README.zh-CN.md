@@ -47,14 +47,32 @@
 | iPhone 版（iOS 16 以上） | 能玩；需要在 Mac 上编译安装 |
 | 语言 | 6 种，全部文字和图片 |
 | 高清画面 | 已完成（4 倍） |
-| 不用 Mac 的安装方式（不含游戏内容的安装包，导入你自己的原版） | 正在做 |
+| 不用 Mac 的安装方式（不含游戏内容的安装包，导入你自己的原版） | 首个版本：在模拟器上测过，还没在真机上测 |
 | 为长屏 iPhone 重新设计的界面 | 设计中 |
 | 安卓、Windows | 计划中（用同一个 Godot 项目） |
 | 新内容（技能、职业） | 以后，等重制完成 |
 
 ## 开始使用
 
-目前需要在 Mac 上编译：Apple 芯片的 Mac，装好 Xcode 和 Python 3。
+有两种方式：在 iPhone 上直接装现成的 App，或者在 Mac 上自己编译全部内容。
+
+### 在 iPhone 上，不需要 Mac
+
+1. **下载**：从 [Releases](https://github.com/yyc0409-ui/dungeon-raid-remake/releases/latest) 下载 `DungeonRaid-Remake-unsigned.ipa`。它不含任何原版内容。
+2. **安装**：用 [AltStore](https://altstore.io)、[Sideloadly](https://sideloadly.io) 这类侧载工具安装，它会用你自己的 Apple ID 签名。免费的 Apple ID 每 7 天要刷新一次。
+3. **放入原版**：你需要自己的一份 Dungeon Raid 1.3.4，是程序未加密的 IPA 文件。把它放进“文件”App 的 **我的 iPhone → Dungeon Raid** 文件夹。这个文件夹要在打开过一次 App 之后才会出现。
+4. **打开游戏，点“导入”**：几秒钟就好。游戏会检查取用的每个文件，版本不对就拒绝导入，不会读错。导入后可以把那个 IPA 删掉。
+
+和在 Mac 上编译的版本相比，有两点不同：
+
+- 图片是原版像素。高清图需要在 Mac 上生成。
+- 西班牙文的带重音字母显示为不带重音（á 显示为 a）。这些字母是用原版字体拼出来的，所以不能随安装包发布。
+
+导入画面按手机语言显示英文或中文。导入之后，游戏用你在设置里选的语言。
+
+### 在 Mac 上
+
+需要 Apple 芯片的 Mac，装好 Xcode 和 Python 3。
 
 1. **准备原版。** 你自己的 Dungeon Raid 1.3.4（IPA 文件），程序要是未加密的。
 2. **准备工具。**
