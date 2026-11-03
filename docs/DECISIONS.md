@@ -82,3 +82,11 @@ K6 完成后用户问“后端是不是全部搞定、只差前端”。Claude �
 - 翻译由 Claude 完成，全部文字一次译完；用户可抽查改词（改 frontend/godot/assets/lang/zh/texts.txt 后重跑 make_cjk_font.py）。
 - 译文与中文图片由原版文字、原版图片派生，和原版素材一样只在本机，不进 Git。
 - 高清画面与中文同步进行（用户：“高清画面我们也同步开展可以吗？”）：另开会话在独立副本里做，主会话合并。
+
+## 2026-11-03：公开到 GitHub，照 d2r-mobile 的做法（用户决定）
+
+- 用户：“照这个做”，指 https://github.com/jhaizhou-ops/d2r-mobile 的做法：公开仓库只放代码、中英文说明、截图（放在 Releases，不进仓库）、法律说明；不含任何原版内容，玩家用自己的原版。
+- 许可证 MIT，只适用于本项目自己的代码和文档。
+- 安装包：做一个不含原版内容的“空壳” IPA，玩家在游戏里导入自己的原版 IPA（T081）；在那之前 Releases 不放 IPA。原版 IPA 里的素材不能打进任何公开安装包。
+- 个人信息：Apple 开发者团队编号改放本机 frontend/godot/team_id.local，不进 Git。
+- 用户同意下载 GitHub 官方命令行工具 gh 2.103.3（约 14 MB，github.com/cli/cli，校验和已核对），装在 ~/.local/bin/gh；由用户本人在浏览器授权登录。
