@@ -165,7 +165,7 @@ def build_extension(lib_name="libdungeonraid.macos.template_debug.arm64.dylib", 
         jobs.append((s, os.path.join(build_dir(), group, rel.replace(os.sep, "_") + ".o"), godot_flags() + inc))
     objs = compile_all(jobs, "godot-cpp")
     objs += rule_objects("ext-rules", ["-fPIC", "-fvisibility=hidden"])
-    own = ["dr_bridge.cpp", "dungeon_raid_session.cpp", "register_types.cpp"] + UI_SOURCES
+    own = ["dr_bridge.cpp", "dungeon_raid_session.cpp", "ios_png.cpp", "register_types.cpp"] + UI_SOURCES
     # godot-cpp's headers as system headers: their warnings are not ours.
     own_inc = [f.replace("-I", "-isystem", 1) for f in inc] + ["-I" + RECOVERED, "-I" + os.path.join(HERE, "src")]
     objs += compile_all([(os.path.join(HERE, "src", f), obj_path(os.path.join(HERE, "src", f), "ext"),
@@ -173,7 +173,7 @@ def build_extension(lib_name="libdungeonraid.macos.template_debug.arm64.dylib", 
     os.makedirs(out_dir, exist_ok=True)
     lib = os.path.join(out_dir, lib_name)
     subprocess.run(clang() + ["-dynamiclib", "-fvisibility=hidden", "-install_name", "@rpath/" + os.path.basename(lib)]
-                   + objs + ["-o", lib], check=True)
+                   + objs + ["-lz", "-o", lib], check=True)   # (zlib: the import's pictures, ios_png.cpp)
     print("built " + os.path.relpath(lib, ROOT))
     return lib
 

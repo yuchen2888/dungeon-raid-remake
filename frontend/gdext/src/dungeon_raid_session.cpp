@@ -1,5 +1,6 @@
 #include "dungeon_raid_session.hpp"
 #include "front_requests.hpp"
+#include "ios_png.hpp"
 #include "recovered_tokens.hpp"
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/packed_color_array.hpp>
@@ -257,6 +258,24 @@ Dictionary DungeonRaidSession::settings_values() {
     d["language"]=v.language;d["volume"]=v.volume;d["vibration"]=v.vibration;d["hd"]=v.hd;d["fast"]=v.fast;
     return d;
 }
+Dictionary DungeonRaidSession::decode_ios_png(const PackedByteArray& png) {
+    Dictionary d;
+    const drfront::IosPicture p=drfront::decode_ios_png(png.ptr(),std::size_t(png.size()));
+    if(p.rgba.empty())return d;
+    PackedByteArray rgba;
+    rgba.resize(std::int64_t(p.rgba.size()));
+    std::copy(p.rgba.begin(),p.rgba.end(),rgba.ptrw());
+    d["width"]=std::int64_t(p.width);d["height"]=std::int64_t(p.height);d["rgba"]=rgba;
+    return d;
+}
+PackedByteArray DungeonRaidSession::add_patch(const PackedByteArray& base,const PackedByteArray& patch) {
+    if(base.size()!=patch.size())return PackedByteArray();
+    PackedByteArray out=base;   // (copy on write: ptrw makes it its own)
+    std::uint8_t* o=out.ptrw();
+    const std::uint8_t* p=patch.ptr();
+    for(std::int64_t i=0;i<out.size();++i)o[i]=std::uint8_t(o[i]+p[i]);
+    return out;
+}
 int DungeonRaidSession::settings_touch(int phase,Vector2 touch) {
     if(!ui_)return -1;
     const SessionObjects o=bridge_->objects();
@@ -302,6 +321,8 @@ void DungeonRaidSession::_bind_methods() {
     ClassDB::bind_method(D_METHOD("settings_configure","name_rows","language","volume","vibration","hd","fast"),
                          &DungeonRaidSession::settings_configure);
     ClassDB::bind_method(D_METHOD("settings_values"),&DungeonRaidSession::settings_values);
+    ClassDB::bind_method(D_METHOD("decode_ios_png","png"),&DungeonRaidSession::decode_ios_png);
+    ClassDB::bind_method(D_METHOD("add_patch","base","patch"),&DungeonRaidSession::add_patch);
     ClassDB::bind_method(D_METHOD("settings_open"),&DungeonRaidSession::settings_open);
     ClassDB::bind_method(D_METHOD("settings_touch","phase","touch"),&DungeonRaidSession::settings_touch);
     ClassDB::bind_method(D_METHOD("scores_open"),&DungeonRaidSession::scores_open);

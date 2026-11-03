@@ -122,6 +122,14 @@ func _ready() -> void:
 		error_text = "The game library did not load (frontend/godot/bin/).\nRun frontend/gdext/build.py extension."
 		return
 	var assets := _asset_folder()
+	if not FileAccess.file_exists(assets + "/tiles.png") and FileAccess.file_exists("res://assets/shell/manifest.json"):
+		# the shell app (T081) before its first game: the player's own original goes in first (importer.gd)
+		var layer := CanvasLayer.new()
+		add_child(layer)
+		var importer: Control = preload("res://importer.gd").new()
+		importer.imported.connect(func() -> void: get_tree().reload_current_scene())
+		layer.add_child(importer)
+		return
 	_load_prefs()
 	language = _language(args)
 	var lang_dir := ""
@@ -467,7 +475,13 @@ func _play_sounds() -> void:
 		var file: String = "%s%d" % [entry["name"], int(s[1]) + 1]
 		if not sound_streams.has(file):
 			var path := "res://assets/original/sounds/" + file + ".wav"
-			sound_streams[file] = load(path) if ResourceLoader.exists(path) else null
+			var imported := "user://original/sounds/" + file + ".wav"   # (the shell app's, importer.gd)
+			if ResourceLoader.exists(path):
+				sound_streams[file] = load(path)
+			elif FileAccess.file_exists(imported):
+				sound_streams[file] = AudioStreamWAV.load_from_file(imported)
+			else:
+				sound_streams[file] = null
 		var stream: AudioStream = sound_streams[file]
 		if stream == null:
 			continue

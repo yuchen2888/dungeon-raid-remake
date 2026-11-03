@@ -57,6 +57,11 @@ public:
     void settings_configure(const godot::PackedInt32Array& name_rows,int language,double volume,bool vibration,bool hd,
                             bool fast);
     godot::Dictionary settings_values();
+    // The shell app's import of the player's original (T081, frontend/godot/importer.gd): one of its CgBI pictures
+    // as {width, height, rgba} (empty when not one), and a language picture back from its patch (each byte
+    // base + patch, mod 256; frontend/tools/make_shell_data.py makes the patches).
+    godot::Dictionary decode_ios_png(const godot::PackedByteArray& png);
+    godot::PackedByteArray add_patch(const godot::PackedByteArray& base,const godot::PackedByteArray& patch);
     bool settings_open();
     int settings_touch(int phase,godot::Vector2 touch);
 protected:
