@@ -23,6 +23,10 @@ struct Font {
     // A wide character's glyph and texture (the '?' of the original's when missing).
     const FontCharacter& glyph(std::uint32_t code,std::int32_t& texture_out) const;
     float wide_advance(std::uint32_t code) const;   // GetAdvance for a wide character (plus the spacing)
+    // The character drawn for code (T081): itself, or, when the language's glyphs lack an accented Latin letter (the
+    // shell app's Spanish: its accented letters are made from the original font's strokes, so it has none), the
+    // letter under the accent (á a, ñ n, ¡ !).
+    std::uint32_t shown(std::uint32_t code) const;
     void use_small_caps(float s);
     float advance(char c,float space_scale) const;
     Point2 offset(char c) const;

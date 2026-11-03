@@ -75,6 +75,15 @@ const FontCharacter& Font::glyph(std::uint32_t code,std::int32_t& texture_out) c
     if(it==wide.end()){texture_out=texture;return chars['?'];}
     texture_out=wide_texture;return it->second;
 }
+std::uint32_t Font::shown(std::uint32_t code) const {
+    if(code<0x80 || code>0xff || wide.count(code))return code;
+    static const char plain[]=   // Latin-1 0xc0..0xff without their marks
+        "AAAAAAACEEEEIIII" "DNOOOOOxOUUUUYTs" "aaaaaaaceeeeiiii" "dnooooo/ouuuuyty";
+    if(code>=0xc0)return static_cast<std::uint8_t>(plain[code-0xc0]);
+    if(code==0xa1)return '!';
+    if(code==0xbf)return '?';
+    return code;
+}
 // (the font's spacing is for its own letters: fontMenu's -0.225 pulls Latin capitals together but would run Chinese
 // characters into each other; the wide glyphs' advance already holds their spacing)
 float Font::wide_advance(std::uint32_t code) const {std::int32_t t;return glyph(code,t).advance;}
@@ -116,7 +125,7 @@ std::vector<TextLine> wrap_wide(const Font& font,const char* s,float limit) {
     std::uint32_t previous=0;
     while(s[i]) {
         const std::size_t pos=i;
-        const std::uint32_t c=next_code(s,i);
+        const std::uint32_t c=font.shown(next_code(s,i));
         if(c==' '){cut=pos;next=i;at=w;can_cut=true;}
         else if(pos>start && (breaks_around(c) || (breaks_around(previous) && !no_line_start(c)))){cut=pos;next=pos;at=w;can_cut=true;}
         float add;
@@ -195,7 +204,7 @@ void Label::set_wide_text(const char* s,int n) {
     std::vector<std::uint32_t> codes;
     bool has_wide=false;
     for(std::size_t i=0;i<static_cast<std::size_t>(n);) {
-        const std::uint32_t c=next_code(s,i);
+        const std::uint32_t c=font->shown(next_code(s,i));
         codes.push_back(c=='\t'?' ':c);has_wide=has_wide || c>=0x80;
     }
     const int m=static_cast<int>(codes.size());
