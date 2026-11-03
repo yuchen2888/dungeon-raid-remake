@@ -8,7 +8,17 @@
 
 > **需要你自己的原版游戏。** 本仓库**不含任何游戏内容**：没有原版的程序、美术、音效、字体和英文文字。要玩，你得有自己的一份 Dungeon Raid 1.3.4 原版。详见[法律说明](#法律说明)。
 
-<!-- screenshots -->
+<p align="center"><img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/hero.png" alt="iPhone 上的 Dungeon Raid 重制版"></p>
+
+| <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/menu-en.png" width="200" alt="主菜单"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/board-en.png" width="200" alt="连线消除"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/attack-en.png" width="200" alt="怪物进攻"> |
+|---|---|---|
+| 主菜单 | 连线消除 | 怪物进攻 |
+
+| <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/setup-zh.png" width="200" alt="开局设置（中文）"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/board-zh.png" width="200" alt="棋盘（中文）"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/settings-en.png" width="200" alt="设置页"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/languages-en.png" width="200" alt="语言页"> |
+|---|---|---|---|
+| 开局设置（中文） | 棋盘（中文） | 设置页 | 语言页 |
+
+*截图来自 iPhone 18 Pro 模拟器，高清画面。*
 
 ## 它是什么，不是什么
 

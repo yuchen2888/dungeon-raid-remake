@@ -8,7 +8,17 @@ The original left the App Store long ago and no longer runs on current iOS. This
 
 > **Bring your own game.** This repository holds **no game content**: no program, art, sound, fonts or English text from the original. You need your own copy of the original Dungeon Raid 1.3.4 to play. See [Legal](#legal).
 
-<!-- screenshots -->
+<p align="center"><img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/hero.png" alt="Dungeon Raid Remake on iPhone"></p>
+
+| <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/menu-en.png" width="200" alt="Main menu"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/board-en.png" width="200" alt="Chaining tiles"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/attack-en.png" width="200" alt="Monsters attack"> |
+|---|---|---|
+| Main menu | Chaining tiles | Monsters attack |
+
+| <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/setup-zh.png" width="200" alt="New game (Chinese)"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/board-zh.png" width="200" alt="Board (Chinese)"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/settings-en.png" width="200" alt="Settings"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/languages-en.png" width="200" alt="Languages"> |
+|---|---|---|---|
+| New game (Chinese) | Board (Chinese) | Settings | Languages |
+
+*Screenshots from the iPhone 18 Pro simulator, HD pictures.*
 
 ## What it is, and what it is not
 
