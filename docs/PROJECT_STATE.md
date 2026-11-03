@@ -4,6 +4,8 @@
 
 ## 已核实
 
+- T080（2026-11-03）：项目已公开到 GitHub https://github.com/yyc0409-ui/dungeon-raid-remake （main，远端 origin；推送需 `git -c 'credential.https://github.com.helper=!~/.local/bin/gh auth git-credential' push`）。下一步 T081 空壳 IPA。
+
 - 实际工作区为本 docs/ 的上级目录；创建前无 Git，无已有分支、提交、暂存修改或远端。源码基线提交 `bd9bbd3` 保存了原有 78 个源码/文档/脚本路径（含新增忽略规则）。
 - 原有 7,282 个文件、1,207,443,199 字节已记录在本地 `.relay/bootstrap-before.json`，并在验证后重新逐项核对哈希。
 - recovered/ 当前存在 30 个 `recovered_*.cpp` 模块、25 个头文件、90 个 verify 脚本、三个独立源码示例（含整局演示 session_demo）。attack_shield 模块现包含 ProcessAttack 的全部片段及整函数编排 dr_process_attack（T020-O）；turn 模块为 T030 新增；补位、生成、JumpDown/Stab 等既有逻辑继续复用。
