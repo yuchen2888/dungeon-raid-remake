@@ -4,12 +4,16 @@ extends SceneTree
 # sounds sample for sample, texts line for line).
 #
 #   Godot --headless --path frontend/godot -s res://tests/import_check.gd -- --ipa=<path to the original IPA>
+#   ... -- --ipa=<path> --expect=<key>      the import must refuse it with that word (e.g. encrypted, wrong)
 
 func _initialize() -> void:
 	var ipa := ""
+	var expect := ""   # "--expect=<key>": the import must refuse the IPA with that word (importer.gd's keys)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--ipa="):
 			ipa = a.substr(6)
+		elif a.begins_with("--expect="):
+			expect = a.substr(9)
 	if ipa == "":
 		print("import_check: give --ipa=<path>")
 		quit(2)
@@ -19,6 +23,10 @@ func _initialize() -> void:
 	await process_frame
 	var t := Time.get_ticks_msec()
 	var error: String = await importer.import_ipa(ipa)
+	if expect != "":
+		print("import_check: refused with \"%s\" (expected \"%s\")" % [error, expect])
+		quit(0 if error == expect else 1)
+		return
 	if error != "":
 		print("import_check: the import failed: ", error)
 		quit(1)

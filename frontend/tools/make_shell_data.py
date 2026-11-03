@@ -6,9 +6,11 @@ player's own copy of the original, every original file it reads, with none of th
 
 Writes frontend/godot/assets/shell/ (local, like the rest of assets/; the shell IPA carries it):
 - manifest.json: the original files the import takes from the player's IPA (Payload/*.app/<name>), each by its size
-  and SHA-256, so an IPA of another version is refused rather than misread;
-- texts.map: each English text of assets/original/texts.txt as where its bytes sit in the original program
-  (offset:length pieces, joined); only positions, no text;
+  and SHA-256, so an IPA of another version is refused rather than misread; for the program only the bytes the game
+  reads count (T082: copies decrypted by different tools differ elsewhere, and some keep only the armv7 code): the
+  SHA-256 of every text texts.map gives, each followed by a 0;
+- texts.map: each English text of assets/original/texts.txt as where its bytes sit in the original program's armv7
+  code (offset:length pieces from the start of that code, joined); only positions, no text;
 - sounds.json: the original's sound table (names of its .caf files, recordings, volumes: numbers read from its
   program by import_original_assets.py);
 - patch/<lang>/<picture>.png: each language's pictures with the original's words redrawn (tiles, menus) as the
@@ -22,6 +24,7 @@ import hashlib
 import json
 import os
 import shutil
+import struct
 import sys
 import zipfile
 
@@ -42,6 +45,18 @@ LOCALISED = ["tiles.png", "menus.png"]
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def armv7(program):
+    """The armv7 code of a Mach-O file: the slice of a universal file, or the file itself when it has only that."""
+    if program[:4] == b"\xca\xfe\xba\xbe":
+        for i in range(struct.unpack_from(">I", program, 4)[0]):
+            cpu, sub, offset, size, _ = struct.unpack_from(">5I", program, 8 + 20 * i)
+            if cpu == 12 and sub == 9:
+                return program[offset:offset + size]
+    elif program[:4] == b"\xce\xfa\xed\xfe" and struct.unpack_from("<II", program, 4) == (12, 9):
+        return program
+    return None
 
 
 def pieces(value, program):
@@ -83,12 +98,12 @@ def escape(v):
 
 
 def main():
-    program = open(PROGRAM, "rb").read()
+    program = armv7(open(PROGRAM, "rb").read())
     if os.path.isdir(OUT):
         shutil.rmtree(OUT)
     os.makedirs(OUT)
     # the files the import takes, by name, size and hash
-    files = {"program": {"size": len(program), "sha256": sha(program)}}
+    files = {}
     sounds = json.load(open(os.path.join(ORIGINAL, "sounds.json")))
     with zipfile.ZipFile(IPA) as z:
         names = {os.path.basename(n): n for n in z.namelist() if n.count("/") == 2}
@@ -96,13 +111,15 @@ def main():
         for name in wanted:
             data = z.read(names[name])
             files[name] = {"size": len(data), "sha256": sha(data)}
-    json.dump({"version": "1.3.4", "files": files}, open(os.path.join(OUT, "manifest.json"), "w"), indent=1)
     shutil.copy(os.path.join(ORIGINAL, "sounds.json"), os.path.join(OUT, "sounds.json"))
     # the texts as positions
     lines = text_lines()
     with open(os.path.join(OUT, "texts.map"), "w", encoding="utf-8") as f:
         for key, _, value in lines:
             f.write("%s\t%s\n" % (key, ",".join("%d:%d" % p for p in pieces(value, program))))
+    texts = b"".join(value + b"\0" for _, _, value in lines)
+    json.dump({"version": "1.3.4", "program": {"arch": "armv7", "texts_sha256": sha(texts)}, "files": files},
+              open(os.path.join(OUT, "manifest.json"), "w"), indent=1)
     rebuilt = rebuild_texts(os.path.join(OUT, "texts.map"), program)
     expected = "".join("%s\t%s\n" % (k, w) for k, w, _ in lines)
     assert rebuilt == expected, "texts.map does not give texts.txt back"

@@ -61,7 +61,7 @@
 1. **下载**：从 [Releases](https://github.com/yyc0409-ui/dungeon-raid-remake/releases/latest) 下载 `DungeonRaid-Remake-unsigned.ipa`。它不含任何原版内容。
 2. **安装**：用 [AltStore](https://altstore.io)、[Sideloadly](https://sideloadly.io) 这类侧载工具安装，它会用你自己的 Apple ID 签名。免费的 Apple ID 每 7 天要刷新一次。
 3. **放入原版**：你需要自己的一份 Dungeon Raid 1.3.4，是程序未加密的 IPA 文件。把它放进“文件”App 的 **我的 iPhone → Dungeon Raid** 文件夹。这个文件夹要在打开过一次 App 之后才会出现。
-4. **打开游戏，点“导入”**：几秒钟就好。游戏会检查取用的每个文件，版本不对就拒绝导入，不会读错。导入后可以把那个 IPA 删掉。
+4. **打开游戏，点“导入”**：几秒钟就好。已解密的 1.3.4 都能用，不管是用什么工具解密的，只保留 armv7 代码的也行。游戏会检查它要读的内容：版本不对就拒绝导入，不会读错；还没解密的，会明确告诉你“还是加密的”。导入后可以把那个 IPA 删掉。
 
 和在 Mac 上编译的版本相比，有两点不同：
 

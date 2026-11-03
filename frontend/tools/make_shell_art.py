@@ -56,6 +56,9 @@ WORDS = {
     "reading": ("正在导入，请稍等…", "Importing, one moment..."),
     "wrong": ("这个文件不是 Dungeon Raid 1.3.4 的未加密原版，没有导入。",
               "This is not the unencrypted original Dungeon Raid 1.3.4; nothing was imported."),
+    "encrypted": ("这个 IPA 的程序还是加密的（App Store 下载的都是这样），需要已解密的版本，没有导入。",
+                  "This IPA's program is still encrypted (as every App Store download is); a decrypted copy is needed. "
+                  "Nothing was imported."),
     "bad_zip": ("打不开这个文件：它不是 IPA。", "This file cannot be opened: it is not an IPA."),
     "done": ("导入完成！", "Imported!"),
     "legal": ("Dungeon Raid 属于 Firemint / EA。本重制版与其无关，只读取你自己的那份原版，不会上传任何东西。",

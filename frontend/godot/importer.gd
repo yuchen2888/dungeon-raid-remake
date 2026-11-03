@@ -7,8 +7,8 @@ extends Control
 #   the original program where assets/shell/texts.map says it is) and sounds.json;
 # - user://lang/<code>/tiles.png, menus.png: each language's pictures, its patch (assets/shell/patch/) added to the
 #   original's.
-# Every file taken from the IPA is checked against assets/shell/manifest.json (size and SHA-256) first, so another
-# version of the game is refused instead of misread. frontend/tools/make_shell_data.py makes assets/shell/.
+# Every file taken from the IPA is checked against assets/shell/manifest.json (size and SHA-256; for the program, the
+# bytes of its texts) first, so another version of the game is refused instead of misread. frontend/tools/make_shell_data.py makes assets/shell/.
 #
 # Getting the IPA in: the app's folder shows in the Files app (export option user_data/accessible_from_files_app), and
 # an .ipa put there is found by itself; where the platform has a file picker, "Choose file" opens it too.
@@ -143,8 +143,6 @@ func import_ipa(path: String) -> String:
 			entries[parts[2]] = e
 	var got := {}
 	for name: String in files:
-		if name == "program":
-			continue
 		_say("reading")
 		await _breathe()
 		if not entries.has(name):
@@ -154,17 +152,23 @@ func import_ipa(path: String) -> String:
 			return "wrong"
 		got[name] = bytes
 	await _breathe()
+	# The program: the file of the app's folder (its name varies) whose armv7 code holds the texts the game reads. Only
+	# those bytes are checked (T082): copies decrypted by different tools differ elsewhere, some keep only armv7.
 	var program := PackedByteArray()
-	for name: String in entries:   # the program: the file of the app's folder that is it (its name varies)
+	var encrypted := false
+	for name: String in entries:
 		if name.get_extension() in ["png", "caf", "nib", "plist", "fnt", "strings", "car", "mobileprovision"]:
 			continue
-		var bytes := zip.read_file(entries[name])
-		if _matches(bytes, files["program"]):
-			program = bytes
+		var code := _armv7(zip.read_file(entries[name]))
+		if code.is_empty():
+			continue
+		if _sha256(_text_bytes(code)) == manifest["program"]["texts_sha256"]:
+			program = code
 			break
+		encrypted = encrypted or _encrypted(code)
 	zip.close()
 	if program.is_empty():
-		return "wrong"
+		return "encrypted" if encrypted else "wrong"
 	# all there: write the files
 	DirAccess.make_dir_recursive_absolute(OUT + "sounds")
 	for name: String in got:
@@ -209,12 +213,52 @@ func _breathe() -> void:
 		_last_frame = Time.get_ticks_msec()
 
 func _matches(bytes: PackedByteArray, want: Dictionary) -> bool:
-	if bytes.size() != int(want["size"]):
-		return false
+	return bytes.size() == int(want["size"]) and _sha256(bytes) == want["sha256"]
+
+func _sha256(bytes: PackedByteArray) -> String:
 	var h := HashingContext.new()
 	h.start(HashingContext.HASH_SHA256)
 	h.update(bytes)
-	return h.finish().hex_encode() == want["sha256"]
+	return h.finish().hex_encode()
+
+func _be32(bytes: PackedByteArray, at: int) -> int:
+	return (bytes[at] << 24) | (bytes[at + 1] << 16) | (bytes[at + 2] << 8) | bytes[at + 3]
+
+# A Mach-O file's armv7 code (CPU 12, subtype 9): its slice of a universal file, or the file itself when that is all
+# it has; empty when it has none.
+func _armv7(bytes: PackedByteArray) -> PackedByteArray:
+	if bytes.size() < 28:
+		return PackedByteArray()
+	if _be32(bytes, 0) == 0xcafebabe:
+		for i in _be32(bytes, 4):
+			var at := 8 + 20 * i
+			if at + 20 <= bytes.size() and _be32(bytes, at) == 12 and _be32(bytes, at + 4) == 9:
+				var offset := _be32(bytes, at + 8)
+				return bytes.slice(offset, offset + _be32(bytes, at + 12))
+	elif bytes.decode_u32(0) == 0xfeedface and bytes.decode_u32(4) == 12 and bytes.decode_u32(8) == 9:
+		return bytes
+	return PackedByteArray()
+
+# Whether App Store encryption is still on (LC_ENCRYPTION_INFO's cryptid): such a copy's texts cannot be read.
+func _encrypted(code: PackedByteArray) -> bool:
+	var at := 28
+	for i in code.decode_u32(16):
+		if at + 20 > code.size():
+			break
+		if code.decode_u32(at) == 0x21:
+			return code.decode_u32(at + 16) != 0
+		at += code.decode_u32(at + 4)
+	return false
+
+# The bytes of every text texts.map gives, each followed by a 0 (make_shell_data.py hashes the same).
+func _text_bytes(code: PackedByteArray) -> PackedByteArray:
+	var out := PackedByteArray()
+	for line in FileAccess.get_file_as_string(SHELL + "texts.map").split("\n", false):
+		for piece in line.split("\t")[1].split(","):
+			var p := piece.split(":")
+			out.append_array(code.slice(int(p[0]), int(p[0]) + int(p[1])))
+		out.append(0)
+	return out
 
 func _save(path: String, bytes: PackedByteArray) -> void:
 	var f := FileAccess.open(path, FileAccess.WRITE)

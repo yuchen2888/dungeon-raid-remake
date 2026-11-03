@@ -61,7 +61,7 @@ There are two ways: install the ready-made app on your iPhone, or build everythi
 1. **Download** `DungeonRaid-Remake-unsigned.ipa` from [Releases](https://github.com/yyc0409-ui/dungeon-raid-remake/releases/latest). It holds none of the original's content.
 2. **Install it** with a sideloading tool such as [AltStore](https://altstore.io) or [Sideloadly](https://sideloadly.io), which signs it with your own Apple ID. With a free Apple ID the app has to be refreshed every 7 days.
 3. **Give it your original.** You need your own copy of Dungeon Raid 1.3.4, as an IPA with its program unencrypted. Put it in the Files app, under **On My iPhone → Dungeon Raid**. That folder appears once the app has been opened once.
-4. **Open the game and tap Import.** It takes a few seconds. The game checks every file it takes, so a different version is refused rather than misread. Afterwards you can delete the IPA from that folder.
+4. **Open the game and tap Import.** It takes a few seconds. Any decrypted copy of 1.3.4 works, whichever tool decrypted it, including copies that keep only the armv7 code. The game checks what it reads, so another version is refused rather than misread, and a copy that is still encrypted is named as such. Afterwards you can delete the IPA from that folder.
 
 What differs from a build on a Mac:
 
