@@ -38,6 +38,7 @@
 !/frontend/godot/dungeon_raid.gdextension
 !/frontend/godot/export_presets.cfg
 !/frontend/godot/tests/
+!/frontend/godot/shell/
 /recovered/*
 !/recovered/*.cpp
 !/recovered/*.hpp

@@ -19,84 +19,81 @@ const SHELL := "res://assets/shell/"
 const OUT := "user://original/"
 
 var session = null
-var status: Label = null
+var status: TextureRect = null
 var buttons: Array = []
-var chinese := OS.get_locale_language() == "zh"
+var lang := "zh" if OS.get_locale_language() == "zh" else "en"
 var busy := false
 
+# The screen's words are pictures (shell/text/<key>.<zh|en>.png, frontend/tools/make_shell_art.py): a phone's own
+# fonts cannot be counted on, and the game's are the original's, not here yet.
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	session = ClassDB.instantiate("DungeonRaidSession")
-	var font := SystemFont.new()
-	font.font_names = PackedStringArray(["PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", "Helvetica Neue", "sans-serif"])
-	var theme_ := Theme.new()
-	theme_.default_font = font
-	theme_.default_font_size = 30
-	theme = theme_
 	var bg := ColorRect.new()
-	bg.color = Color(0.10, 0.08, 0.19)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.11, 0.07, 0.19)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	box.offset_left = 48
 	box.offset_right = -48
-	box.offset_top = 120
-	box.offset_bottom = -80
-	box.add_theme_constant_override("separation", 28)
+	box.offset_top = 100
+	box.offset_bottom = -60
+	box.add_theme_constant_override("separation", 30)
 	add_child(box)
-	var title := Label.new()
-	title.text = "Dungeon Raid"
-	title.add_theme_font_size_override("font_size", 56)
-	title.add_theme_color_override("font_color", Color(1.0, 0.82, 0.35))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
-	var text := Label.new()
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.text = _words("intro")
-	box.add_child(text)
-	var go := _button(_words("import"), _import_found)
-	box.add_child(go)
+	var icon := TextureRect.new()
+	icon.texture = _picture("res://shell/icon.png")
+	icon.custom_minimum_size = Vector2(0, 180)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	box.add_child(icon)
+	box.add_child(_words("intro"))
+	box.add_child(_button("import", _import_found))
 	if DisplayServer.has_feature(DisplayServer.FEATURE_NATIVE_DIALOG_FILE):
-		box.add_child(_button(_words("choose"), _choose))
-	status = Label.new()
-	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	status.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
+		box.add_child(_button("choose", _choose))
+	status = _words("none")
+	status.modulate = Color(0.75, 0.85, 1.0)
+	status.visible = false
 	box.add_child(status)
-	var legal := Label.new()
-	legal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	legal.add_theme_font_size_override("font_size", 20)
-	legal.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
-	legal.text = _words("legal")
+	var legal := _words("legal")
+	legal.modulate = Color(0.6, 0.6, 0.72)
 	box.add_child(legal)
 
-func _button(label: String, action: Callable) -> Button:
+func _picture(path: String) -> Texture2D:
+	var image := Image.new()
+	if image.load_png_from_buffer(FileAccess.get_file_as_bytes(path)) != OK:
+		return null
+	return ImageTexture.create_from_image(image)
+
+# A text picture as wide as the screen's column (its height following).
+func _words(key: String) -> TextureRect:
+	var r := TextureRect.new()
+	r.texture = _picture("res://shell/text/%s.%s.png" % [key, lang])
+	r.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
+	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return r
+
+func _button(key: String, action: Callable) -> Button:
 	var b := Button.new()
-	b.text = label
-	b.custom_minimum_size = Vector2(0, 88)
+	var words := _picture("res://shell/text/%s.%s.png" % [key, lang])
+	var label := TextureRect.new()
+	label.texture = words
+	label.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	label.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	label.offset_top = 22
+	label.offset_bottom = -22
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(label)
+	b.custom_minimum_size = Vector2(0, 96)
 	b.pressed.connect(action)
 	buttons.append(b)
 	return b
 
-func _words(key: String) -> String:
-	var zh := {
-		"intro": "这是 Dungeon Raid 的非官方重制版，不带原版游戏的任何内容。第一次玩之前，需要你自己的原版 Dungeon Raid 1.3.4（未加密的 IPA 文件）。\n\n打开“文件”App →“我的 iPhone”→“Dungeon Raid”，把 IPA 放进去，再点下面的“导入”。",
-		"import": "导入", "choose": "选择文件…",
-		"none": "没找到 IPA：请把它放进“文件”App 里的“我的 iPhone → Dungeon Raid”文件夹。",
-		"reading": "正在读取 %s…", "wrong": "这个 IPA 不是 Dungeon Raid 1.3.4 的未加密原版（%s 不符），没有导入。",
-		"done": "导入完成！", "bad_zip": "打不开这个文件：它不是 IPA。",
-		"legal": "Dungeon Raid 属于 Firemint / EA。本重制版与其无关，只读取你自己的那份原版，不会上传任何东西。"}
-	var en := {
-		"intro": "This is an unofficial remake of Dungeon Raid, and it holds none of the original game's content. Before the first game it needs your own copy of the original Dungeon Raid 1.3.4 (an unencrypted IPA file).\n\nOpen the Files app → On My iPhone → Dungeon Raid, put the IPA there, then tap Import.",
-		"import": "Import", "choose": "Choose file…",
-		"none": "No IPA found: put it in the Files app, On My iPhone → Dungeon Raid.",
-		"reading": "Reading %s…", "wrong": "This IPA is not the unencrypted original Dungeon Raid 1.3.4 (%s does not match); nothing was imported.",
-		"done": "Imported!", "bad_zip": "This file cannot be opened: it is not an IPA.",
-		"legal": "Dungeon Raid belongs to Firemint / EA. This remake has nothing to do with them; it only reads your own copy of the original and uploads nothing."}
-	return (zh if chinese else en)[key]
-
-func _say(text: String) -> void:
-	status.text = text
+func _say(key: String) -> void:
+	status.texture = _picture("res://shell/text/%s.%s.png" % [key, lang])
+	status.visible = true
 
 func _import_found() -> void:
 	var found := ""
@@ -105,7 +102,7 @@ func _import_found() -> void:
 			found = "user://" + f
 			break
 	if found == "":
-		_say(_words("none"))
+		_say("none")
 		return
 	_run(found)
 
@@ -128,17 +125,17 @@ func _run(path: String) -> void:
 	if error != "":
 		_say(error)
 		return
-	_say(_words("done"))
+	_say("done")
 	imported.emit()
 
-# The import itself; "" when it worked, else what went wrong (in the player's words). Nothing is written to
+# The import itself; "" when it worked, else what went wrong (a key of the screen's words). Nothing is written to
 # user://original/ until every file has been checked.
 func import_ipa(path: String) -> String:
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SHELL + "manifest.json"))
 	var files: Dictionary = manifest["files"]
 	var zip := ZIPReader.new()
 	if zip.open(path) != OK:
-		return _words("bad_zip")
+		return "bad_zip"
 	var entries := {}   # name in the app's folder -> its path in the IPA
 	for e in zip.get_files():
 		var parts := e.split("/")
@@ -148,16 +145,15 @@ func import_ipa(path: String) -> String:
 	for name: String in files:
 		if name == "program":
 			continue
-		_say(_words("reading") % name)
-		await get_tree().process_frame
+		_say("reading")
+		await _breathe()
 		if not entries.has(name):
-			return _words("wrong") % name
+			return "wrong"
 		var bytes := zip.read_file(entries[name])
 		if not _matches(bytes, files[name]):
-			return _words("wrong") % name
+			return "wrong"
 		got[name] = bytes
-	_say(_words("reading") % "DungeonRaid")
-	await get_tree().process_frame
+	await _breathe()
 	var program := PackedByteArray()
 	for name: String in entries:   # the program: the file of the app's folder that is it (its name varies)
 		if name.get_extension() in ["png", "caf", "nib", "plist", "fnt", "strings", "car", "mobileprovision"]:
@@ -168,7 +164,7 @@ func import_ipa(path: String) -> String:
 			break
 	zip.close()
 	if program.is_empty():
-		return _words("wrong") % "DungeonRaid"
+		return "wrong"
 	# all there: write the files
 	DirAccess.make_dir_recursive_absolute(OUT + "sounds")
 	for name: String in got:
@@ -176,13 +172,13 @@ func import_ipa(path: String) -> String:
 		if name.ends_with(".png"):
 			var p: Dictionary = session.decode_ios_png(bytes)
 			if p.is_empty():
-				return _words("wrong") % name
+				return "wrong"
 			Image.create_from_data(p["width"], p["height"], false, Image.FORMAT_RGBA8, p["rgba"]).save_png(OUT + name)
 		elif name.ends_with(".caf"):
 			_save(OUT + "sounds/" + name.get_basename() + ".wav", _wav(bytes))
 		else:
 			_save(OUT + name, bytes)
-		await get_tree().process_frame
+		await _breathe()
 	_save(OUT + "texts.txt", _texts(program).to_utf8_buffer())
 	_save(OUT + "sounds.json", FileAccess.get_file_as_bytes(SHELL + "sounds.json"))
 	for code in DirAccess.get_directories_at(SHELL + "patch"):
@@ -197,12 +193,20 @@ func import_ipa(path: String) -> String:
 			patch.convert(Image.FORMAT_RGBA8)
 			var data: PackedByteArray = session.add_patch(base.get_data(), patch.get_data())
 			if data.is_empty():
-				return _words("wrong") % (code + "/" + name)
+				return "wrong"
 			Image.create_from_data(base.get_width(), base.get_height(), false, Image.FORMAT_RGBA8, data).save_png(
 				"user://lang/" + code + "/" + name)
-			await get_tree().process_frame
+			await _breathe()
 	_save(OUT + "imported.txt", ("Dungeon Raid %s, %s\n" % [manifest["version"], Time.get_datetime_string_from_system()]).to_utf8_buffer())
 	return ""
+
+# A frame now and then, so the screen keeps showing it is busy (one after every file would be slow where frames are,
+# as in the simulator).
+var _last_frame := 0
+func _breathe() -> void:
+	if Time.get_ticks_msec() - _last_frame > 250:
+		await get_tree().process_frame
+		_last_frame = Time.get_ticks_msec()
 
 func _matches(bytes: PackedByteArray, want: Dictionary) -> bool:
 	if bytes.size() != int(want["size"]):
