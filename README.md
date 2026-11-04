@@ -2,13 +2,34 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-An unofficial, non-commercial remake of **Dungeon Raid** (Firemint, 2011), the match-three dungeon crawler, for today's iPhone and Mac.
-
-The original left the App Store long ago and no longer runs on current iOS. This project brings it back with the original's rules recovered as source code, a new front end, full-screen support for modern iPhones, HD pictures and six languages.
-
-> **Bring your own game.** This repository holds **no game content**: no program, art, sound, fonts or English text from the original. You need your own copy of the original Dungeon Raid 1.3.4 to play. See [Legal](#legal).
+> One finger, a six-by-six board, one more run, and somehow it is morning.
 
 <p align="center"><img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/hero.png" alt="Dungeon Raid Remake on iPhone"></p>
+
+## A labour of love
+
+In 2011 Firemint, the Australian studio behind *Flight Control* and *Real Racing*, put **Dungeon Raid** on the iPhone. It looked like another match-three game. It played like a dungeon crawl that kept going deeper. Back when the iPhone 4 was new, it was the one game many people never deleted: on the train, in the queue, "just one more run" before bed, and then it was 2 a.m. It was loved by the people who played it, often called one of the most replayable games on the iPhone, and old players still talk about that one-more-run pull today.
+
+What made it so good?
+
+- **One stroke.** No swapping. Hold your finger down and trace through touching tiles of one kind, across, down or diagonally. The longer the chain, the better it feels.
+- **Every tile matters.** Swords and skulls chain together to attack. Coins buy equipment. Shields repair armour. Potions heal. Every stroke is a choice: stay alive, or kill first?
+- **The monsters hit back.** After each stroke, every skull left on the board attacks you. They pile up and get stronger, and the special ones change the game: spiky ones that hurt you when you hit them, ones that freeze tiles, turn potions into acid, steal your gold or blow up when their timer runs out, and bosses far tougher than the rest.
+- **A hero that grows.** Level up from experience, spend gold on equipment, turn shields into armour upgrades and pick up skills, so no two runs build the same hero.
+- **Classes to unlock.** Pick a class and a difficulty for each game. Each class has its own race, perks and flaws, and special skill. Killing special enemies on anything above Easy unlocks new classes and levels them up, with more ways to set them up.
+- **No second chances.** One life per run. When you die, you keep only a score, and that is what makes every stroke tense.
+
+Then it stopped being updated. In 2017 iOS 11 dropped support for old 32-bit apps, and Dungeon Raid vanished from everyone's phones and from the App Store. For years, old players have kept asking whether there is any way to play it again.
+
+Lately the internet has been full of old games brought back with the help of AI, one childhood memory after another. It reminded me of the dungeon I spent hundreds of hours in, so I set out to revive it with [Claude](https://claude.com/claude-code), Anthropic's AI coding assistant. Not by running the old program in an emulator, but by recovering the original's rules one by one as readable source code and rebuilding the game on a modern engine: full screen on today's iPhones, HD pictures, and more languages.
+
+It is an unofficial, non-commercial remake, made so that old players can have one more run, and so that people who never played it can see what a great game it was.
+
+## What the remake offers
+
+The original's rules are recovered as source code and checked against the original frame by frame. A new front end fills the screen on modern iPhones. It adds HD pictures and six languages, and it also runs on a Mac.
+
+> **Bring your own game.** This repository holds **no game content**: no program, art, sound, fonts or English text from the original. You need your own copy of the original Dungeon Raid 1.3.4 to play. See [Legal](#legal).
 
 | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/menu-en.png" width="200" alt="Main menu"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/board-en.png" width="200" alt="Chaining tiles"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/attack-en.png" width="200" alt="Monsters attack"> |
 |---|---|---|
@@ -55,6 +76,17 @@ The original left the App Store long ago and no longer runs on current iOS. This
 ## Getting started
 
 There are two ways: install the ready-made app on your iPhone, or build everything yourself on a Mac.
+
+### Why you need your own copy
+
+Copyright. Dungeon Raid's art, sound, music, fonts and text belong to their owners, and those rights did not end when the game left the store. We are just players who love the game, and it is not ours to give away.
+
+So the work is split like this:
+
+- **What we publish** is only what we made ourselves: the recovered rules code, the new front end, the translations, and lettering drawn with Source Han Sans. The install package holds only these. Before each release a tool checks it file by file, and it contains not a single file of the original.
+- **What you bring** is your own copy of the original. When the game first opens, it reads the pictures, sounds and texts from your copy and keeps them on your phone. Nothing is uploaded anywhere.
+
+Many remakes of old games work the same way: the engine and code are shared, and each player supplies the game content from their own copy. That way an old game can run again while the creators' rights are respected. We also won't tell anyone where to find the original's files.
 
 ### On an iPhone, no Mac needed
 
