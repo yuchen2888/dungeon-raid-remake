@@ -29,6 +29,14 @@ It is an unofficial, non-commercial remake, made so that old players can have on
 
 The original's rules are recovered as source code and checked against the original frame by frame. A new front end fills the screen on modern iPhones. It adds HD pictures and six languages, and it also runs on a Mac.
 
+### About full screen: why the top and bottom are "extended"
+
+The original was made for the 3.5-inch iPhones of 2011, with a 2:3 screen; today's iPhones are much taller. The remake does not stretch the picture or move a single button. It puts the original screen, exactly as it was, in the middle, and fills the space above and below with the colours of its top and bottom edges, blurred outwards and fading darker, like light spilling off the picture, instead of two black bars.
+
+This keeps **the original's interface and board exactly as they were**: every tile and every button in its old place at its old size, so it feels just like it did back then, with rules checked against the original frame by frame.
+
+That is only a first step. How to really use the whole screen of a tall iPhone, whether by moving the status panels up and down, enlarging the board, or redesigning the interface altogether, is still open. **Suggestions are very welcome**: ideas for full-screen layouts, or for a redesigned UI, sketches included. Please open an issue.
+
 > **Bring your own game.** This repository holds **no game content**: no program, art, sound, fonts or English text from the original. You need your own copy of the original Dungeon Raid 1.3.4 to play. See [Legal](#legal).
 
 | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/menu-en.png" width="200" alt="Main menu"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/board-en.png" width="200" alt="Chaining tiles"> | <img src="https://github.com/yyc0409-ui/dungeon-raid-remake/releases/download/media/attack-en.png" width="200" alt="Monsters attack"> |
@@ -76,6 +84,8 @@ The original's rules are recovered as source code and checked against the origin
 ## Getting started
 
 There are two ways: install the ready-made app on your iPhone, or build everything yourself on a Mac.
+
+> **Strongly recommended: let an AI help you install it.** Sideloading, signing and building can be fiddly if you have not done them before. The easiest way is to ask an AI tool or AI agent, such as an AI coding assistant like Claude Code or Codex that can work on your computer: give it the link to this page, tell it which phone and computer you have, and let it walk you through step by step. If something goes wrong, show it the error. This project itself was made together with AI the same way. (You still need to bring your own copy of the original game.)
 
 ### Why you need your own copy
 
